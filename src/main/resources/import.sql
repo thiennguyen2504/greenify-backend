@@ -1,0 +1,6 @@
+-- INSERT INTO _user (id, firstname, lastname, email, password, enabled) VALUES (1, 'Admin', 'User', 'admin@example.com', '$2a$10$EobnJ7JTLaSYHHJnSw08iuHJZCAhmJFLlbynVnEo2Pnz5TQMcn90C', true);
+-- INSERT INTO _user (id, firstname, lastname, email, password, enabled) VALUES (2, 'Normal', 'User', 'user@example.com', '$2a$10$EobnJ7JTLaSYHHJnSw08iuHJZCAhmJFLlbynVnEo2Pnz5TQMcn90C', true);
+--
+-- INSERT INTO _user_roles (user_id, roles) VALUES (1, 'ADMIN');
+-- INSERT INTO _user_roles (user_id, roles) VALUES (1, 'USER');
+-- INSERT INTO _user_roles (user_id, roles) VALUES (2, 'USER');
