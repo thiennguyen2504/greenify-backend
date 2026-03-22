@@ -1,0 +1,82 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: greenify-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - greenify-net
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: greenify-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - greenify-net
+
+  # Spring Boot Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: greenify-app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database (PostgreSQL)
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DRIVER: org.postgresql.Driver
+      JPA_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      JPA_DDL_AUTO: update
+      H2_CONSOLE_ENABLED: "false"
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      # OAuth2
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Mail
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      # Domain
+      DOMAIN_URL: ${DOMAIN_URL}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - greenify-net
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  greenify-net:
+    driver: bridge

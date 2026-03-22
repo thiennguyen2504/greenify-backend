@@ -51,7 +51,8 @@ class AuthenticationIntegrationTest {
         @BeforeEach
         public void setUp() {
                 // Seed roles
-                roleRepository.deleteAll(); // Clean up first if needed, though Transactional handles rollback usually
+                userRepository.deleteAll(); // Delete users first to remove foreign key references
+                roleRepository.deleteAll();
 
                 if (roleRepository.findByName("ADMIN").isEmpty()) {
                         roleRepository.save(com.webdev.greenify.entity.Role.builder().name("ADMIN").build());
@@ -113,7 +114,7 @@ class AuthenticationIntegrationTest {
                 AuthenticationResponse authResponse = objectMapper.readValue(response, AuthenticationResponse.class);
 
                 // Test protected resource with token
-                mockMvc.perform(get("/api/v1/management/users")
+                mockMvc.perform(get("/api/v1/users")
                                 .header("Authorization", "Bearer " + authResponse.getAccessToken()))
                                 .andDo(MockMvcResultHandlers.print())
                                 .andExpect(status().isOk())
