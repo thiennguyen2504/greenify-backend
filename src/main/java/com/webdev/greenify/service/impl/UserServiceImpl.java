@@ -1,6 +1,6 @@
 package com.webdev.greenify.service.impl;
 
-import com.webdev.greenify.dto.UserDto;
+import com.webdev.greenify.dto.UserDetailResponseDTO;
 import com.webdev.greenify.exception.ResourceNotFoundException;
 import com.webdev.greenify.mapper.UserMapper;
 import com.webdev.greenify.repository.UserRepository;
@@ -19,16 +19,16 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Override
-    public List<UserDto> findAllUsers() {
+    public List<UserDetailResponseDTO> findAllUsers() {
         return repository.findAllWithRoles().stream()
                 .map(userMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public UserDto findUserById(Long id) {
+    public UserDetailResponseDTO findUserById(String id) {
         return repository.findById(id)
                 .map(userMapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
     }
 }

@@ -1,18 +1,28 @@
 package com.webdev.greenify.service.impl;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.webdev.greenify.dto.AuthenticationRequest;
 import com.webdev.greenify.dto.AuthenticationResponse;
 import com.webdev.greenify.dto.LogoutRequest;
 import com.webdev.greenify.dto.RefreshTokenRequest;
 import com.webdev.greenify.dto.RegisterRequest;
-import com.webdev.greenify.entity.Role;
-import com.webdev.greenify.entity.User;
+import com.webdev.greenify.entity.RoleEntity;
+import com.webdev.greenify.entity.UserEntity;
 import com.webdev.greenify.exception.DuplicateResourceException;
 import com.webdev.greenify.exception.InvalidTokenException;
 import com.webdev.greenify.exception.ResourceNotFoundException;
+import com.webdev.greenify.exception.TokenException;
+import com.webdev.greenify.properties.JwtProperties;
 import com.webdev.greenify.repository.RoleRepository;
 import com.webdev.greenify.repository.UserRepository;
-import com.webdev.greenify.security.JwtService;
 import com.webdev.greenify.service.AuthenticationService;
 import com.webdev.greenify.service.EmailService;
 import com.webdev.greenify.service.TokenBlacklistService;
@@ -21,16 +31,21 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
+
+    private final JwtProperties jwtProperties;
     private final UserRepository repository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final EmailService emailService;
     private final TokenBlacklistService tokenBlacklistService;
 
@@ -40,40 +55,39 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new DuplicateResourceException("Email already exists");
         }
 
-        Set<Role> roles = new HashSet<>();
+        Set<RoleEntity> roleEntities = new HashSet<>();
         if (request.getRoles() != null) {
             request.getRoles().forEach(roleName -> {
-                Role role = roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName));
-                roles.add(role);
+                RoleEntity roleEntity = roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new ResourceNotFoundException("RoleEntity not found: " + roleName));
+                roleEntities.add(roleEntity);
             });
         }
 
-        var user = User.builder()
+        var user = UserEntity.builder()
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .roles(roles)
-                .enabled(false)
+                .roles(roleEntities)
                 .build();
         var savedUser = repository.save(user);
 
-        var jwtToken = jwtService.generateToken(savedUser);
+        var jwtToken = generateToken(savedUser);
         emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFirstname(), jwtToken);
     }
 
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("User not found"));
+                .orElseThrow(() -> new BadCredentialsException("UserEntity not found"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid password");
         }
 
-        var jwtToken = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
+        var jwtToken = generateToken(user);
+        var refreshToken = generateRefreshToken(user);
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
@@ -84,20 +98,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public AuthenticationResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
 
-        if (tokenBlacklistService.isTokenBlacklisted(refreshToken)) {
+        if (tokenBlacklistService.isAccessTokenBlacklisted(refreshToken)) {
             throw new InvalidTokenException("Refresh token has been revoked");
         }
 
-        String userEmail = jwtService.extractUsername(refreshToken);
+        String userEmail = extractUsername(refreshToken);
         if (userEmail != null) {
             var user = this.repository.findByEmail(userEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
 
-            if (jwtService.isTokenValid(refreshToken, user)) {
-                tokenBlacklistService.blacklistToken(refreshToken);
+            if (isTokenValid(refreshToken, user)) {
+                tokenBlacklistService.blacklistRefreshToken(refreshToken);
 
-                var accessToken = jwtService.generateToken(user);
-                var newRefreshToken = jwtService.generateRefreshToken(user);
+                var accessToken = generateToken(user);
+                var newRefreshToken = generateRefreshToken(user);
 
                 return AuthenticationResponse.builder()
                         .accessToken(accessToken)
@@ -112,22 +126,78 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public void logout(LogoutRequest request) {
         String token = request.getToken();
         if (token != null) {
-            tokenBlacklistService.blacklistToken(token);
+            tokenBlacklistService.blacklistAccessToken(token);
         }
     }
 
     @Override
     public void verifyUser(String token) {
-        String email = jwtService.extractUsername(token);
+        String email = extractUsername(token);
         if (email == null) {
             throw new InvalidTokenException("Invalid token");
         }
-        User user = repository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (jwtService.isTokenValid(token, user)) {
-            user.setEnabled(true);
-            repository.save(user);
+        UserEntity userEntity = repository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
+        if (isTokenValid(token, userEntity)) {
+            repository.save(userEntity);
         } else {
             throw new InvalidTokenException("Invalid token");
+        }
+    }
+
+    public String generateToken(UserEntity userEntity) {
+        return generateToken(userEntity, jwtProperties.getExpiration());
+    }
+
+    public String generateRefreshToken(UserEntity userEntity) {
+        return generateToken(userEntity, jwtProperties.getRefreshTokenExpiration());
+    }
+
+    private String generateToken(UserEntity userEntity, long expiration) {
+        try {
+            JWSSigner signer = new MACSigner(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
+
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                    .subject(userEntity.getEmail())
+                    .issueTime(new Date())
+                    .expirationTime(new Date(System.currentTimeMillis() + expiration))
+                    .claim("roles", userEntity.getRoles().stream().map(RoleEntity::getName).collect(Collectors.toList()));
+
+            SignedJWT signedJWT = new SignedJWT(
+                    new JWSHeader(JWSAlgorithm.HS256),
+                    claimsBuilder.build());
+
+            signedJWT.sign(signer);
+            return signedJWT.serialize();
+        } catch (JOSEException e) {
+            throw new TokenException("Error generating JWT", e);
+        }
+    }
+
+    public String extractUsername(String token) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            return signedJWT.getJWTClaimsSet().getSubject();
+        } catch (ParseException e) {
+            return null;
+        }
+    }
+
+    public boolean isTokenValid(String token, UserEntity userEntityDetails) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            JWSVerifier verifier = new MACVerifier(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
+
+            if (!signedJWT.verify(verifier)) {
+                return false;
+            }
+
+            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+            String username = claims.getSubject();
+            Date expiration = claims.getExpirationTime();
+
+            return (username.equals(userEntityDetails.getEmail()) && expiration.after(new Date()));
+        } catch (JOSEException | ParseException e) {
+            return false;
         }
     }
 }

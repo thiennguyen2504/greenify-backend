@@ -1,6 +1,6 @@
 package com.webdev.greenify.controller;
 
-import com.webdev.greenify.dto.UserDto;
+import com.webdev.greenify.dto.UserDetailResponseDTO;
 import com.webdev.greenify.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +21,13 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserDto>> getAllUsers() {
+    public ResponseEntity<List<UserDetailResponseDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.findAllUsers());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<UserDetailResponseDTO> getUserById(@PathVariable String id) {
         return ResponseEntity.ok(userService.findUserById(id));
     }
 }

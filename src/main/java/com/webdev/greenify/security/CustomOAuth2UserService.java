@@ -1,6 +1,6 @@
 package com.webdev.greenify.security;
 
-import com.webdev.greenify.entity.User;
+import com.webdev.greenify.entity.UserEntity;
 import com.webdev.greenify.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,11 +21,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         String email = oAuth2User.getAttribute("email");
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        Optional<UserEntity> userOptional = userRepository.findByEmail(email);
         if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            // Update user details if needed
-            userRepository.save(user);
+            UserEntity userEntity = userOptional.get();
+            // Update userEntity details if needed
+            userRepository.save(userEntity);
         } else {
             // Auto register?
             // For now we can throw exception or auto register.

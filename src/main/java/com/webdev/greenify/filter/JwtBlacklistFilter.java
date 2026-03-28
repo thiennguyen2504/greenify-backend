@@ -32,7 +32,7 @@ public class JwtBlacklistFilter extends OncePerRequestFilter {
 
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String accessToken = authHeader.substring(7);
-                if (tokenBlacklistService.isTokenBlacklisted(accessToken)) {
+                if (tokenBlacklistService.isAccessTokenBlacklisted(accessToken)) {
                     throw new BadCredentialsException("Access token has been blacklisted");
                 }
             }

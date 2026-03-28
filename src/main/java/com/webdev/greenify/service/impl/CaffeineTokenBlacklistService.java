@@ -11,21 +11,35 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class CaffeineTokenBlacklistService implements TokenBlacklistService {
 
-    private final Cache<String, Boolean> blacklistedTokens;
+    private final Cache<String, Boolean> blacklistedAccessTokens;
+    private final Cache<String, Boolean> blacklistedRefreshTokens;
 
     public CaffeineTokenBlacklistService(JwtProperties jwtProperties) {
-        this.blacklistedTokens = Caffeine.newBuilder()
+        this.blacklistedAccessTokens = Caffeine.newBuilder()
                 .expireAfterWrite(jwtProperties.getExpiration(), TimeUnit.MILLISECONDS)
+                .build();
+        this.blacklistedRefreshTokens = Caffeine.newBuilder()
+                .expireAfterWrite(jwtProperties.getRefreshTokenExpiration(), TimeUnit.MILLISECONDS)
                 .build();
     }
 
     @Override
-    public void blacklistToken(String token) {
-        blacklistedTokens.put(token, true);
+    public void blacklistAccessToken(String token) {
+        blacklistedAccessTokens.put(token, true);
     }
 
     @Override
-    public boolean isTokenBlacklisted(String token) {
-        return blacklistedTokens.getIfPresent(token) != null;
+    public void blacklistRefreshToken(String refreshToken) {
+        blacklistedRefreshTokens.put(refreshToken, true);
+    }
+
+    @Override
+    public boolean isAccessTokenBlacklisted(String token) {
+        return blacklistedAccessTokens.getIfPresent(token) != null;
+    }
+
+    @Override
+    public boolean isRefreshTokenBlacklisted(String token) {
+        return blacklistedRefreshTokens.getIfPresent(token) != null;
     }
 }

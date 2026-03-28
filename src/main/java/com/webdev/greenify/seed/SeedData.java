@@ -1,7 +1,7 @@
 package com.webdev.greenify.seed;
 
-import com.webdev.greenify.entity.Role;
-import com.webdev.greenify.entity.User;
+import com.webdev.greenify.entity.RoleEntity;
+import com.webdev.greenify.entity.UserEntity;
 import com.webdev.greenify.repository.RoleRepository;
 import com.webdev.greenify.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,41 +25,39 @@ public class SeedData implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
 
-        // Ensure roles exist
-        Role adminRole = roleRepository.findByName("ADMIN")
-                .orElseGet(() -> roleRepository.save(Role.builder().name("ADMIN").build()));
+        // Ensure roleEntities exist
+        RoleEntity adminRoleEntity = roleRepository.findByName("ADMIN")
+                .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("ADMIN").build()));
 
-        Role userRole = roleRepository.findByName("USER")
-                .orElseGet(() -> roleRepository.save(Role.builder().name("USER").build()));
+        RoleEntity userRoleEntity = roleRepository.findByName("USER")
+                .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("USER").build()));
 
-        // Create Admin User
+        // Create Admin UserEntity
         if (userRepository.findByEmail("admin@example.com").isEmpty()) {
-            Set<Role> adminRoles = new HashSet<>();
-            adminRoles.add(adminRole);
-            adminRoles.add(userRole);
+            Set<RoleEntity> adminRoleEntities = new HashSet<>();
+            adminRoleEntities.add(adminRoleEntity);
+            adminRoleEntities.add(userRoleEntity);
 
-            userRepository.save(User.builder()
+            userRepository.save(UserEntity.builder()
                     .firstname("Admin")
-                    .lastname("User")
+                    .lastname("UserEntity")
                     .email("admin@example.com")
                     .password(passwordEncoder.encode("password123"))
-                    .enabled(true)
-                    .roles(adminRoles)
+                    .roles(adminRoleEntities)
                     .build());
         }
 
-        // Create Normal User
+        // Create Normal UserEntity
         if (userRepository.findByEmail("user@example.com").isEmpty()) {
-            Set<Role> userRoles = new HashSet<>();
-            userRoles.add(userRole);
+            Set<RoleEntity> userRoleEntities = new HashSet<>();
+            userRoleEntities.add(userRoleEntity);
 
-            userRepository.save(User.builder()
+            userRepository.save(UserEntity.builder()
                     .firstname("Normal")
-                    .lastname("User")
+                    .lastname("UserEntity")
                     .email("user@example.com")
                     .password(passwordEncoder.encode("password123"))
-                    .enabled(true)
-                    .roles(userRoles)
+                    .roles(userRoleEntities)
                     .build());
         }
     }

@@ -1,7 +1,8 @@
 package com.webdev.greenify.service;
 
 public interface TokenBlacklistService {
-    void blacklistToken(String token);
-
-    boolean isTokenBlacklisted(String token);
+    void blacklistAccessToken(String token);
+    void blacklistRefreshToken(String refreshToken);
+    boolean isAccessTokenBlacklisted(String token);
+    boolean isRefreshTokenBlacklisted(String token);
 }

@@ -59,7 +59,7 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret-key: ${JWT_SECRET:}
+  secret-key: ${JWT_SECRET:cmVhZGVyYXJtYWlycGxhbmVidXNobW9vbnNoYWRlY29uc3RhbnRseWV2ZXJ5b25lZGk=}
   expiration: 86400000
   refresh-token-expiration: 604800000
 

@@ -1,9 +1,10 @@
 package com.webdev.greenify.service;
 
-import com.webdev.greenify.dto.UserDto;
+import com.webdev.greenify.dto.UserDetailResponseDTO;
+
 import java.util.List;
 
 public interface UserService {
-    List<UserDto> findAllUsers();
-    UserDto findUserById(Long id);
+    List<UserDetailResponseDTO> findAllUsers();
+    UserDetailResponseDTO findUserById(String id);
 }

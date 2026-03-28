@@ -1,10 +1,10 @@
 package com.webdev.greenify.repository;
 
-import com.webdev.greenify.entity.Role;
+import com.webdev.greenify.entity.RoleEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface RoleRepository extends JpaRepository<Role, Long> {
-    Optional<Role> findByName(String name);
+public interface RoleRepository extends JpaRepository<RoleEntity, String> {
+    Optional<RoleEntity> findByName(String name);
 }

@@ -1,6 +1,6 @@
 package com.webdev.greenify.dto;
 
-import com.webdev.greenify.entity.Role;
+import com.webdev.greenify.entity.RoleEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,11 +12,11 @@ import java.util.Set;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDto {
+public class UserDetailResponseDTO {
     private Long id;
     private String firstname;
     private String lastname;
     private String email;
-    private Set<Role> roles;
+    private Set<RoleEntity> roleEntities;
     private boolean enabled;
 }

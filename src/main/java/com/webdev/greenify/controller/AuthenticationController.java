@@ -22,7 +22,7 @@ public class AuthenticationController {
     public ResponseEntity<String> register(
             @RequestBody @Valid RegisterRequest request) {
         service.register(request);
-        return ResponseEntity.ok("User registered successfully. Please check your email to verify.");
+        return ResponseEntity.ok("UserEntity registered successfully. Please check your email to verify.");
     }
 
     @PostMapping("/authenticate")
