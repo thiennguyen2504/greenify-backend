@@ -10,6 +10,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.webdev.greenify.user.enumeration.AccountStatus;
+
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,31 +36,35 @@ public class SeedData implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("USER").build()));
 
         // Create Admin UserEntity
-        if (userRepository.findByEmail("admin@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("admin@example.com").isEmpty()) {
             Set<RoleEntity> adminRoleEntities = new HashSet<>();
             adminRoleEntities.add(adminRoleEntity);
             adminRoleEntities.add(userRoleEntity);
 
             userRepository.save(UserEntity.builder()
-                    .firstname("Admin")
-                    .lastname("UserEntity")
                     .email("admin@example.com")
+                    .username("admin")
                     .password(passwordEncoder.encode("password123"))
                     .roles(adminRoleEntities)
+                    .status(AccountStatus.ACTIVE)
+                    .currentVerificationToken("SEED_VERIFIED")
+                    .expiredVerificationTokenDate(LocalDateTime.now().plusDays(1))
                     .build());
         }
 
         // Create Normal UserEntity
-        if (userRepository.findByEmail("user@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("user@example.com").isEmpty()) {
             Set<RoleEntity> userRoleEntities = new HashSet<>();
             userRoleEntities.add(userRoleEntity);
 
             userRepository.save(UserEntity.builder()
-                    .firstname("Normal")
-                    .lastname("UserEntity")
                     .email("user@example.com")
+                    .username("user")
                     .password(passwordEncoder.encode("password123"))
                     .roles(userRoleEntities)
+                    .status(AccountStatus.ACTIVE)
+                    .currentVerificationToken("SEED_VERIFIED")
+                    .expiredVerificationTokenDate(LocalDateTime.now().plusDays(1))
                     .build());
         }
     }

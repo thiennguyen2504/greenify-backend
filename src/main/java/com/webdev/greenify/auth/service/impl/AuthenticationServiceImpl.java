@@ -1,5 +1,8 @@
 package com.webdev.greenify.auth.service.impl;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -79,19 +82,53 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("UserEntity not found"));
+        String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
+
+        UserEntity user = repository.findByIdentifier(normalizedIdentifier)
+                .orElseThrow(() -> new BadCredentialsException("Username or password is incorrect"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid password");
+            throw new BadCredentialsException("Username or password is incorrect");
         }
 
-        var jwtToken = generateToken(user);
-        var refreshToken = generateRefreshToken(user);
+        String jwtToken = generateToken(user, jwtProperties.getExpiration());
+        String refreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    private String normalizeIdentifier(String identifier) {
+        if (identifier == null)
+            return null;
+        String value = identifier.trim();
+
+        if (value.contains("@")) {
+            return identifier.toLowerCase();
+        }
+
+        if (value.matches("^[0-9+().\\s-]+$")) {
+            return normalizePhone(value);
+        }
+
+        return identifier.trim().toLowerCase().replaceAll("\\s+", "");
+    }
+
+    private String normalizePhone(String phone) {
+        try {
+            PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+            Phonenumber.PhoneNumber number = phoneUtil.parse(phone, "VN");
+
+            if (!phoneUtil.isValidNumber(number)) {
+                throw new IllegalArgumentException("Invalid phone number");
+            }
+
+            return phoneUtil.format(number, PhoneNumberUtil.PhoneNumberFormat.E164);
+
+        } catch (NumberParseException e) {
+            throw new IllegalArgumentException("Invalid phone format", e);
+        }
     }
 
     @Override
@@ -102,16 +139,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new InvalidTokenException("Refresh token has been revoked");
         }
 
-        String userEmail = extractUsername(refreshToken);
-        if (userEmail != null) {
-            var user = this.repository.findByEmail(userEmail)
+        String userId = extractUserId(refreshToken);
+        if (userId != null) {
+            UserEntity user = this.repository.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
 
             if (isTokenValid(refreshToken, user)) {
                 tokenBlacklistService.blacklistRefreshToken(refreshToken);
 
-                var accessToken = generateToken(user);
-                var newRefreshToken = generateRefreshToken(user);
+                String accessToken = generateToken(user, jwtProperties.getExpiration());
+                String newRefreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
 
                 return AuthenticationResponse.builder()
                         .accessToken(accessToken)
@@ -132,11 +169,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void verifyUser(String token) {
-        String email = extractUsername(token);
-        if (email == null) {
+        String userId = extractUserId(token);
+        if (userId == null) {
             throw new InvalidTokenException("Invalid token");
         }
-        UserEntity userEntity = repository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
+        UserEntity userEntity = repository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
         if (isTokenValid(token, userEntity)) {
             repository.save(userEntity);
         } else {
@@ -152,15 +189,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return generateToken(userEntity, jwtProperties.getRefreshTokenExpiration());
     }
 
-    private String generateToken(UserEntity userEntity, long expiration) {
+    @Override
+    public String generateToken(UserEntity userEntity, long expiration) {
         try {
             JWSSigner signer = new MACSigner(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
 
             JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-                    .subject(userEntity.getEmail())
+                    .subject(userEntity.getId())
                     .issueTime(new Date())
                     .expirationTime(new Date(System.currentTimeMillis() + expiration))
-                    .claim("roles", userEntity.getRoles().stream().map(RoleEntity::getName).collect(Collectors.toList()));
+                    .claim("roles", userEntity.getRoles().stream().map(RoleEntity::getName).toList());
 
             SignedJWT signedJWT = new SignedJWT(
                     new JWSHeader(JWSAlgorithm.HS256),
@@ -173,7 +211,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
-    public String extractUsername(String token) {
+    public String extractUserId(String token) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token);
             return signedJWT.getJWTClaimsSet().getSubject();
@@ -192,10 +230,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
 
             JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-            String username = claims.getSubject();
+            String userId = claims.getSubject();
             Date expiration = claims.getExpirationTime();
 
-            return (username.equals(userEntityDetails.getEmail()) && expiration.after(new Date()));
+            return (userId.equals(userEntityDetails.getId()) && expiration.after(new Date()));
         } catch (JOSEException | ParseException e) {
             return false;
         }

@@ -5,6 +5,7 @@ import com.webdev.greenify.auth.dto.AuthenticationResponse;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
+import com.webdev.greenify.user.entity.UserEntity;
 
 
 
@@ -22,4 +23,6 @@ public interface AuthenticationService {
     void verifyUser(String token);
 
     void logout(LogoutRequest request);
+
+    String generateToken(UserEntity userEntity, long expiration);
 }
