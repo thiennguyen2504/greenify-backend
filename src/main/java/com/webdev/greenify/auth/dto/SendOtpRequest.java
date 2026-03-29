@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LogoutRequest {
-    @NotBlank(message = "Refresh token must not be blank")
-    private String refreshToken;
+public class SendOtpRequest {
+    @NotBlank(message = "Identifier is required")
+    private String identifier;
 }

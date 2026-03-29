@@ -52,10 +52,4 @@ public class UserEntity extends BaseEntity {
 
     @Column
     private String oauthId;
-
-    @Column(nullable = false)
-    private String currentVerificationToken;
-
-    @Column(nullable = false)
-    private LocalDateTime expiredVerificationTokenDate;
 }

@@ -47,8 +47,6 @@ public class SeedData implements CommandLineRunner {
                     .password(passwordEncoder.encode("password123"))
                     .roles(adminRoleEntities)
                     .status(AccountStatus.ACTIVE)
-                    .currentVerificationToken("SEED_VERIFIED")
-                    .expiredVerificationTokenDate(LocalDateTime.now().plusDays(1))
                     .build());
         }
 
@@ -63,8 +61,6 @@ public class SeedData implements CommandLineRunner {
                     .password(passwordEncoder.encode("password123"))
                     .roles(userRoleEntities)
                     .status(AccountStatus.ACTIVE)
-                    .currentVerificationToken("SEED_VERIFIED")
-                    .expiredVerificationTokenDate(LocalDateTime.now().plusDays(1))
                     .build());
         }
     }

@@ -5,24 +5,23 @@ import com.webdev.greenify.auth.dto.AuthenticationResponse;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
+import com.webdev.greenify.auth.dto.SendOtpRequest;
+import com.webdev.greenify.auth.dto.VerifyOtpRequest;
+import com.webdev.greenify.auth.dto.VerifyOtpResponse;
 import com.webdev.greenify.user.entity.UserEntity;
 
-
-
-
-
-
-
 public interface AuthenticationService {
-    void register(RegisterRequest request);
+    void sendOtp(SendOtpRequest request);
+
+    VerifyOtpResponse verifyOtp(VerifyOtpRequest request);
+
+    AuthenticationResponse register(RegisterRequest request);
 
     AuthenticationResponse authenticate(AuthenticationRequest request);
 
     AuthenticationResponse refreshToken(RefreshTokenRequest request);
 
-    void verifyUser(String token);
-
-    void logout(LogoutRequest request);
+    void logout(LogoutRequest request, String authHeader);
 
     String generateToken(UserEntity userEntity, long expiration);
 }
