@@ -1,10 +1,9 @@
 package com.webdev.greenify.config;
 
-import com.webdev.greenify.filter.JwtBlacklistFilter;
-import com.webdev.greenify.properties.JwtProperties;
-import com.webdev.greenify.security.CustomAuthenticationFailureHandler;
-import com.webdev.greenify.security.CustomOAuth2UserService;
-import com.webdev.greenify.security.OAuth2LoginSuccessHandler;
+
+import com.webdev.greenify.auth.handler.CustomAuthenticationFailureHandler;
+import com.webdev.greenify.auth.handler.OAuth2LoginSuccessHandler;
+import com.webdev.greenify.auth.service.impl.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
