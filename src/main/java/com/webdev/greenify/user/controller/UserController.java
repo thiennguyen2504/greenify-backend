@@ -30,4 +30,10 @@ public class UserController {
     public ResponseEntity<UserDetailResponseDTO> getUserById(@PathVariable String id) {
         return ResponseEntity.ok(userService.findUserById(id));
     }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<UserDetailResponseDTO> getCurrentUser() {
+        return ResponseEntity.ok(userService.getCurrentUser());
+    }
 }
