@@ -2,6 +2,7 @@ package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.webdev.greenify.user.enumeration.AccountStatus;
-
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
