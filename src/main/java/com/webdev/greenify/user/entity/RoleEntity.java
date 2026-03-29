@@ -18,7 +18,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "app_entity")
+@Table(name = "app_role")
 public class RoleEntity extends BaseEntity{
     @Column(unique = true)
     private String name;

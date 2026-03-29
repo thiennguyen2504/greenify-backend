@@ -22,7 +22,7 @@ public class UserServiceImpl implements UserService {
     public List<UserDetailResponseDTO> findAllUsers() {
         return repository.findAllWithRoles().stream()
                 .map(userMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

@@ -17,6 +17,6 @@ public class UserDetailResponseDTO {
     private String firstname;
     private String lastname;
     private String email;
-    private Set<RoleEntity> roleEntities;
+    private Set<RoleEntity> roles;
     private boolean enabled;
 }
