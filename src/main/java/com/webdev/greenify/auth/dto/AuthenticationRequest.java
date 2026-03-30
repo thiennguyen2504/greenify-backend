@@ -1,6 +1,5 @@
 package com.webdev.greenify.auth.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,9 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthenticationRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email is invalid")
-    private String email;
+    @NotBlank(message = "Credential is required")
+    private String identifier;
 
     @NotBlank(message = "Password is required")
     private String password;

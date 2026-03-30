@@ -7,4 +7,5 @@ import java.util.List;
 public interface UserService {
     List<UserDetailResponseDTO> findAllUsers();
     UserDetailResponseDTO findUserById(String id);
+    UserDetailResponseDTO getCurrentUser();
 }

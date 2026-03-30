@@ -6,10 +6,10 @@ import com.webdev.greenify.user.mapper.UserMapper;
 import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,5 +30,11 @@ public class UserServiceImpl implements UserService {
         return repository.findById(id)
                 .map(userMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
+    }
+
+    @Override
+    public UserDetailResponseDTO getCurrentUser() {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        return findUserById(userId);
     }
 }

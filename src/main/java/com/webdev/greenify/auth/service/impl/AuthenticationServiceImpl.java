@@ -1,5 +1,8 @@
 package com.webdev.greenify.auth.service.impl;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -14,19 +17,24 @@ import com.webdev.greenify.auth.dto.AuthenticationResponse;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
+import com.webdev.greenify.auth.dto.SendOtpRequest;
+import com.webdev.greenify.auth.dto.VerifyOtpRequest;
+import com.webdev.greenify.auth.dto.VerifyOtpResponse;
 import com.webdev.greenify.auth.service.AuthenticationService;
+import com.webdev.greenify.auth.service.OtpService;
 import com.webdev.greenify.auth.service.TokenBlacklistService;
+import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.DuplicateResourceException;
 import com.webdev.greenify.common.exception.InvalidTokenException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.common.exception.TokenException;
 import com.webdev.greenify.config.JwtProperties;
-import com.webdev.greenify.notification.service.EmailService;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,9 +42,7 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,52 +52,118 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final OtpService otpService;
 
     @Override
-    public void register(RegisterRequest request) {
-        if (repository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already exists");
+    public void sendOtp(SendOtpRequest request) {
+        String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
+        if (repository.findByIdentifier(normalizedIdentifier).isPresent()) {
+            throw new DuplicateResourceException("Email or phone number already registered");
         }
-
-        Set<RoleEntity> roleEntities = new HashSet<>();
-        if (request.getRoles() != null) {
-            request.getRoles().forEach(roleName -> {
-                RoleEntity roleEntity = roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new ResourceNotFoundException("RoleEntity not found: " + roleName));
-                roleEntities.add(roleEntity);
-            });
-        }
-
-        var user = UserEntity.builder()
-                .firstname(request.getFirstname())
-                .lastname(request.getLastname())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .roles(roleEntities)
-                .build();
-        var savedUser = repository.save(user);
-
-        var jwtToken = generateToken(savedUser);
-        emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFirstname(), jwtToken);
+        otpService.processAndSendOtp(normalizedIdentifier);
     }
 
     @Override
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("UserEntity not found"));
+    public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
+        String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
+        String token = otpService.verifyOtp(normalizedIdentifier, request.getOtp());
+        return VerifyOtpResponse.builder().verificationToken(token).build();
+    }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid password");
+    @Override
+    public AuthenticationResponse register(RegisterRequest request) {
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new AppException("Passwords do not match", HttpStatus.BAD_REQUEST);
         }
 
-        var jwtToken = generateToken(user);
-        var refreshToken = generateRefreshToken(user);
+        String identifier = otpService.getIdentifierFromVerificationToken(request.getVerificationToken());
+        if (identifier == null) {
+            throw new InvalidTokenException("Invalid or expired verification token");
+        }
+
+        if (repository.findByIdentifier(identifier).isPresent()) {
+            throw new DuplicateResourceException("Email or phone number already registered");
+        }
+
+        RoleEntity role = roleRepository.findByName("USER")
+                .orElseThrow(() -> new ResourceNotFoundException("Role USER not found"));
+
+        String email = null;
+        String phone = null;
+        if (identifier.contains("@")) {
+            email = identifier;
+        } else if (identifier.matches("^\\+[1-9]\\d{1,14}$")) {
+            phone = identifier;
+        }
+
+        UserEntity user = UserEntity.builder()
+                .email(email)
+                .phoneNumber(phone)
+                .password(passwordEncoder.encode(request.getPassword()))
+                .roles(Set.of(role))
+                .status(com.webdev.greenify.user.enumeration.AccountStatus.ACTIVE)
+                .build();
+        repository.save(user);
+
+        otpService.clearVerificationToken(request.getVerificationToken());
+        String jwtToken = generateToken(user, jwtProperties.getExpiration());
+        String refreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Override
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
+
+        UserEntity user = repository.findByIdentifier(normalizedIdentifier)
+                .orElseThrow(() -> new BadCredentialsException("Username or password is incorrect"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Username or password is incorrect");
+        }
+
+        String jwtToken = generateToken(user, jwtProperties.getExpiration());
+        String refreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private String normalizeIdentifier(String identifier) {
+        if (identifier == null)
+            return null;
+        String value = identifier.trim();
+
+        if (value.contains("@")) {
+            return identifier.toLowerCase();
+        }
+
+        if (value.matches("^[0-9+().\\s-]+$")) {
+            return normalizePhone(value);
+        }
+
+        return identifier.trim().toLowerCase().replaceAll("\\s+", "");
+    }
+
+    private String normalizePhone(String phone) {
+        try {
+            PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+            Phonenumber.PhoneNumber number = phoneUtil.parse(phone, "VN");
+
+            if (!phoneUtil.isValidNumber(number)) {
+                throw new IllegalArgumentException("Invalid phone number");
+            }
+
+            return phoneUtil.format(number, PhoneNumberUtil.PhoneNumberFormat.E164);
+
+        } catch (NumberParseException e) {
+            throw new IllegalArgumentException("Invalid phone format", e);
+        }
     }
 
     @Override
@@ -102,65 +174,49 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new InvalidTokenException("Refresh token has been revoked");
         }
 
-        String userEmail = extractUsername(refreshToken);
-        if (userEmail != null) {
-            var user = this.repository.findByEmail(userEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
+        String userId = extractUserId(refreshToken);
+        if (userId == null) {
+            throw new InvalidTokenException("Invalid refresh token");
+        }
 
-            if (isTokenValid(refreshToken, user)) {
-                tokenBlacklistService.blacklistRefreshToken(refreshToken);
+        UserEntity user = repository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-                var accessToken = generateToken(user);
-                var newRefreshToken = generateRefreshToken(user);
+        if (isTokenValid(refreshToken, user)) {
+            tokenBlacklistService.blacklistRefreshToken(refreshToken);
 
-                return AuthenticationResponse.builder()
-                        .accessToken(accessToken)
-                        .refreshToken(newRefreshToken)
-                        .build();
-            }
+            String accessToken = generateToken(user, jwtProperties.getExpiration());
+            String newRefreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
+
+            return AuthenticationResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(newRefreshToken)
+                    .build();
         }
         throw new InvalidTokenException("Invalid refresh token");
     }
 
     @Override
-    public void logout(LogoutRequest request) {
-        String token = request.getToken();
-        if (token != null) {
-            tokenBlacklistService.blacklistAccessToken(token);
+    public void logout(LogoutRequest request, String authHeader) {
+        String refreshToken = request.getRefreshToken();
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String accessToken = authHeader.substring(7);
+
+            tokenBlacklistService.blacklistAccessToken(accessToken);
         }
+        tokenBlacklistService.blacklistRefreshToken(refreshToken);
     }
 
     @Override
-    public void verifyUser(String token) {
-        String email = extractUsername(token);
-        if (email == null) {
-            throw new InvalidTokenException("Invalid token");
-        }
-        UserEntity userEntity = repository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("UserEntity not found"));
-        if (isTokenValid(token, userEntity)) {
-            repository.save(userEntity);
-        } else {
-            throw new InvalidTokenException("Invalid token");
-        }
-    }
-
-    public String generateToken(UserEntity userEntity) {
-        return generateToken(userEntity, jwtProperties.getExpiration());
-    }
-
-    public String generateRefreshToken(UserEntity userEntity) {
-        return generateToken(userEntity, jwtProperties.getRefreshTokenExpiration());
-    }
-
-    private String generateToken(UserEntity userEntity, long expiration) {
+    public String generateToken(UserEntity userEntity, long expiration) {
         try {
             JWSSigner signer = new MACSigner(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
 
             JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-                    .subject(userEntity.getEmail())
+                    .subject(userEntity.getId())
                     .issueTime(new Date())
                     .expirationTime(new Date(System.currentTimeMillis() + expiration))
-                    .claim("roles", userEntity.getRoles().stream().map(RoleEntity::getName).collect(Collectors.toList()));
+                    .claim("roles", userEntity.getRoles().stream().map(RoleEntity::getName).toList());
 
             SignedJWT signedJWT = new SignedJWT(
                     new JWSHeader(JWSAlgorithm.HS256),
@@ -173,7 +229,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
-    public String extractUsername(String token) {
+    public String extractUserId(String token) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token);
             return signedJWT.getJWTClaimsSet().getSubject();
@@ -182,7 +238,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
-    public boolean isTokenValid(String token, UserEntity userEntityDetails) {
+    public boolean isTokenValid(String token, UserEntity user) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token);
             JWSVerifier verifier = new MACVerifier(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
@@ -192,10 +248,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
 
             JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-            String username = claims.getSubject();
+            String userId = claims.getSubject();
             Date expiration = claims.getExpirationTime();
 
-            return (username.equals(userEntityDetails.getEmail()) && expiration.after(new Date()));
+            return (userId.equals(user.getId()) && expiration.after(new Date()));
         } catch (JOSEException | ParseException e) {
             return false;
         }

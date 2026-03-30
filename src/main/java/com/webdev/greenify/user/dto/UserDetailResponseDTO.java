@@ -1,5 +1,6 @@
 package com.webdev.greenify.user.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.webdev.greenify.user.entity.RoleEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,11 +13,11 @@ import java.util.Set;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserDetailResponseDTO {
-    private Long id;
-    private String firstname;
-    private String lastname;
+    private String id;
     private String email;
+    private String phoneNumber;
+    private String username;
     private Set<RoleEntity> roles;
-    private boolean enabled;
 }

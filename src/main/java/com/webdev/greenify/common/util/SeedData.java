@@ -2,6 +2,7 @@ package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,31 +34,31 @@ public class SeedData implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("USER").build()));
 
         // Create Admin UserEntity
-        if (userRepository.findByEmail("admin@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("admin@example.com").isEmpty()) {
             Set<RoleEntity> adminRoleEntities = new HashSet<>();
             adminRoleEntities.add(adminRoleEntity);
             adminRoleEntities.add(userRoleEntity);
 
             userRepository.save(UserEntity.builder()
-                    .firstname("Admin")
-                    .lastname("UserEntity")
                     .email("admin@example.com")
+                    .username("admin")
                     .password(passwordEncoder.encode("password123"))
                     .roles(adminRoleEntities)
+                    .status(AccountStatus.ACTIVE)
                     .build());
         }
 
         // Create Normal UserEntity
-        if (userRepository.findByEmail("user@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("user@example.com").isEmpty()) {
             Set<RoleEntity> userRoleEntities = new HashSet<>();
             userRoleEntities.add(userRoleEntity);
 
             userRepository.save(UserEntity.builder()
-                    .firstname("Normal")
-                    .lastname("UserEntity")
                     .email("user@example.com")
+                    .username("user")
                     .password(passwordEncoder.encode("password123"))
                     .roles(userRoleEntities)
+                    .status(AccountStatus.ACTIVE)
                     .build());
         }
     }
