@@ -61,6 +61,11 @@ public class GreenActionServiceImpl implements GreenActionService {
         UserEntity user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Use current date if actionDate is not provided
+        LocalDate effectiveActionDate = request.getActionDate() != null 
+                ? request.getActionDate() 
+                : LocalDate.now();
+
         // Create post entity
         GreenActionPostEntity post = GreenActionPostEntity.builder()
                 .user(user)
@@ -69,7 +74,7 @@ public class GreenActionServiceImpl implements GreenActionService {
                 .mediaUrl(request.getMediaUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .actionDate(request.getActionDate())
+                .actionDate(effectiveActionDate)
                 .status(PostStatus.PENDING_REVIEW)
                 .approveCount(0)
                 .rejectCount(0)

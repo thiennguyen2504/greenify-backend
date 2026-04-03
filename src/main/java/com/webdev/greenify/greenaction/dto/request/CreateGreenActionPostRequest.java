@@ -28,6 +28,5 @@ public class CreateGreenActionPostRequest {
 
     private BigDecimal longitude;
 
-    @NotNull(message = "Action date is required")
-    private LocalDate actionDate;
+    private LocalDate actionDate; // Optional - will use current date if not provided
 }
