@@ -1,7 +1,6 @@
 package com.webdev.greenify.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.webdev.greenify.user.entity.RoleEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,5 +18,6 @@ public class UserDetailResponseDTO {
     private String email;
     private String phoneNumber;
     private String username;
-    private Set<RoleEntity> roles;
+    private Set<String> roles;
+    private UserProfileResponseDTO userProfile;
 }
