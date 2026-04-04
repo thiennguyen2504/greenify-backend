@@ -59,7 +59,7 @@ public class ProfileServiceImpl implements ProfileService {
         profile.setStatus(isProfileComplete(profile) ? UserProfileStatus.COMPLETE : UserProfileStatus.IN_COMPLETE);
 
         if (request.getAvatar() != null) {
-            ProfileImageEntity image = imageMapper.toEntity(request.getAvatar());
+            ProfileImageEntity image = imageMapper.toProfileImageEntity(request.getAvatar());
             image.setStatus(ImageStatus.ACTIVE);
             image.setUserProfile(profile);
             profile.setAvatar(image);
@@ -86,9 +86,9 @@ public class ProfileServiceImpl implements ProfileService {
         userProfileMapper.updateProfileFromDto(request, profile);
         if (request.getAvatar() != null) {
             if (profile.getAvatar() != null)
-                imageMapper.update(request.getAvatar(), profile.getAvatar());
+                imageMapper.updateProfileImage(request.getAvatar(), profile.getAvatar());
             else {
-                ProfileImageEntity image = imageMapper.toEntity(request.getAvatar());
+                ProfileImageEntity image = imageMapper.toProfileImageEntity(request.getAvatar());
                 image.setStatus(ImageStatus.ACTIVE);
                 image.setUserProfile(profile);
                 profile.setAvatar(image);

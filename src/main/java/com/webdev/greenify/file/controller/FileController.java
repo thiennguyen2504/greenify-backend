@@ -19,7 +19,7 @@ public class FileController {
     private final FileService fileService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'CTV')")
     public ResponseEntity<ImageRequestDTO> uploadImage(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(fileService.uploadImage(file));
     }

@@ -12,6 +12,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,7 +25,9 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "post_reviews")
+@Table(name = "post_reviews", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_post_reviewer", columnNames = {"post_id", "reviewer_id"})
+})
 public class PostReviewEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -45,6 +48,6 @@ public class PostReviewEntity extends BaseEntity {
     @Column(name = "reject_reason_note", columnDefinition = "TEXT")
     private String rejectReasonNote;
 
-    @Column(name = "is_valid")
-    private Boolean isValid;
+    @Column(name = "is_valid", nullable = false)
+    private Boolean isValid = true;
 }

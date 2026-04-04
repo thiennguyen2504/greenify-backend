@@ -1,5 +1,7 @@
 package com.webdev.greenify.greenaction.dto.request;
 
+import com.webdev.greenify.file.dto.ImageRequestDTO;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -21,12 +23,13 @@ public class CreateGreenActionPostRequest {
 
     private String caption;
 
-    @NotBlank(message = "Media URL is required")
-    private String mediaUrl;
+    @NotNull(message = "Media image is required")
+    @Valid
+    private ImageRequestDTO media;
 
     private BigDecimal latitude;
 
     private BigDecimal longitude;
 
-    private LocalDate actionDate; // Optional - will use current date if not provided
+    private LocalDate actionDate;
 }

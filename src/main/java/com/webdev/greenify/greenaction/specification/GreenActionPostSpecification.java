@@ -13,7 +13,12 @@ public class GreenActionPostSpecification {
     }
 
     public static Specification<GreenActionPostEntity> hasStatus(PostStatus status) {
-        return (root, query, cb) -> cb.equal(root.get("status"), status);
+        return (root, query, cb) -> {
+            if (status == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("status"), status);
+        };
     }
 
     public static Specification<GreenActionPostEntity> hasActionTypeId(String actionTypeId) {

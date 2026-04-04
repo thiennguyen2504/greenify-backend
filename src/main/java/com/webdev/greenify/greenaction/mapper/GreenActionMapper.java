@@ -8,23 +8,26 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface GreenActionMapper {
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
+    @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
     GreenActionPostSummaryResponse toSummaryResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
+    @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
     GreenActionPostDetailResponse toDetailResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
     @Mapping(target = "actionTypeId", source = "actionType.id")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
+    @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
     @Mapping(target = "alreadyReviewed", ignore = true)
     GreenActionPostReviewerResponse toReviewerResponse(GreenActionPostEntity entity);
 
@@ -39,5 +42,13 @@ public interface GreenActionMapper {
             return username;
         }
         return entity.getUser().getEmail();
+    }
+
+    @Named("getMediaUrl")
+    default String getMediaUrl(GreenActionPostEntity entity) {
+        if (entity.getPostImage() == null) {
+            return null;
+        }
+        return entity.getPostImage().getImageUrl();
     }
 }
