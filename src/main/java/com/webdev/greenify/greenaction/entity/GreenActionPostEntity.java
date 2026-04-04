@@ -1,8 +1,10 @@
 package com.webdev.greenify.greenaction.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
+import com.webdev.greenify.file.entity.PostImageEntity;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import com.webdev.greenify.user.entity.UserEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,11 +12,13 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
@@ -40,8 +44,9 @@ public class GreenActionPostEntity extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String caption;
 
-    @Column(name = "media_url", columnDefinition = "TEXT")
-    private String mediaUrl;
+    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private PostImageEntity postImage;
 
     @Column(precision = 9, scale = 6)
     private BigDecimal latitude;
@@ -56,9 +61,9 @@ public class GreenActionPostEntity extends BaseEntity {
     @Column(length = 30)
     private PostStatus status;
 
-    @Column(name = "approve_count")
-    private Integer approveCount;
+    @Column(name = "approve_count", nullable = false)
+    private Integer approveCount = 0;
 
-    @Column(name = "reject_count")
-    private Integer rejectCount;
+    @Column(name = "reject_count", nullable = false)
+    private Integer rejectCount = 0;
 }

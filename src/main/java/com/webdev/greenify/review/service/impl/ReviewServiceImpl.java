@@ -137,9 +137,13 @@ public class ReviewServiceImpl implements ReviewService {
     private PostStatus updatePostStatusAfterReview(GreenActionPostEntity post, ReviewDecision decision) {
         PostStatus newStatus;
 
+        // Normalize null counts to 0
+        int currentApproveCount = post.getApproveCount() != null ? post.getApproveCount() : 0;
+        int currentRejectCount = post.getRejectCount() != null ? post.getRejectCount() : 0;
+
         switch (decision) {
             case APPROVE -> {
-                int newApproveCount = post.getApproveCount() + 1;
+                int newApproveCount = currentApproveCount + 1;
                 post.setApproveCount(newApproveCount);
                 
                 if (newApproveCount >= APPROVE_THRESHOLD) {
@@ -150,7 +154,7 @@ public class ReviewServiceImpl implements ReviewService {
                 }
             }
             case REJECT -> {
-                int newRejectCount = post.getRejectCount() + 1;
+                int newRejectCount = currentRejectCount + 1;
                 post.setRejectCount(newRejectCount);
                 
                 if (newRejectCount >= REJECT_THRESHOLD) {
@@ -163,7 +167,7 @@ public class ReviewServiceImpl implements ReviewService {
             case REPORT_SUSPICIOUS -> {
                 // Immediate flagging for suspicious reports
                 newStatus = PostStatus.FLAGGED;
-                post.setRejectCount(post.getRejectCount() + 1);
+                post.setRejectCount(currentRejectCount + 1);
                 log.warn("Post {} flagged as suspicious by reviewer", post.getId());
             }
             default -> throw new IllegalArgumentException("Unknown decision type: " + decision);

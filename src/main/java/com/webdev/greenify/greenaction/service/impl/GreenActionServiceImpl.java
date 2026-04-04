@@ -2,6 +2,8 @@ package com.webdev.greenify.greenaction.service.impl;
 
 import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
+import com.webdev.greenify.file.entity.PostImageEntity;
+import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
@@ -36,10 +38,14 @@ import java.util.List;
 @Slf4j
 public class GreenActionServiceImpl implements GreenActionService {
 
+    private static final int MIN_PAGE_SIZE = 1;
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final GreenActionPostRepository postRepository;
     private final GreenActionTypeRepository actionTypeRepository;
     private final UserRepository userRepository;
     private final GreenActionMapper greenActionMapper;
+    private final ImageMapper imageMapper;
 
     @Override
     @Transactional
@@ -71,7 +77,6 @@ public class GreenActionServiceImpl implements GreenActionService {
                 .user(user)
                 .actionType(actionType)
                 .caption(request.getCaption())
-                .mediaUrl(request.getMediaUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .actionDate(effectiveActionDate)
@@ -79,6 +84,13 @@ public class GreenActionServiceImpl implements GreenActionService {
                 .approveCount(0)
                 .rejectCount(0)
                 .build();
+
+        // Create and attach post image
+        if (request.getMedia() != null) {
+            PostImageEntity postImage = imageMapper.toPostImageEntity(request.getMedia());
+            postImage.setPost(post);
+            post.setPostImage(postImage);
+        }
 
         post = postRepository.save(post);
         log.info("Green action post created with ID: {} by user: {}", post.getId(), currentUserId);
@@ -89,7 +101,7 @@ public class GreenActionServiceImpl implements GreenActionService {
     @Override
     @Transactional(readOnly = true)
     public List<GreenActionPostSummaryResponse> getTopPosts(int limit) {
-        int effectiveLimit = Math.min(Math.max(limit, 1), 50);
+        int effectiveLimit = clampPageSize(limit);
         Pageable pageable = PageRequest.of(0, effectiveLimit);
         
         List<GreenActionPostEntity> posts = postRepository.findTopPostsWithUserAndActionType(
@@ -110,7 +122,11 @@ public class GreenActionServiceImpl implements GreenActionService {
             int page,
             int size) {
         
-        Pageable pageable = PageRequest.of(page, size, 
+        // Validate and clamp page/size
+        int effectivePage = Math.max(page, 0);
+        int effectiveSize = clampPageSize(size);
+        
+        Pageable pageable = PageRequest.of(effectivePage, effectiveSize, 
                 Sort.by(Sort.Direction.DESC, "approveCount")
                         .and(Sort.by(Sort.Direction.DESC, "createdAt")));
 
@@ -148,6 +164,10 @@ public class GreenActionServiceImpl implements GreenActionService {
         }
 
         return greenActionMapper.toDetailResponse(post);
+    }
+
+    private int clampPageSize(int size) {
+        return Math.min(Math.max(size, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
     }
 
     private String getCurrentUserId() {
