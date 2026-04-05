@@ -5,6 +5,8 @@ import com.webdev.greenify.station.enumeration.StationStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
@@ -43,6 +45,7 @@ public class RecyclingStationEntity extends BaseEntity {
     private String email;
 
     @Column
+    @Enumerated(EnumType.STRING)
     private StationStatus status;
 
     @OneToOne(orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, fetch = FetchType.LAZY)

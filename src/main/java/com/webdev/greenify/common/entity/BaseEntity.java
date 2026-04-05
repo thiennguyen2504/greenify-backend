@@ -1,5 +1,6 @@
 package com.webdev.greenify.common.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -12,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SoftDelete;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -59,6 +61,9 @@ public abstract class BaseEntity {
     /** Username who modified the entity. */
     @LastModifiedBy
     private String lastModifiedBy;
+
+    @Column(name = "is_deleted")
+    protected boolean isDeleted = false;
 
     @PrePersist
     public void prePersist() {
