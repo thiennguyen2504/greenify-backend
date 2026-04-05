@@ -2,6 +2,8 @@ package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
+import com.webdev.greenify.station.entity.WasteTypeEntity;
+import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
@@ -29,6 +31,7 @@ public class SeedData implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final GreenActionTypeRepository greenActionTypeRepository;
+    private final WasteTypeRepository wasteTypeRepository;
 
     @Override
     @Transactional
@@ -75,6 +78,9 @@ public class SeedData implements CommandLineRunner {
 
         // Seed Green Action Types
         seedGreenActionTypes();
+
+        // Seed Waste Types
+        seedWasteTypes();
     }
 
     private void seedGreenActionTypes() {
@@ -82,192 +88,192 @@ public class SeedData implements CommandLineRunner {
             List<GreenActionTypeEntity> actionTypes = new ArrayList<>();
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Phân loại rác")
-                    .actionName("Phân loại rác tại nhà")
+                    .groupName("Waste Sorting")
+                    .actionName("Sorting waste at home")
                     .suggestedPoints(new BigDecimal("5"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Phân loại rác")
-                    .actionName("Phân loại rác tại nơi làm việc / trường học")
+                    .groupName("Waste Sorting")
+                    .actionName("Sorting waste at work/school")
                     .suggestedPoints(new BigDecimal("6"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tái chế")
-                    .actionName("Gom giấy/plastic/lon để tái chế")
+                    .groupName("Recycling")
+                    .actionName("Collect paper/plastic/cans for recycling")
                     .suggestedPoints(new BigDecimal("5"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tái chế")
-                    .actionName("Mang rác tái chế đến điểm thu gom")
+                    .groupName("Recycling")
+                    .actionName("Bring recyclables to collection points")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Giảm nhựa")
-                    .actionName("Sử dụng bình nước cá nhân")
+                    .groupName("Plastic Reduction")
+                    .actionName("Use personal water bottles")
                     .suggestedPoints(new BigDecimal("2"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Giảm nhựa")
-                    .actionName("Dùng hộp đựng / ly cá nhân khi mua đồ ăn, nước uống")
+                    .groupName("Plastic Reduction")
+                    .actionName("Use personal containers/cups when buying food")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Giảm nhựa")
-                    .actionName("Từ chối túi nilon / ống hút nhựa")
+                    .groupName("Plastic Reduction")
+                    .actionName("Refuse plastic bags/straws")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tiết kiệm tài nguyên")
-                    .actionName("Tắt điện khi không sử dụng")
+                    .groupName("Resource Conservation")
+                    .actionName("Turn off electricity when not in use")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tiết kiệm tài nguyên")
-                    .actionName("Tiết kiệm nước trong sinh hoạt")
+                    .groupName("Resource Conservation")
+                    .actionName("Conserve water in daily activities")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Di chuyển xanh")
-                    .actionName("Đi bộ / xe đạp cho quãng đường ngắn")
+                    .groupName("Green Transportation")
+                    .actionName("Walk/Bike for short distances")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Di chuyển xanh")
-                    .actionName("Sử dụng phương tiện công cộng")
+                    .groupName("Green Transportation")
+                    .actionName("Use public transportation")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Làm sạch môi trường")
-                    .actionName("Nhặt rác tại khu vực công cộng")
+                    .groupName("Environmental Cleanup")
+                    .actionName("Pick up trash in public areas")
                     .suggestedPoints(new BigDecimal("8"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Làm sạch môi trường")
-                    .actionName("Dọn vệ sinh khu vực sống")
+                    .groupName("Environmental Cleanup")
+                    .actionName("Clean up local living neighborhood")
                     .suggestedPoints(new BigDecimal("6"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Trồng xanh")
-                    .actionName("Trồng cây / trồng hoa")
+                    .groupName("Greenery")
+                    .actionName("Plant trees/flowers")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Trồng xanh")
-                    .actionName("Chăm sóc cây xanh định kỳ")
+                    .groupName("Greenery")
+                    .actionName("Regularly care for plants")
                     .suggestedPoints(new BigDecimal("2"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tái sử dụng")
-                    .actionName("Tái sử dụng đồ vật thay vì bỏ đi")
+                    .groupName("Reuse")
+                    .actionName("Reuse items instead of throwing them away")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tiêu dùng xanh")
-                    .actionName("Mua sản phẩm thân thiện môi trường")
+                    .groupName("Green Consumption")
+                    .actionName("Buy eco-friendly products")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tham gia cộng đồng")
-                    .actionName("Tham gia sự kiện môi trường do app/NGO tổ chức")
+                    .groupName("Community Participation")
+                    .actionName("Join environmental events organized by App/NGO")
                     .suggestedPoints(new BigDecimal("10"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Tuyên truyền xanh")
-                    .actionName("Chia sẻ/tuyên truyền thông điệp môi trường có hành động thực tế đi kèm")
+                    .groupName("Green Awareness")
+                    .actionName("Share environmental messages with practical actions")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Sáng kiến xanh")
-                    .actionName("Tổ chức hoặc khởi xướng hoạt động xanh quy mô nhỏ")
+                    .groupName("Green Initiative")
+                    .actionName("Organize or initiate small green activities")
                     .suggestedPoints(new BigDecimal("9"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Báo cáo môi trường")
-                    .actionName("Raise bãi rác / điểm ô nhiễm cần xử lý")
+                    .groupName("Environmental Reporting")
+                    .actionName("Report illegal dumping/polluted spots")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Sáng tạo tái chế")
-                    .actionName("Tự làm sản phẩm từ vật liệu tái chế")
+                    .groupName("Creative Recycling")
+                    .actionName("DIY products from recycled materials")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Hữu cơ tại nhà")
-                    .actionName("Ủ rác hữu cơ / làm compost đơn giản")
+                    .groupName("Organic at Home")
+                    .actionName("Compost organic wastes at home")
                     .suggestedPoints(new BigDecimal("8"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Đóng góp cộng đồng")
-                    .actionName("Duyệt bài hợp lệ với tư cách CTV")
+                    .groupName("Community Contribution")
+                    .actionName("Review posts as a Contributor")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
@@ -275,6 +281,45 @@ public class SeedData implements CommandLineRunner {
 
             greenActionTypeRepository.saveAll(actionTypes);
             log.info("Seeded {} green action types", actionTypes.size());
+        }
+    }
+
+    private void seedWasteTypes() {
+        if (wasteTypeRepository.count() == 0) {
+            List<WasteTypeEntity> wasteTypes = new ArrayList<>();
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Plastic")
+                    .description("Plastic bottles, containers, bags, and household plastic items.")
+                    .build());
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Paper")
+                    .description("Newspapers, books, cardboard, and office paper.")
+                    .build());
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Metal")
+                    .description("Aluminum cans, scrap iron, aluminum, and copper.")
+                    .build());
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Glass")
+                    .description("Glass bottles, jars, and broken glassware.")
+                    .build());
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Organic")
+                    .description("Food scraps, fruit peels, vegetables, and garden waste.")
+                    .build());
+
+            wasteTypes.add(WasteTypeEntity.builder()
+                    .name("Hazardous")
+                    .description("Old batteries, fluorescent bulbs, and chemical containers.")
+                    .build());
+
+            wasteTypeRepository.saveAll(wasteTypes);
+            log.info("Seeded {} waste types", wasteTypes.size());
         }
     }
 }
