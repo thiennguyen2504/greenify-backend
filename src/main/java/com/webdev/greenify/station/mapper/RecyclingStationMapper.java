@@ -7,9 +7,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-import java.util.List;
-
-@Mapper(uses = {AddressMapper.class})
+@Mapper(uses = {AddressMapper.class, OpenTimeMapper.class})
 public interface RecyclingStationMapper {
 
     @Mapping(target = "status", ignore = true)
@@ -17,8 +15,6 @@ public interface RecyclingStationMapper {
     RecyclingStationEntity toEntity(RecyclingStationRequestDTO dto);
 
     RecyclingStationResponseDTO toRecyclingStationResponseDTO(RecyclingStationEntity entity);
-
-    List<RecyclingStationResponseDTO> toRecyclingStationResponseDTOList(List<RecyclingStationEntity> entities);
 
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "wasteTypes", ignore = true)

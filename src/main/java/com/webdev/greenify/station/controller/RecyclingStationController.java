@@ -35,6 +35,7 @@ public class RecyclingStationController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<RecyclingStationResponseDTO>> getAllStations(Pageable pageable) {
         return ResponseEntity.ok(recyclingStationService.getAllStations(pageable));
     }

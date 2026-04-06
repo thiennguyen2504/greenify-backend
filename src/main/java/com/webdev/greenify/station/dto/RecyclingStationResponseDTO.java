@@ -23,4 +23,5 @@ public class RecyclingStationResponseDTO {
     private StationStatus status;
     private AddressResponseDTO address;
     private List<WasteTypeResponseDTO> wasteTypes;
+    private List<OpenTimeResponseDTO> openTimes;
 }

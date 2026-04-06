@@ -22,4 +22,5 @@ public class RecyclingStationRequestDTO {
     private String email;
     private AddressRequestDTO address;
     private List<String> wasteTypeIds;
+    private List<OpenTimeRequestDTO> openTimes;
 }

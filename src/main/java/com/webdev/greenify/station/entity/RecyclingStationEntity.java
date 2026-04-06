@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -59,4 +60,7 @@ public class RecyclingStationEntity extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "waste_type_id")
     )
     private List<WasteTypeEntity> wasteTypes;
+
+    @OneToMany(mappedBy = "recyclingStation", cascade = {CascadeType.ALL}, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<OpenTimeEntity> openTimes;
 }

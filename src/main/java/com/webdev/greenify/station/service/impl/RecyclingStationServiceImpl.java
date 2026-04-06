@@ -40,6 +40,7 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
             stationEntity.setWasteTypes(wasteTypes);
         }
         stationEntity.setStatus(StationStatus.ACTIVE);
+        stationEntity.getOpenTimes().forEach(openTime -> openTime.setRecyclingStation(stationEntity));
         RecyclingStationEntity savedStation = recyclingStationRepository.save(stationEntity);
         return recyclingStationMapper.toRecyclingStationResponseDTO(savedStation);
     }
@@ -82,7 +83,7 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
                 }
             }
         }
-
+        stationEntity.getOpenTimes().forEach(openTime -> openTime.setRecyclingStation(stationEntity));
         RecyclingStationEntity savedStation = recyclingStationRepository.save(stationEntity);
         return recyclingStationMapper.toRecyclingStationResponseDTO(savedStation);
     }
