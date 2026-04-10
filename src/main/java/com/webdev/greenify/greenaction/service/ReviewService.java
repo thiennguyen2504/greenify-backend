@@ -1,8 +1,8 @@
-package com.webdev.greenify.review.service;
+package com.webdev.greenify.greenaction.service;
 
+import com.webdev.greenify.greenaction.dto.request.SubmitReviewRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostReviewerResponse;
-import com.webdev.greenify.review.dto.request.SubmitReviewRequest;
-import com.webdev.greenify.review.dto.response.SubmitReviewResponse;
+import com.webdev.greenify.greenaction.dto.response.SubmitReviewResponse;
 
 public interface ReviewService {
 

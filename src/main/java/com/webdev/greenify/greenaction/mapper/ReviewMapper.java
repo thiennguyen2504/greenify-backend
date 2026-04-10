@@ -1,13 +1,13 @@
-package com.webdev.greenify.review.mapper;
+package com.webdev.greenify.greenaction.mapper;
 
+import com.webdev.greenify.greenaction.dto.response.SubmitReviewResponse;
+import com.webdev.greenify.greenaction.entity.PostReviewEntity;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
-import com.webdev.greenify.review.dto.response.SubmitReviewResponse;
-import com.webdev.greenify.review.entity.PostReviewEntity;
-import com.webdev.greenify.review.enumeration.ReviewDecision;
+import com.webdev.greenify.greenaction.enumeration.ReviewDecision;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface ReviewMapper {
 
     @Mapping(target = "reviewId", source = "review.id")

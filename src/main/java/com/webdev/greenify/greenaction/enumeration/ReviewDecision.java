@@ -1,4 +1,4 @@
-package com.webdev.greenify.review.enumeration;
+package com.webdev.greenify.greenaction.enumeration;
 
 public enum ReviewDecision {
     APPROVE,

@@ -1,8 +1,8 @@
-package com.webdev.greenify.review.dto.response;
+package com.webdev.greenify.greenaction.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
-import com.webdev.greenify.review.enumeration.ReviewDecision;
+import com.webdev.greenify.greenaction.enumeration.ReviewDecision;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

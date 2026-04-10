@@ -1,9 +1,9 @@
-package com.webdev.greenify.review.controller;
+package com.webdev.greenify.greenaction.controller;
 
+import com.webdev.greenify.greenaction.dto.request.SubmitReviewRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostReviewerResponse;
-import com.webdev.greenify.review.dto.request.SubmitReviewRequest;
-import com.webdev.greenify.review.dto.response.SubmitReviewResponse;
-import com.webdev.greenify.review.service.ReviewService;
+import com.webdev.greenify.greenaction.dto.response.SubmitReviewResponse;
+import com.webdev.greenify.greenaction.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

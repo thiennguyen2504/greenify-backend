@@ -1,6 +1,6 @@
-package com.webdev.greenify.review.dto.request;
+package com.webdev.greenify.greenaction.dto.request;
 
-import com.webdev.greenify.review.enumeration.ReviewDecision;
+import com.webdev.greenify.greenaction.enumeration.ReviewDecision;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

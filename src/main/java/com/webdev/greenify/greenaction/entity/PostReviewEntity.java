@@ -1,8 +1,7 @@
-package com.webdev.greenify.review.entity;
+package com.webdev.greenify.greenaction.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
-import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
-import com.webdev.greenify.review.enumeration.ReviewDecision;
+import com.webdev.greenify.greenaction.enumeration.ReviewDecision;
 import com.webdev.greenify.user.entity.UserEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
