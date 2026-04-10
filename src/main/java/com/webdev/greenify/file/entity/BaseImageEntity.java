@@ -37,5 +37,5 @@ public abstract class BaseImageEntity extends BaseEntity {
     private String imageUrl;
 
     @Column
-    private ImageStatus status;
+    private ImageStatus status = ImageStatus.ACTIVE;
 }

@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,21 +42,21 @@ import java.util.List;
 @Table(name = "green_event")
 public class EventEntity extends BaseEntity {
 
-    @Column
+    @Column(nullable = false)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     @Lob
     private String description;
 
-    @Column
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private GreenEventType eventType;
 
-    @Column
+    @Column(nullable = false)
     private LocalDateTime startTime;
 
-    @Column
+    @Column(nullable = false)
     private LocalDateTime endTime;
 
     @Column
@@ -79,11 +80,19 @@ public class EventEntity extends BaseEntity {
     @Column
     private Double rewardPoints;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
+    @Lob
+    private String rejectReason;
+
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private GreenEventStatus status;
 
+    @Column
+    private Integer rejectedCount = 0;
+
     @OneToMany(mappedBy = "event", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE}, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<EventImageEntity> images = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -91,6 +100,6 @@ public class EventEntity extends BaseEntity {
     private UserEntity organizer;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
-    @JoinColumn(name = "address_id", referencedColumnName = "id")
+    @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
     private AddressEntity address;
 }

@@ -1,5 +1,6 @@
 package com.webdev.greenify.station.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class AddressRequestDTO {
+    @NotBlank(message = "Province is required")
     private String province;
     private String district;
     private String ward;
