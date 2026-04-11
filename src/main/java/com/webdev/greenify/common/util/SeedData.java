@@ -76,12 +76,36 @@ public class SeedData implements CommandLineRunner {
                     .build());
         }
 
+        // Create CTV users for review workflows
+        createCtvUserIfMissing("ctv1@example.com", "ctv1", ctvRoleEntity, userRoleEntity);
+        createCtvUserIfMissing("ctv2@example.com", "ctv2", ctvRoleEntity, userRoleEntity);
+        createCtvUserIfMissing("ctv3@example.com", "ctv3", ctvRoleEntity, userRoleEntity);
+
+
         // Seed Green Action Types
         seedGreenActionTypes();
 
         // Seed Waste Types
         seedWasteTypes();
     }
+
+        private void createCtvUserIfMissing(String email, String username, RoleEntity ctvRoleEntity, RoleEntity userRoleEntity) {
+                if (userRepository.findByIdentifier(email).isPresent()) {
+                        return;
+                }
+
+                Set<RoleEntity> ctvRoleEntities = new HashSet<>();
+                ctvRoleEntities.add(ctvRoleEntity);
+                ctvRoleEntities.add(userRoleEntity);
+
+                userRepository.save(UserEntity.builder()
+                                .email(email)
+                                .username(username)
+                                .password(passwordEncoder.encode("password123"))
+                                .roles(ctvRoleEntities)
+                                .status(AccountStatus.ACTIVE)
+                                .build());
+        }
 
     private void seedGreenActionTypes() {
         if (greenActionTypeRepository.count() == 0) {
