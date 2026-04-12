@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -119,8 +120,6 @@ public class EventServiceImpl implements EventService {
         if (event.isDeleted()) {
             throw new ResourceNotFoundException("Event not found");
         }
-
-        // Check if status allows update
         EnumSet<GreenEventStatus> allowableStatuses = EnumSet.of(
                 GreenEventStatus.DRAFT, 
                 GreenEventStatus.APPROVAL_WAITING, 
@@ -131,35 +130,9 @@ public class EventServiceImpl implements EventService {
         }
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
-
-        // Update basic fields
-        event.setTitle(request.getTitle());
-        event.setDescription(request.getDescription());
-        event.setEventType(request.getEventType());
-        event.setStartTime(request.getStartTime());
-        event.setEndTime(request.getEndTime());
-        event.setMaxParticipants(request.getMaxParticipants());
-        event.setMinParticipants(request.getMinParticipants());
-        event.setCancelDeadlineHoursBefore(request.getCancelDeadlineHoursBefore());
-        event.setSignUpDeadlineHoursBefore(request.getSignUpDeadlineHoursBefore());
-        event.setReminderHoursBefore(request.getReminderHoursBefore());
-        event.setThankYouHoursAfter(request.getThankYouHoursAfter());
-        event.setRewardPoints(request.getRewardPoints());
-        
-        if (request.getStatus() != null) {
-            event.setStatus(request.getStatus());
-        }
-
-        // Handle image updates (for simplicity here, we clear and re-add if needed or just handle thumbnail)
-        // In a real app, you'd probably handle this more granularly
-        if (request.getThumbnail() != null) {
-            // Remove old thumbnail if exists
-            event.getImages().removeIf(img -> img.getImageType() == EventImageType.THUMBNAIL);
-            EventImageEntity eventThumbnail = imageMapper.toEventImageEntity(request.getThumbnail());
-            eventThumbnail.setEvent(event);
-            eventThumbnail.setImageType(EventImageType.THUMBNAIL);
-            event.getImages().add(eventThumbnail);
-        }
+        eventMapper.updateEvent(request, event);
+        prepareEventRelationships(event, request);
+        event.setStatus(GreenEventStatus.APPROVAL_WAITING);
 
         event = eventRepository.save(event);
         log.info("Event updated with ID: {}", event.getId());
@@ -172,7 +145,7 @@ public class EventServiceImpl implements EventService {
     public void deleteEvent(String id) {
         EventEntity event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-        
+
         event.setDeleted(true);
         eventRepository.save(event);
         log.info("Event soft-deleted with ID: {}", id);
@@ -206,7 +179,8 @@ public class EventServiceImpl implements EventService {
 
         event.setStatus(GreenEventStatus.REJECTED);
         event.setRejectReason(request.getReason());
-        event.setRejectedCount(event.getRejectedCount() + 1);
+        Integer newRejectedCount = event.getRejectedCount() != null ? event.getRejectedCount() + 1 : 1;
+        event.setRejectedCount(newRejectedCount);
         eventRepository.save(event);
         log.info("Event rejected with ID: {} Reason: {}", id, request.getReason());
     }
@@ -216,18 +190,20 @@ public class EventServiceImpl implements EventService {
             event.getAddress().setEvent(event);
         }
 
-        if (event.getImages() != null && !event.getImages().isEmpty()) {
-            event.getImages().forEach(image -> {
-                image.setEvent(event);
-                image.setImageType(EventImageType.DETAIL);
-            });
+        List<EventImageEntity> eventImages = event.getImages();
+        if (eventImages == null) {
+            eventImages = new ArrayList<>();
+            event.setImages(eventImages);
         }
-
+        eventImages.forEach(image -> {
+            image.setEvent(event);
+            image.setImageType(EventImageType.DETAIL);
+        });
         if (request.getThumbnail() != null) {
-            EventImageEntity eventThumbnail = imageMapper.toEventImageEntity(request.getThumbnail());
-            eventThumbnail.setEvent(event);
-            eventThumbnail.setImageType(EventImageType.THUMBNAIL);
-            event.getImages().add(eventThumbnail);
+            EventImageEntity thumbnail = imageMapper.toEventImageEntity(request.getThumbnail());
+            thumbnail.setEvent(event);
+            thumbnail.setImageType(EventImageType.THUMBNAIL);
+            eventImages.add(thumbnail);
         }
     }
 

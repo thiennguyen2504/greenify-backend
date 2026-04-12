@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EventImageResponseDTO {
     private String id;
+    private String objectKey;
+    private String bucketName;
     private String imageUrl;
     private EventImageType imageType;
 }

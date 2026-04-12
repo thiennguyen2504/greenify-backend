@@ -7,6 +7,7 @@ import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.station.mapper.AddressMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 @Mapper(uses = {AddressMapper.class, ImageMapper.class})
 public interface EventMapper {
@@ -15,4 +16,7 @@ public interface EventMapper {
     EventEntity toEntity(EventRequestDTO dto);
 
     EventResponseDTO toResponse(EventEntity entity);
+
+    @Mapping(target = "organizer", ignore = true)
+    void updateEvent(EventRequestDTO dto, @MappingTarget EventEntity entity);
 }

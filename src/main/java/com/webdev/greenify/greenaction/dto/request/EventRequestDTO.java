@@ -70,7 +70,7 @@ public class EventRequestDTO {
     private GreenEventStatus status;
 
     @Valid
-    @NotNull(message = "Address is required")
+    @NotNull(message = "Thumbnail is required")
     private ImageRequestDTO thumbnail;
 
     @Valid
