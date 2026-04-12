@@ -11,10 +11,13 @@ import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -23,9 +26,13 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 @Slf4j
 public class SeedData implements CommandLineRunner {
+
+    @Value("${app.seed.ctv-password:}")
+    private String seedCtvPassword;
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -94,6 +101,11 @@ public class SeedData implements CommandLineRunner {
                         return;
                 }
 
+                if (!StringUtils.hasText(seedCtvPassword)) {
+                        log.warn("Skipping seeded CTV user creation for {} because app.seed.ctv-password is not configured", email);
+                        return;
+                }
+
                 Set<RoleEntity> ctvRoleEntities = new HashSet<>();
                 ctvRoleEntities.add(ctvRoleEntity);
                 ctvRoleEntities.add(userRoleEntity);
@@ -101,7 +113,7 @@ public class SeedData implements CommandLineRunner {
                 userRepository.save(UserEntity.builder()
                                 .email(email)
                                 .username(username)
-                                .password(passwordEncoder.encode("password123"))
+                                .password(passwordEncoder.encode(seedCtvPassword))
                                 .roles(ctvRoleEntities)
                                 .status(AccountStatus.ACTIVE)
                                 .build());
