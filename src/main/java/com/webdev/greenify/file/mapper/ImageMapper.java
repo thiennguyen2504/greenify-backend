@@ -1,6 +1,7 @@
 package com.webdev.greenify.file.mapper;
 
 import com.webdev.greenify.file.dto.ImageRequestDTO;
+import com.webdev.greenify.file.entity.EventImageEntity;
 import com.webdev.greenify.file.entity.PostImageEntity;
 import com.webdev.greenify.file.entity.ProfileImageEntity;
 import org.mapstruct.BeanMapping;
@@ -13,6 +14,8 @@ public interface ImageMapper {
     ProfileImageEntity toProfileImageEntity(ImageRequestDTO dto);
 
     PostImageEntity toPostImageEntity(ImageRequestDTO dto);
+
+    EventImageEntity toEventImageEntity(ImageRequestDTO dto);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateProfileImage(ImageRequestDTO dto, @MappingTarget ProfileImageEntity entity);
