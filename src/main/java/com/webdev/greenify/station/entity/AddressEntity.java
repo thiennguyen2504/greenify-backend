@@ -1,23 +1,24 @@
 package com.webdev.greenify.station.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
+import com.webdev.greenify.greenaction.entity.EventEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Getter
 @Setter
 @EqualsAndHashCode(callSuper = true)
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -43,4 +44,7 @@ public class AddressEntity extends BaseEntity {
 
     @OneToOne(mappedBy = "address")
     private RecyclingStationEntity recyclingStation;
+
+    @OneToOne(mappedBy = "address")
+    private EventEntity event;
 }

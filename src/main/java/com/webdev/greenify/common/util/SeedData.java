@@ -54,6 +54,9 @@ public class SeedData implements CommandLineRunner {
         RoleEntity ctvRoleEntity = roleRepository.findByName("CTV")
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("CTV").build()));
 
+        RoleEntity ngoRoleEntity = roleRepository.findByName("NGO")
+                .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("NGO").build()));
+
         // Create Admin UserEntity
         if (userRepository.findByIdentifier("admin@example.com").isEmpty()) {
             Set<RoleEntity> adminRoleEntities = new HashSet<>();
@@ -88,6 +91,20 @@ public class SeedData implements CommandLineRunner {
         createCtvUserIfMissing("ctv2@example.com", "ctv2", ctvRoleEntity, userRoleEntity);
         createCtvUserIfMissing("ctv3@example.com", "ctv3", ctvRoleEntity, userRoleEntity);
 
+        // Create NGO UserEntity
+        if (userRepository.findByIdentifier("ngo@example.com").isEmpty()) {
+            Set<RoleEntity> ngoRoleEntities = new HashSet<>();
+            ngoRoleEntities.add(ngoRoleEntity);
+            ngoRoleEntities.add(userRoleEntity);
+
+            userRepository.save(UserEntity.builder()
+                    .email("ngo@example.com")
+                    .username("ngo_tester")
+                    .password(passwordEncoder.encode("password123"))
+                    .roles(ngoRoleEntities)
+                    .status(AccountStatus.ACTIVE)
+                    .build());
+        }
 
         // Seed Green Action Types
         seedGreenActionTypes();
