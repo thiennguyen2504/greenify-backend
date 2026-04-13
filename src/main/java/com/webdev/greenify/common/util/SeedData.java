@@ -1,5 +1,7 @@
 package com.webdev.greenify.common.util;
 
+import com.webdev.greenify.garden.entity.SeedEntity;
+import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
@@ -12,6 +14,7 @@ import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,10 +35,15 @@ public class SeedData implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final GreenActionTypeRepository greenActionTypeRepository;
     private final WasteTypeRepository wasteTypeRepository;
+        private final SeedRepository seedRepository;
+        private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+
+                // Backfill legacy null soft-delete flags before any entity mapping occurs.
+                normalizeSoftDeleteFlags();
 
         // Ensure roleEntities exist
         RoleEntity adminRoleEntity = roleRepository.findByName("ADMIN")
@@ -87,6 +95,30 @@ public class SeedData implements CommandLineRunner {
 
         // Seed Waste Types
         seedWasteTypes();
+
+                // Seed Garden Seeds
+                seedGardenSeeds();
+        }
+
+        private void normalizeSoftDeleteFlags() {
+                try {
+                        List<String> tables = jdbcTemplate.queryForList("""
+                                        SELECT DISTINCT table_name
+                                        FROM information_schema.columns
+                                        WHERE lower(column_name) = 'is_deleted'
+                                          AND lower(table_schema) NOT IN ('information_schema', 'pg_catalog')
+                                        """, String.class);
+
+                        for (String table : tables) {
+                                int updatedRows = jdbcTemplate.update(
+                                                "UPDATE " + table + " SET is_deleted = FALSE WHERE is_deleted IS NULL");
+                                if (updatedRows > 0) {
+                                        log.info("Backfilled {} rows in {}.is_deleted", updatedRows, table);
+                                }
+                        }
+                } catch (Exception ex) {
+                        log.warn("Could not normalize soft-delete flags before seeding", ex);
+                }
     }
 
         private void createCtvUserIfMissing(String email, String username, RoleEntity ctvRoleEntity, RoleEntity userRoleEntity) {
@@ -344,6 +376,54 @@ public class SeedData implements CommandLineRunner {
 
             wasteTypeRepository.saveAll(wasteTypes);
             log.info("Seeded {} waste types", wasteTypes.size());
+        }
+    }
+
+    private void seedGardenSeeds() {
+        if (seedRepository.count() == 0) {
+            List<SeedEntity> seeds = new ArrayList<>();
+
+            seeds.add(SeedEntity.builder()
+                    .name("Sunflower")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage4/600/600")
+                    .daysToMature(14)
+                    .stage2FromDay(3)
+                    .stage3FromDay(7)
+                    .stage4FromDay(12)
+                    .isActive(true)
+                    .build());
+
+            seeds.add(SeedEntity.builder()
+                    .name("Lavender")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-lavender-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-lavender-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-lavender-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-lavender-stage4/600/600")
+                    .daysToMature(21)
+                    .stage2FromDay(5)
+                    .stage3FromDay(10)
+                    .stage4FromDay(16)
+                    .isActive(true)
+                    .build());
+
+            seeds.add(SeedEntity.builder()
+                    .name("Rose")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-rose-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-rose-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-rose-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-rose-stage4/600/600")
+                    .daysToMature(30)
+                    .stage2FromDay(6)
+                    .stage3FromDay(14)
+                    .stage4FromDay(24)
+                    .isActive(true)
+                    .build());
+
+            seedRepository.saveAll(seeds);
+            log.info("Seeded {} garden seeds", seeds.size());
         }
     }
 }
