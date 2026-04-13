@@ -13,6 +13,7 @@ import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -151,31 +152,38 @@ public class PointServiceImpl implements PointService {
     @Transactional
     public void processExpiredPoints() {
         LocalDateTime now = LocalDateTime.now();
-        List<PointTransactionEntity> expiredTransactions = 
+        List<PointTransactionEntity> expiredTransactions =
                 pointTransactionRepository.findExpiredPointsNotProcessed(now);
 
         int processedCount = 0;
         for (PointTransactionEntity expiredTransaction : expiredTransactions) {
-            // Create negative transaction to deduct expired points
-            BigDecimal deductionAmount = expiredTransaction.getPoints().negate();
-            
+            BigDecimal deductedPoints = decreaseWalletAvailablePoints(
+                    expiredTransaction.getUser(),
+                    expiredTransaction.getPoints());
+
+            if (deductedPoints.compareTo(ZERO_POINTS) <= 0) {
+                log.info("Skipped expiring points for user {} (transaction {}) because no available points remain",
+                        expiredTransaction.getUser().getId(),
+                        expiredTransaction.getId());
+                continue;
+            }
+
             String deductionDescription = String.format(
                     "Điểm hết hạn: %s",
                     expiredTransaction.getActionDescription());
 
             PointTransactionEntity deduction = PointTransactionEntity.builder()
                     .user(expiredTransaction.getUser())
-                    .points(deductionAmount)
+                    .points(deductedPoints.negate())
                     .actionDescription(deductionDescription)
                     .expiredTransactionId(expiredTransaction.getId())
                     .build();
 
-            decreaseWalletAvailablePoints(expiredTransaction.getUser(), expiredTransaction.getPoints());
             pointTransactionRepository.save(deduction);
             processedCount++;
 
             log.info("Expired {} points from user {} (transaction {})",
-                    expiredTransaction.getPoints(),
+                    deductedPoints,
                     expiredTransaction.getUser().getId(),
                     expiredTransaction.getId());
         }
@@ -200,11 +208,14 @@ public class PointServiceImpl implements PointService {
                 pointWalletRepository.save(wallet);
         }
 
-        private void decreaseWalletAvailablePoints(UserEntity user, BigDecimal amount) {
+        private BigDecimal decreaseWalletAvailablePoints(UserEntity user, BigDecimal amount) {
                 PointWalletEntity wallet = getOrCreateWalletForUpdate(user);
-                BigDecimal newAvailablePoints = wallet.getAvailablePoints().subtract(amount);
-                wallet.setAvailablePoints(newAvailablePoints.max(ZERO_POINTS));
+                BigDecimal currentAvailablePoints = wallet.getAvailablePoints().max(ZERO_POINTS);
+                BigDecimal deductedPoints = amount.min(currentAvailablePoints);
+                BigDecimal newAvailablePoints = currentAvailablePoints.subtract(deductedPoints);
+                wallet.setAvailablePoints(newAvailablePoints);
                 pointWalletRepository.save(wallet);
+                return deductedPoints;
         }
 
         private PointWalletEntity getOrCreateWalletForUpdate(UserEntity user) {
@@ -218,11 +229,17 @@ public class PointServiceImpl implements PointService {
 
                 PointWalletEntity wallet = PointWalletEntity.builder()
                                 .user(user)
-                                .availablePoints(availablePoints)
+                                .availablePoints(availablePoints.max(ZERO_POINTS))
                                 .totalPoints(accumulatedPoints)
                                 .weeklyPoints(ZERO_POINTS)
                                 .status(DEFAULT_WALLET_STATUS)
                                 .build();
-                return pointWalletRepository.save(wallet);
+
+                try {
+                        return pointWalletRepository.save(wallet);
+                } catch (DataIntegrityViolationException ex) {
+                        return pointWalletRepository.findByUserIdForUpdate(user.getId())
+                                        .orElseThrow(() -> ex);
+                }
         }
 }

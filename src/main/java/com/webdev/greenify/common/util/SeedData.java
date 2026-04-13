@@ -13,11 +13,14 @@ import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -26,9 +29,13 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 @Slf4j
 public class SeedData implements CommandLineRunner {
+
+    @Value("${app.seed.ctv-password:}")
+    private String seedCtvPassword;
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -54,6 +61,9 @@ public class SeedData implements CommandLineRunner {
 
         RoleEntity ctvRoleEntity = roleRepository.findByName("CTV")
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("CTV").build()));
+
+        RoleEntity ngoRoleEntity = roleRepository.findByName("NGO")
+                .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("NGO").build()));
 
         // Create Admin UserEntity
         if (userRepository.findByIdentifier("admin@example.com").isEmpty()) {
@@ -89,6 +99,20 @@ public class SeedData implements CommandLineRunner {
         createCtvUserIfMissing("ctv2@example.com", "ctv2", ctvRoleEntity, userRoleEntity);
         createCtvUserIfMissing("ctv3@example.com", "ctv3", ctvRoleEntity, userRoleEntity);
 
+        // Create NGO UserEntity
+        if (userRepository.findByIdentifier("ngo@example.com").isEmpty()) {
+            Set<RoleEntity> ngoRoleEntities = new HashSet<>();
+            ngoRoleEntities.add(ngoRoleEntity);
+            ngoRoleEntities.add(userRoleEntity);
+
+            userRepository.save(UserEntity.builder()
+                    .email("ngo@example.com")
+                    .username("ngo_tester")
+                    .password(passwordEncoder.encode("password123"))
+                    .roles(ngoRoleEntities)
+                    .status(AccountStatus.ACTIVE)
+                    .build());
+        }
 
         // Seed Green Action Types
         seedGreenActionTypes();
@@ -126,6 +150,11 @@ public class SeedData implements CommandLineRunner {
                         return;
                 }
 
+                if (!StringUtils.hasText(seedCtvPassword)) {
+                        log.warn("Skipping seeded CTV user creation for {} because app.seed.ctv-password is not configured", email);
+                        return;
+                }
+
                 Set<RoleEntity> ctvRoleEntities = new HashSet<>();
                 ctvRoleEntities.add(ctvRoleEntity);
                 ctvRoleEntities.add(userRoleEntity);
@@ -133,7 +162,7 @@ public class SeedData implements CommandLineRunner {
                 userRepository.save(UserEntity.builder()
                                 .email(email)
                                 .username(username)
-                                .password(passwordEncoder.encode("password123"))
+                                .password(passwordEncoder.encode(seedCtvPassword))
                                 .roles(ctvRoleEntities)
                                 .status(AccountStatus.ACTIVE)
                                 .build());
