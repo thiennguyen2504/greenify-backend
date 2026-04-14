@@ -6,14 +6,18 @@ import com.webdev.greenify.file.entity.PostImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
+import com.webdev.greenify.greenaction.dto.response.PostReviewResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
+import com.webdev.greenify.greenaction.entity.PostReviewEntity;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import com.webdev.greenify.greenaction.mapper.GreenActionMapper;
+import com.webdev.greenify.greenaction.mapper.ReviewMapper;
 import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
+import com.webdev.greenify.greenaction.repository.PostReviewRepository;
 import com.webdev.greenify.greenaction.service.GreenActionService;
 import com.webdev.greenify.greenaction.specification.GreenActionPostSpecification;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -30,8 +34,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +51,10 @@ public class GreenActionServiceImpl implements GreenActionService {
 
     private final GreenActionPostRepository postRepository;
     private final GreenActionTypeRepository actionTypeRepository;
+    private final PostReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final GreenActionMapper greenActionMapper;
+    private final ReviewMapper reviewMapper;
     private final ImageMapper imageMapper;
 
     @Override
@@ -95,7 +105,10 @@ public class GreenActionServiceImpl implements GreenActionService {
         post = postRepository.save(post);
         log.info("Green action post created with ID: {} by user: {}", post.getId(), currentUserId);
 
-        return greenActionMapper.toDetailResponse(post);
+        GreenActionPostDetailResponse response = greenActionMapper.toDetailResponse(post);
+        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
+        response.setReviews(List.of());
+        return response;
     }
 
     @Override
@@ -106,15 +119,24 @@ public class GreenActionServiceImpl implements GreenActionService {
         
         List<GreenActionPostEntity> posts = postRepository.findTopPostsWithUserAndActionType(
                 PostStatus.VERIFIED, pageable);
-        
+
+        Map<String, List<PostReviewResponse>> reviewsByPostId = getReviewsGroupedByPostIds(
+                posts.stream().map(GreenActionPostEntity::getId).toList());
+
         return posts.stream()
-                .map(greenActionMapper::toSummaryResponse)
+                .map(post -> {
+                    GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
+                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
+                    response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
+                    return response;
+                })
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<GreenActionPostSummaryResponse> getPostsByFilter(
+            PostStatus status,
             String actionTypeId,
             String groupName,
             LocalDate fromDate,
@@ -130,13 +152,66 @@ public class GreenActionServiceImpl implements GreenActionService {
                 Sort.by(Sort.Direction.DESC, "approveCount")
                         .and(Sort.by(Sort.Direction.DESC, "createdAt")));
 
+        PostStatus effectiveStatus = status != null ? status : PostStatus.VERIFIED;
+
         Specification<GreenActionPostEntity> spec = GreenActionPostSpecification.buildSpecification(
-                PostStatus.VERIFIED, actionTypeId, groupName, fromDate, toDate);
+            effectiveStatus, actionTypeId, groupName, fromDate, toDate);
 
         Page<GreenActionPostEntity> postsPage = postRepository.findAll(spec, pageable);
 
+        Map<String, List<PostReviewResponse>> reviewsByPostId = getReviewsGroupedByPostIds(
+                postsPage.getContent().stream().map(GreenActionPostEntity::getId).toList());
+
         List<GreenActionPostSummaryResponse> content = postsPage.getContent().stream()
-                .map(greenActionMapper::toSummaryResponse)
+                .map(post -> {
+                    GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
+                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
+                    response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
+                    return response;
+                })
+                .toList();
+
+        return PagedResponse.of(
+                content,
+                postsPage.getNumber(),
+                postsPage.getSize(),
+                postsPage.getTotalElements(),
+                postsPage.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<GreenActionPostSummaryResponse> getPostHistoryForCurrentUser(
+            PostStatus status,
+            LocalDate fromDate,
+            LocalDate toDate,
+            int page,
+            int size) {
+        String currentUserId = getCurrentUserId();
+
+        int effectivePage = Math.max(page, 0);
+        int effectiveSize = clampPageSize(size);
+
+        Pageable pageable = PageRequest.of(
+                effectivePage,
+                effectiveSize,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Specification<GreenActionPostEntity> spec = GreenActionPostSpecification.hasUserId(currentUserId)
+                .and(GreenActionPostSpecification.buildSpecification(status, null, null, fromDate, toDate));
+
+        Page<GreenActionPostEntity> postsPage = postRepository.findAll(spec, pageable);
+
+        Map<String, List<PostReviewResponse>> reviewsByPostId = getReviewsGroupedByPostIds(
+                postsPage.getContent().stream().map(GreenActionPostEntity::getId).toList());
+
+        List<GreenActionPostSummaryResponse> content = postsPage.getContent().stream()
+                .map(post -> {
+                    GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
+                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
+                    response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
+                    return response;
+                })
                 .toList();
 
         return PagedResponse.of(
@@ -163,7 +238,34 @@ public class GreenActionServiceImpl implements GreenActionService {
             throw new AppException("Bài viết không khả dụng", HttpStatus.FORBIDDEN);
         }
 
-        return greenActionMapper.toDetailResponse(post);
+        GreenActionPostDetailResponse response = greenActionMapper.toDetailResponse(post);
+        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
+        response.setReviews(reviewMapper.toPostReviewResponseList(
+                reviewRepository.findByPostIdAndIsValidTrueOrderByCreatedAtDesc(post.getId())));
+        return response;
+    }
+
+    private Map<String, List<PostReviewResponse>> getReviewsGroupedByPostIds(List<String> postIds) {
+        if (postIds == null || postIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<PostReviewEntity> reviews = reviewRepository.findByPostIdsAndIsValidTrue(postIds);
+        return reviews.stream().collect(Collectors.groupingBy(
+                review -> review.getPost().getId(),
+                LinkedHashMap::new,
+                Collectors.mapping(reviewMapper::toPostReviewResponse, Collectors.toList())));
+    }
+
+    private String buildMockLocation(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || longitude == null) {
+            return "Vi tri mo phong: chua co toa do";
+        }
+        return "Vi tri mo phong tu toa do ("
+                + latitude.stripTrailingZeros().toPlainString()
+                + ", "
+                + longitude.stripTrailingZeros().toPlainString()
+                + ")";
     }
 
     private int clampPageSize(int size) {

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -29,6 +30,8 @@ public class GreenActionPostReviewerResponse {
     private BigDecimal longitude;
     private Integer approveCount;
     private Integer rejectCount;
+    private String location;
+    private List<PostReviewResponse> reviews;
     private LocalDate actionDate;
     private PostStatus status;
     private LocalDateTime createdAt;

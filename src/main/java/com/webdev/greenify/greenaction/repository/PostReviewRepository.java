@@ -52,4 +52,24 @@ public interface PostReviewRepository extends JpaRepository<PostReviewEntity, St
     boolean existsByPostIdAndDecisionAndIsValidTrue(
             @Param("postId") String postId,
             @Param("decision") ReviewDecision decision);
+
+    @Query("""
+            SELECT r FROM PostReviewEntity r
+            JOIN FETCH r.reviewer
+            WHERE r.post.id = :postId
+            AND r.isValid = true
+            ORDER BY r.createdAt DESC
+            """)
+    List<PostReviewEntity> findByPostIdAndIsValidTrueOrderByCreatedAtDesc(
+            @Param("postId") String postId);
+
+    @Query("""
+            SELECT r FROM PostReviewEntity r
+            JOIN FETCH r.reviewer
+            JOIN FETCH r.post
+            WHERE r.post.id IN :postIds
+            AND r.isValid = true
+            ORDER BY r.createdAt DESC
+            """)
+    List<PostReviewEntity> findByPostIdsAndIsValidTrue(@Param("postIds") List<String> postIds);
 }
