@@ -54,4 +54,7 @@ public class PlantDailyLogEntity extends BaseEntity {
 
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
+
+    @Column(name = "green_post_url", columnDefinition = "TEXT")
+    private String greenPostUrl;
 }

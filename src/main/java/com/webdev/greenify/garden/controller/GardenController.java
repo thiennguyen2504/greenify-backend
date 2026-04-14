@@ -3,6 +3,7 @@ package com.webdev.greenify.garden.controller;
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
+import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
 import com.webdev.greenify.garden.service.GardenService;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -45,6 +48,12 @@ public class GardenController {
     @PreAuthorize("hasAnyRole('USER', 'CTV')")
     public ResponseEntity<PlantProgressResponse> getCurrentPlantProgress() {
         return ResponseEntity.ok(gardenService.getCurrentPlantProgress());
+    }
+
+    @GetMapping("/garden/plant/daily-logs")
+    @PreAuthorize("hasAnyRole('USER', 'CTV')")
+    public ResponseEntity<List<PlantDailyLogResponse>> getCurrentUserDailyLogs() {
+        return ResponseEntity.ok(gardenService.getCurrentUserDailyLogs());
     }
 
     @GetMapping("/garden/archives")

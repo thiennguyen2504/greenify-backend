@@ -1,9 +1,12 @@
 package com.webdev.greenify.garden.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -50,6 +53,10 @@ public class SeedEntity extends BaseEntity {
 
     @Column(name = "stage4_from_day", nullable = false)
     private Integer stage4FromDay;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cycle_type", length = 30, nullable = false)
+    private PlantCycleType cycleType = PlantCycleType.SHORT_TERM;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reward_voucher_template_id")

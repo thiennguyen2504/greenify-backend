@@ -5,6 +5,7 @@ import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
+import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
 import com.webdev.greenify.garden.entity.GardenArchiveEntity;
@@ -12,6 +13,7 @@ import com.webdev.greenify.garden.entity.PlantDailyLogEntity;
 import com.webdev.greenify.garden.entity.PlantProgressEntity;
 import com.webdev.greenify.garden.entity.SeedEntity;
 import com.webdev.greenify.garden.enumeration.GardenRewardStatus;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.enumeration.PlantStage;
 import com.webdev.greenify.garden.enumeration.PlantStatus;
 import com.webdev.greenify.garden.mapper.GardenArchiveMapper;
@@ -43,7 +45,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -136,6 +141,34 @@ public class GardenServiceImpl implements GardenService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<PlantDailyLogResponse> getCurrentUserDailyLogs() {
+        String userId = getCurrentUserId();
+        List<PlantDailyLogEntity> dailyLogs = plantDailyLogRepository.findByUserIdOrderByLogDateAsc(userId);
+
+        List<PlantDailyLogResponse> responses = new ArrayList<>(dailyLogs.size());
+        PlantStage previousStage = null;
+
+        for (PlantDailyLogEntity dailyLog : dailyLogs) {
+            PlantStage currentStage = dailyLog.getStage();
+            boolean isChangeState = previousStage == null || !Objects.equals(currentStage, previousStage);
+
+            responses.add(PlantDailyLogResponse.builder()
+                    .logDate(dailyLog.getLogDate())
+                    .stage(currentStage)
+                    .isActiveDay(dailyLog.getIsActiveDay())
+                    .imageUrl(dailyLog.getImageUrl())
+                    .greenPostUrl(dailyLog.getGreenPostUrl())
+                    .isChangeState(isChangeState)
+                    .build());
+
+            previousStage = currentStage;
+        }
+
+        return responses;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PagedResponse<GardenArchiveResponse> getGardenArchives(int page, int size) {
         String userId = getCurrentUserId();
         int effectivePage = Math.max(page, 0);
@@ -166,7 +199,7 @@ public class GardenServiceImpl implements GardenService {
      */
     @Override
     @Transactional
-    public void updatePlantProgress(String userId, LocalDate actionDate) {
+    public void updatePlantProgress(String userId, LocalDate actionDate, String greenPostUrl) {
         if (userId == null || actionDate == null) {
             return;
         }
@@ -183,7 +216,13 @@ public class GardenServiceImpl implements GardenService {
             return;
         }
 
-        int newProgressDays = (progress.getProgressDays() != null ? progress.getProgressDays() : 0) + 1;
+        int missedDays = calculateMissedDays(progress, actionDate);
+        int appliedPenaltyDays = resolvePenaltyDays(progress.getSeed().getCycleType(), missedDays);
+
+        int currentProgressDays = valueOrZero(progress.getProgressDays());
+        int progressAfterPenalty = Math.max(0, currentProgressDays - appliedPenaltyDays);
+        int newProgressDays = progressAfterPenalty + 1;
+
         progress.setProgressDays(newProgressDays);
 
         PlantStage newStage = resolveStage(progress.getSeed(), newProgressDays);
@@ -198,14 +237,19 @@ public class GardenServiceImpl implements GardenService {
                 .stage(newStage)
                 .isActiveDay(true)
                 .imageUrl(seedMapper.resolveStageImageUrl(progress.getSeed(), newStage))
+                .greenPostUrl(greenPostUrl)
                 .build();
 
         plantDailyLogRepository.save(dailyLog);
 
-        log.info("Updated plant progress {} for user {} on {}: progressDays={}, stage={}",
+        log.info("Updated plant progress {} for user {} on {}: previousProgressDays={}, missedDays={}, appliedPenaltyDays={}, progressAfterPenalty={}, newProgressDays={}, stage={}",
                 progress.getId(),
                 userId,
                 actionDate,
+            currentProgressDays,
+            missedDays,
+            appliedPenaltyDays,
+            progressAfterPenalty,
                 newProgressDays,
                 newStage);
 
@@ -235,14 +279,16 @@ public class GardenServiceImpl implements GardenService {
                 .stage2FromDay(request.getStage2FromDay())
                 .stage3FromDay(request.getStage3FromDay())
                 .stage4FromDay(request.getStage4FromDay())
+                .cycleType(request.getCycleType())
                 .rewardVoucherTemplate(rewardVoucherTemplate)
                 .isActive(true)
                 .build();
 
         seed = seedRepository.save(seed);
 
-        log.info("Admin created new seed {} with rewardVoucherTemplateId={}",
+        log.info("Admin created new seed {} with cycleType={} and rewardVoucherTemplateId={}",
                 seed.getId(),
+                seed.getCycleType(),
                 rewardVoucherTemplate != null ? rewardVoucherTemplate.getId() : null);
 
         return seedMapper.toSeedResponse(seed);
@@ -299,6 +345,43 @@ public class GardenServiceImpl implements GardenService {
             return PlantStage.GROWING;
         }
         return PlantStage.BLOOMING;
+    }
+
+    private int calculateMissedDays(PlantProgressEntity progress, LocalDate actionDate) {
+        if (progress == null || actionDate == null) {
+            return 0;
+        }
+
+        LocalDate lastActiveDate = plantDailyLogRepository
+                .findTopByPlantProgressIdAndIsActiveDayTrueOrderByLogDateDesc(progress.getId())
+                .map(PlantDailyLogEntity::getLogDate)
+                .orElseGet(() -> progress.getStartedAt() != null
+                        ? progress.getStartedAt().toLocalDate()
+                        : actionDate);
+
+        long gapDays = ChronoUnit.DAYS.between(lastActiveDate, actionDate) - 1;
+        if (gapDays <= 0) {
+            return 0;
+        }
+
+        return (int) Math.min(gapDays, Integer.MAX_VALUE);
+    }
+
+    private int resolvePenaltyDays(PlantCycleType cycleType, int missedDays) {
+        if (missedDays <= 0) {
+            return 0;
+        }
+
+        PlantCycleType effectiveCycleType = cycleType != null ? cycleType : PlantCycleType.SHORT_TERM;
+        if (effectiveCycleType == PlantCycleType.LONG_TERM) {
+            return missedDays >= 3 ? (missedDays - 2) : 0;
+        }
+
+        return missedDays;
+    }
+
+    private int valueOrZero(Integer value) {
+        return value != null ? value : 0;
     }
 
     private void validateSeedThresholds(CreateSeedRequest request) {

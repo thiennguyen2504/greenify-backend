@@ -1,6 +1,7 @@
 package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.garden.entity.SeedEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
@@ -422,6 +423,7 @@ public class SeedData implements CommandLineRunner {
                     .stage2FromDay(3)
                     .stage3FromDay(7)
                     .stage4FromDay(12)
+                    .cycleType(PlantCycleType.SHORT_TERM)
                     .isActive(true)
                     .build());
 
@@ -435,6 +437,7 @@ public class SeedData implements CommandLineRunner {
                     .stage2FromDay(5)
                     .stage3FromDay(10)
                     .stage4FromDay(16)
+                    .cycleType(PlantCycleType.LONG_TERM)
                     .isActive(true)
                     .build());
 
@@ -448,6 +451,7 @@ public class SeedData implements CommandLineRunner {
                     .stage2FromDay(6)
                     .stage3FromDay(14)
                     .stage4FromDay(24)
+                    .cycleType(PlantCycleType.LONG_TERM)
                     .isActive(true)
                     .build());
 

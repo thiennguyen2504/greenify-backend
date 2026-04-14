@@ -1,5 +1,6 @@
 package com.webdev.greenify.garden.dto.request;
 
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -44,6 +45,9 @@ public class CreateSeedRequest {
     @NotNull(message = "Stage 4 from day is required")
     @Positive(message = "Stage 4 from day must be greater than 0")
     private Integer stage4FromDay;
+
+    @NotNull(message = "Plant cycle type is required")
+    private PlantCycleType cycleType;
 
     private String rewardVoucherTemplateId;
 }

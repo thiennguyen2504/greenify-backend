@@ -6,7 +6,7 @@ import java.time.LocalDate;
 
 public interface StreakService {
 
-    void handleVerifiedPost(String userId, LocalDate actionDate);
+    void handleVerifiedPost(String userId, LocalDate actionDate, String greenPostUrl);
 
     StreakResponse getCurrentStreak();
 

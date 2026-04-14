@@ -1,6 +1,7 @@
 package com.webdev.greenify.garden.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.enumeration.PlantStage;
 import com.webdev.greenify.garden.enumeration.PlantStatus;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ public class PlantProgressResponse {
     private String seedName;
     private Integer progressDays;
     private Integer daysToMature;
+    private PlantCycleType cycleType;
     private PlantStage currentStage;
     private PlantStatus status;
     private String currentStageImageUrl;

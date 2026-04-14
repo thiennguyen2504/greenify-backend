@@ -41,7 +41,7 @@ public class StreakServiceImpl implements StreakService {
      */
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
-    public void handleVerifiedPost(String userId, LocalDate actionDate) {
+    public void handleVerifiedPost(String userId, LocalDate actionDate, String greenPostUrl) {
         if (userId == null || actionDate == null) {
             return;
         }
@@ -59,7 +59,7 @@ public class StreakServiceImpl implements StreakService {
             streak.setStatus(StreakStatus.ACTIVE);
             streakRepository.save(streak);
 
-            gardenService.updatePlantProgress(userId, actionDate);
+            gardenService.updatePlantProgress(userId, actionDate, greenPostUrl);
 
             log.info("Initialized streak for user {} at actionDate={}", userId, actionDate);
             return;
@@ -83,7 +83,7 @@ public class StreakServiceImpl implements StreakService {
         }
 
         streakRepository.save(streak);
-        gardenService.updatePlantProgress(userId, actionDate);
+        gardenService.updatePlantProgress(userId, actionDate, greenPostUrl);
 
         log.info("Handled verified post for user {} on {}. currentStreak={}, longestStreak={}",
                 userId,

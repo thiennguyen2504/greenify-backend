@@ -136,7 +136,10 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Award points if post becomes VERIFIED
         if (newStatus == PostStatus.VERIFIED) {
-            streakService.handleVerifiedPost(post.getUser().getId(), post.getActionDate());
+            streakService.handleVerifiedPost(
+                    post.getUser().getId(),
+                    post.getActionDate(),
+                    post.getPostImage() != null ? post.getPostImage().getImageUrl() : null);
             awardPointsForVerifiedPost(post);
         }
 

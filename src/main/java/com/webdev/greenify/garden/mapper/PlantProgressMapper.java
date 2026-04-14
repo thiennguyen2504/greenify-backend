@@ -12,6 +12,7 @@ public interface PlantProgressMapper {
     @Mapping(target = "seedId", source = "seed.id")
     @Mapping(target = "seedName", source = "seed.name")
     @Mapping(target = "daysToMature", source = "seed.daysToMature")
+    @Mapping(target = "cycleType", source = "seed.cycleType")
     @Mapping(target = "currentStageImageUrl", source = ".", qualifiedByName = "resolveCurrentStageImageUrl")
     @Mapping(target = "percentComplete", source = ".", qualifiedByName = "calculatePercentComplete")
     PlantProgressResponse toPlantProgressResponse(PlantProgressEntity entity);
@@ -19,11 +20,16 @@ public interface PlantProgressMapper {
     @Named("calculatePercentComplete")
     default Double calculatePercentComplete(PlantProgressEntity entity) {
         if (entity == null || entity.getSeed() == null || entity.getSeed().getDaysToMature() == null
-                || entity.getSeed().getDaysToMature() <= 0 || entity.getProgressDays() == null) {
+                || entity.getSeed().getDaysToMature() <= 0) {
             return 0D;
         }
 
-        double percent = (double) entity.getProgressDays() / entity.getSeed().getDaysToMature() * 100D;
-        return Math.min(percent, 100D);
+        int progressDays = valueOrZero(entity.getProgressDays());
+        double percent = (double) progressDays / entity.getSeed().getDaysToMature() * 100D;
+        return Math.min(Math.max(percent, 0D), 100D);
+    }
+
+    default int valueOrZero(Integer value) {
+        return value != null ? value : 0;
     }
 }

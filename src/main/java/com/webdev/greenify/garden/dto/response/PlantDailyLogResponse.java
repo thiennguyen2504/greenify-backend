@@ -1,6 +1,7 @@
 package com.webdev.greenify.garden.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.webdev.greenify.garden.enumeration.PlantStage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,4 +21,7 @@ public class PlantDailyLogResponse {
     private PlantStage stage;
     private Boolean isActiveDay;
     private String imageUrl;
+    private String greenPostUrl;
+
+    private Boolean isChangeState;
 }
