@@ -46,13 +46,15 @@ services:
       redis:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: dev
       # Database (PostgreSQL)
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME}?currentSchema=public
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_DRIVER: org.postgresql.Driver
       JPA_DIALECT: org.hibernate.dialect.PostgreSQLDialect
       JPA_DDL_AUTO: update
+      SQL_INIT_MODE: always
       H2_CONSOLE_ENABLED: "false"
       # Redis
       REDIS_HOST: redis

@@ -3,11 +3,15 @@ package com.webdev.greenify.greenaction.service.impl;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.dto.response.PointHistoryResponse;
 import com.webdev.greenify.greenaction.dto.response.TotalPointsResponse;
+import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.PointTransactionEntity;
 import com.webdev.greenify.greenaction.mapper.PointMapper;
+import com.webdev.greenify.greenaction.repository.EventRepository;
+import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
 import com.webdev.greenify.greenaction.service.PointService;
+import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.point.entity.PointWalletEntity;
 import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -24,6 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,11 +43,15 @@ public class PointServiceImpl implements PointService {
     private static final int MIN_PAGE_SIZE = 1;
     private static final int MAX_PAGE_SIZE = 50;
     private static final int POINT_EXPIRATION_MONTHS = 2;
-        private static final BigDecimal ZERO_POINTS = BigDecimal.ZERO;
-        private static final String DEFAULT_WALLET_STATUS = "ACTIVE";
+    private static final String EVENT_SOURCE_PREFIX = "Sự Kiện: ";
+    private static final String GREEN_ACTION_SOURCE_PREFIX = "Hành Động Xanh: ";
+    private static final BigDecimal ZERO_POINTS = BigDecimal.ZERO;
+    private static final String DEFAULT_WALLET_STATUS = "ACTIVE";
 
     private final PointTransactionRepository pointTransactionRepository;
-        private final PointWalletRepository pointWalletRepository;
+    private final GreenActionPostRepository greenActionPostRepository;
+    private final EventRepository eventRepository;
+    private final PointWalletRepository pointWalletRepository;
     private final PointMapper pointMapper;
 
     @Override
@@ -136,8 +148,13 @@ public class PointServiceImpl implements PointService {
         Page<PointTransactionEntity> transactionsPage = pointTransactionRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable);
 
-        List<PointHistoryResponse> content = transactionsPage.getContent().stream()
-                .map(pointMapper::toPointHistoryResponse)
+        List<PointTransactionEntity> transactions = transactionsPage.getContent();
+        Set<String> sourceIds = extractSourceIds(transactions);
+        Map<String, GreenActionPostEntity> postsById = loadPostsById(sourceIds);
+        Map<String, EventEntity> eventsById = loadEventsById(sourceIds);
+
+        List<PointHistoryResponse> content = transactions.stream()
+                .map(transaction -> toPointHistoryResponse(transaction, postsById, eventsById))
                 .toList();
 
         return PagedResponse.of(
@@ -191,6 +208,120 @@ public class PointServiceImpl implements PointService {
         if (processedCount > 0) {
             log.info("Processed {} expired point transactions", processedCount);
         }
+    }
+
+    private PointHistoryResponse toPointHistoryResponse(
+            PointTransactionEntity transaction,
+            Map<String, GreenActionPostEntity> postsById,
+            Map<String, EventEntity> eventsById) {
+
+        PointHistoryResponse response = pointMapper.toPointHistoryResponse(transaction);
+        SourceMetadata sourceMetadata = resolveSourceMetadata(transaction, postsById, eventsById);
+        response.setSourceName(sourceMetadata.sourceName());
+        response.setSourceDisplayUrl(sourceMetadata.sourceDisplayUrl());
+        return response;
+    }
+
+    private SourceMetadata resolveSourceMetadata(
+            PointTransactionEntity transaction,
+            Map<String, GreenActionPostEntity> postsById,
+            Map<String, EventEntity> eventsById) {
+
+        String sourceId = transaction.getSourcePostId();
+        if (!hasText(sourceId)) {
+            return new SourceMetadata(transaction.getActionDescription(), null);
+        }
+
+        GreenActionPostEntity post = postsById.get(sourceId);
+        if (post != null) {
+            return new SourceMetadata(resolveGreenActionSourceName(post), resolveGreenActionDisplayUrl(post));
+        }
+
+        EventEntity event = eventsById.get(sourceId);
+        if (event != null) {
+            return new SourceMetadata(resolveEventSourceName(event), resolveEventDisplayUrl(event));
+        }
+
+        return new SourceMetadata(transaction.getActionDescription(), null);
+    }
+
+    private String resolveGreenActionSourceName(GreenActionPostEntity post) {
+        if (post.getActionType() == null || !hasText(post.getActionType().getActionName())) {
+            return "Hành Động Xanh";
+        }
+        return GREEN_ACTION_SOURCE_PREFIX + post.getActionType().getActionName();
+    }
+
+    private String resolveGreenActionDisplayUrl(GreenActionPostEntity post) {
+        if (post.getPostImage() == null) {
+            return null;
+        }
+        return firstNonBlank(post.getPostImage().getImageUrl());
+    }
+
+    private String resolveEventSourceName(EventEntity event) {
+        if (!hasText(event.getTitle())) {
+            return "Sự Kiện";
+        }
+        return EVENT_SOURCE_PREFIX + event.getTitle();
+    }
+
+    private String resolveEventDisplayUrl(EventEntity event) {
+        if (event.getImages() == null || event.getImages().isEmpty()) {
+            return null;
+        }
+
+        String thumbnailUrl = event.getImages().stream()
+                .filter(image -> image != null && image.getImageType() == EventImageType.THUMBNAIL)
+                .map(image -> firstNonBlank(image.getImageUrl()))
+                .filter(this::hasText)
+                .findFirst()
+                .orElse(null);
+
+        if (hasText(thumbnailUrl)) {
+            return thumbnailUrl;
+        }
+
+        return event.getImages().stream()
+                .map(image -> image == null ? null : firstNonBlank(image.getImageUrl()))
+                .filter(this::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Set<String> extractSourceIds(List<PointTransactionEntity> transactions) {
+        return transactions.stream()
+                .map(PointTransactionEntity::getSourcePostId)
+                .map(this::firstNonBlank)
+                .filter(this::hasText)
+                .collect(Collectors.toSet());
+    }
+
+    private Map<String, GreenActionPostEntity> loadPostsById(Set<String> sourceIds) {
+        if (sourceIds.isEmpty()) {
+            return Map.of();
+        }
+        return greenActionPostRepository.findByIdIn(sourceIds).stream()
+                .collect(Collectors.toMap(GreenActionPostEntity::getId, Function.identity()));
+    }
+
+    private Map<String, EventEntity> loadEventsById(Set<String> sourceIds) {
+        if (sourceIds.isEmpty()) {
+            return Map.of();
+        }
+        return eventRepository.findByIdIn(sourceIds).stream()
+                .collect(Collectors.toMap(EventEntity::getId, Function.identity()));
+    }
+
+    private String firstNonBlank(String value) {
+        return hasText(value) ? value : null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private record SourceMetadata(String sourceName, String sourceDisplayUrl) {
     }
 
     private int clampPageSize(int size) {

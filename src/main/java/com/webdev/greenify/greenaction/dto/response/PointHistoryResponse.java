@@ -21,6 +21,9 @@ public class PointHistoryResponse {
     private String actionDescription;
     private String sourcePostId;
     private String sourceReviewId;
+    private String sourceName;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String sourceDisplayUrl;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private String expiredTransactionId;

@@ -1,27 +1,25 @@
 package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.garden.entity.SeedEntity;
-import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -35,8 +33,7 @@ import java.util.Set;
 @Slf4j
 public class SeedData implements CommandLineRunner {
 
-    @Value("${app.seed.ctv-password:}")
-    private String seedCtvPassword;
+        private static final String SEEDED_PASSWORD = "password123";
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -147,26 +144,27 @@ public class SeedData implements CommandLineRunner {
     }
 
         private void createCtvUserIfMissing(String email, String username, RoleEntity ctvRoleEntity, RoleEntity userRoleEntity) {
-                if (userRepository.findByIdentifier(email).isPresent()) {
-                        return;
-                }
-
-                if (!StringUtils.hasText(seedCtvPassword)) {
-                        log.warn("Skipping seeded CTV user creation for {} because app.seed.ctv-password is not configured", email);
-                        return;
-                }
-
                 Set<RoleEntity> ctvRoleEntities = new HashSet<>();
                 ctvRoleEntities.add(ctvRoleEntity);
                 ctvRoleEntities.add(userRoleEntity);
 
-                userRepository.save(UserEntity.builder()
-                                .email(email)
-                                .username(username)
-                                .password(passwordEncoder.encode(seedCtvPassword))
-                                .roles(ctvRoleEntities)
-                                .status(AccountStatus.ACTIVE)
-                                .build());
+                UserEntity existingCtvUser = userRepository.findByIdentifier(email).orElse(null);
+                if (existingCtvUser == null) {
+                        userRepository.save(UserEntity.builder()
+                                        .email(email)
+                                        .username(username)
+                                        .password(passwordEncoder.encode(SEEDED_PASSWORD))
+                                        .roles(ctvRoleEntities)
+                                        .status(AccountStatus.ACTIVE)
+                                        .build());
+                        return;
+                }
+
+                existingCtvUser.setUsername(username);
+                existingCtvUser.setPassword(passwordEncoder.encode(SEEDED_PASSWORD));
+                existingCtvUser.setStatus(AccountStatus.ACTIVE);
+                existingCtvUser.getRoles().addAll(ctvRoleEntities);
+                userRepository.save(existingCtvUser);
         }
 
     private void seedGreenActionTypes() {
