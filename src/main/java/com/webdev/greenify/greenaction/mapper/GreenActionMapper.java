@@ -15,12 +15,16 @@ public interface GreenActionMapper {
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "location", ignore = true)
+    @Mapping(target = "reviews", ignore = true)
     GreenActionPostSummaryResponse toSummaryResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "location", ignore = true)
+    @Mapping(target = "reviews", ignore = true)
     GreenActionPostDetailResponse toDetailResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
@@ -28,6 +32,8 @@ public interface GreenActionMapper {
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "location", ignore = true)
+    @Mapping(target = "reviews", ignore = true)
     @Mapping(target = "alreadyReviewed", ignore = true)
     GreenActionPostReviewerResponse toReviewerResponse(GreenActionPostEntity entity);
 

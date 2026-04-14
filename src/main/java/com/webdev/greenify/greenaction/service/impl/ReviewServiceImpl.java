@@ -37,10 +37,10 @@ public class ReviewServiceImpl implements ReviewService {
 
     private static final Set<PostStatus> REVIEWABLE_STATUSES = Set.of(
             PostStatus.PENDING_REVIEW, PostStatus.PARTIALLY_APPROVED);
-    
-        private static final int APPROVE_THRESHOLD = 3;
-        private static final int REJECT_THRESHOLD = 3;
-        private static final double DECISION_RATIO_THRESHOLD = 0.6;
+
+    private static final int APPROVE_THRESHOLD = 3;
+    private static final int REJECT_THRESHOLD = 3;
+    private static final double DECISION_RATIO_THRESHOLD = 0.6;
 
     private final GreenActionPostRepository postRepository;
     private final PostReviewRepository reviewRepository;
@@ -76,6 +76,9 @@ public class ReviewServiceImpl implements ReviewService {
 
         GreenActionPostReviewerResponse response = greenActionMapper.toReviewerResponse(post);
         response.setAlreadyReviewed(false);
+        response.setReviews(reviewMapper.toPostReviewResponseList(
+                reviewRepository.findByPostIdAndIsValidTrueOrderByCreatedAtDesc(postId)));
+        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
         return response;
     }
 
@@ -236,5 +239,16 @@ public class ReviewServiceImpl implements ReviewService {
 
     private String getCurrentUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    private String buildMockLocation(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || longitude == null) {
+            return "Vi tri mo phong: chua co toa do";
+        }
+        return "Vi tri mo phong tu toa do ("
+                + latitude.stripTrailingZeros().toPlainString()
+                + ", "
+                + longitude.stripTrailingZeros().toPlainString()
+                + ")";
     }
 }

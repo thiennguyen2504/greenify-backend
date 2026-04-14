@@ -40,6 +40,15 @@ public class GreenActionPostSpecification {
         };
     }
 
+    public static Specification<GreenActionPostEntity> hasUserId(String userId) {
+        return (root, query, cb) -> {
+            if (userId == null || userId.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("user").get("id"), userId);
+        };
+    }
+
     public static Specification<GreenActionPostEntity> actionDateFrom(LocalDate fromDate) {
         return (root, query, cb) -> {
             if (fromDate == null) {

@@ -4,6 +4,7 @@ import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
+import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import com.webdev.greenify.greenaction.service.GreenActionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class GreenActionController {
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN', 'NGO')")
     public ResponseEntity<PagedResponse<GreenActionPostSummaryResponse>> getPostsByFilter(
+            @RequestParam(required = false) PostStatus status,
             @RequestParam(required = false) String actionTypeId,
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -54,7 +56,19 @@ public class GreenActionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(greenActionService.getPostsByFilter(
-                actionTypeId, groupName, fromDate, toDate, page, size));
+                status, actionTypeId, groupName, fromDate, toDate, page, size));
+    }
+
+    @GetMapping("/me/history")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<PagedResponse<GreenActionPostSummaryResponse>> getMyPostHistory(
+            @RequestParam(required = false) PostStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(greenActionService.getPostHistoryForCurrentUser(
+                status, fromDate, toDate, page, size));
     }
 
     @GetMapping("/{postId}")
