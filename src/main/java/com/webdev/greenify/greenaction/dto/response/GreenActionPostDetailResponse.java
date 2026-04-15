@@ -20,6 +20,8 @@ public class GreenActionPostDetailResponse {
 
     private String id;
     private String authorDisplayName;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String authorAvatarUrl;
     private String actionTypeName;
     private String groupName;
     private String caption;

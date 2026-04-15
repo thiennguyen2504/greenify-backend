@@ -261,7 +261,7 @@ public class GreenActionServiceImpl implements GreenActionService {
         if (latitude == null || longitude == null) {
             return "Vi tri mo phong: chua co toa do";
         }
-        return "Vi tri mo phong tu toa do ("
+        return "tes ("
                 + latitude.stripTrailingZeros().toPlainString()
                 + ", "
                 + longitude.stripTrailingZeros().toPlainString()

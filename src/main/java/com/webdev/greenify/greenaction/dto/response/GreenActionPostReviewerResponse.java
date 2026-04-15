@@ -21,6 +21,8 @@ public class GreenActionPostReviewerResponse {
 
     private String id;
     private String authorDisplayName;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String authorAvatarUrl;
     private String actionTypeId;
     private String actionTypeName;
     private String groupName;
