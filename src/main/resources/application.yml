@@ -18,7 +18,14 @@ spring:
     show-sql: true
     properties:
       hibernate:
+        default_schema: ${DB_SCHEMA:public}
         format_sql: false
+
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:never}
+      schema-locations: classpath:db/init/postgresql-schema.sql
+      continue-on-error: true
 
   # H2 Console (only for local development)
   h2:

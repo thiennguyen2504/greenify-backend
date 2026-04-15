@@ -1,23 +1,25 @@
 package com.webdev.greenify.common.util;
 
+import com.webdev.greenify.garden.entity.SeedEntity;
+import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,18 +33,22 @@ import java.util.Set;
 @Slf4j
 public class SeedData implements CommandLineRunner {
 
-    @Value("${app.seed.ctv-password:}")
-    private String seedCtvPassword;
+        private static final String SEEDED_PASSWORD = "password123";
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final GreenActionTypeRepository greenActionTypeRepository;
     private final WasteTypeRepository wasteTypeRepository;
+        private final SeedRepository seedRepository;
+        private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+
+                // Backfill legacy null soft-delete flags before any entity mapping occurs.
+                normalizeSoftDeleteFlags();
 
         // Ensure roleEntities exist
         RoleEntity adminRoleEntity = roleRepository.findByName("ADMIN")
@@ -111,29 +117,54 @@ public class SeedData implements CommandLineRunner {
 
         // Seed Waste Types
         seedWasteTypes();
+
+                // Seed Garden Seeds
+                seedGardenSeeds();
+        }
+
+        private void normalizeSoftDeleteFlags() {
+                try {
+                        List<String> tables = jdbcTemplate.queryForList("""
+                                        SELECT DISTINCT table_name
+                                        FROM information_schema.columns
+                                        WHERE lower(column_name) = 'is_deleted'
+                                          AND lower(table_schema) NOT IN ('information_schema', 'pg_catalog')
+                                        """, String.class);
+
+                        for (String table : tables) {
+                                int updatedRows = jdbcTemplate.update(
+                                                "UPDATE " + table + " SET is_deleted = FALSE WHERE is_deleted IS NULL");
+                                if (updatedRows > 0) {
+                                        log.info("Backfilled {} rows in {}.is_deleted", updatedRows, table);
+                                }
+                        }
+                } catch (Exception ex) {
+                        log.warn("Could not normalize soft-delete flags before seeding", ex);
+                }
     }
 
         private void createCtvUserIfMissing(String email, String username, RoleEntity ctvRoleEntity, RoleEntity userRoleEntity) {
-                if (userRepository.findByIdentifier(email).isPresent()) {
-                        return;
-                }
-
-                if (!StringUtils.hasText(seedCtvPassword)) {
-                        log.warn("Skipping seeded CTV user creation for {} because app.seed.ctv-password is not configured", email);
-                        return;
-                }
-
                 Set<RoleEntity> ctvRoleEntities = new HashSet<>();
                 ctvRoleEntities.add(ctvRoleEntity);
                 ctvRoleEntities.add(userRoleEntity);
 
-                userRepository.save(UserEntity.builder()
-                                .email(email)
-                                .username(username)
-                                .password(passwordEncoder.encode(seedCtvPassword))
-                                .roles(ctvRoleEntities)
-                                .status(AccountStatus.ACTIVE)
-                                .build());
+                UserEntity existingCtvUser = userRepository.findByIdentifier(email).orElse(null);
+                if (existingCtvUser == null) {
+                        userRepository.save(UserEntity.builder()
+                                        .email(email)
+                                        .username(username)
+                                        .password(passwordEncoder.encode(SEEDED_PASSWORD))
+                                        .roles(ctvRoleEntities)
+                                        .status(AccountStatus.ACTIVE)
+                                        .build());
+                        return;
+                }
+
+                existingCtvUser.setUsername(username);
+                existingCtvUser.setPassword(passwordEncoder.encode(SEEDED_PASSWORD));
+                existingCtvUser.setStatus(AccountStatus.ACTIVE);
+                existingCtvUser.getRoles().addAll(ctvRoleEntities);
+                userRepository.save(existingCtvUser);
         }
 
     private void seedGreenActionTypes() {
@@ -373,6 +404,57 @@ public class SeedData implements CommandLineRunner {
 
             wasteTypeRepository.saveAll(wasteTypes);
             log.info("Seeded {} waste types", wasteTypes.size());
+        }
+    }
+
+    private void seedGardenSeeds() {
+        if (seedRepository.count() == 0) {
+            List<SeedEntity> seeds = new ArrayList<>();
+
+            seeds.add(SeedEntity.builder()
+                    .name("Sunflower")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage4/600/600")
+                    .daysToMature(14)
+                    .stage2FromDay(3)
+                    .stage3FromDay(7)
+                    .stage4FromDay(12)
+                    .cycleType(PlantCycleType.SHORT_TERM)
+                    .isActive(true)
+                    .build());
+
+            seeds.add(SeedEntity.builder()
+                    .name("Lavender")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-lavender-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-lavender-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-lavender-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-lavender-stage4/600/600")
+                    .daysToMature(21)
+                    .stage2FromDay(5)
+                    .stage3FromDay(10)
+                    .stage4FromDay(16)
+                    .cycleType(PlantCycleType.LONG_TERM)
+                    .isActive(true)
+                    .build());
+
+            seeds.add(SeedEntity.builder()
+                    .name("Rose")
+                    .stage1ImageUrl("https://picsum.photos/seed/greenify-rose-stage1/600/600")
+                    .stage2ImageUrl("https://picsum.photos/seed/greenify-rose-stage2/600/600")
+                    .stage3ImageUrl("https://picsum.photos/seed/greenify-rose-stage3/600/600")
+                    .stage4ImageUrl("https://picsum.photos/seed/greenify-rose-stage4/600/600")
+                    .daysToMature(30)
+                    .stage2FromDay(6)
+                    .stage3FromDay(14)
+                    .stage4FromDay(24)
+                    .cycleType(PlantCycleType.LONG_TERM)
+                    .isActive(true)
+                    .build());
+
+            seedRepository.saveAll(seeds);
+            log.info("Seeded {} garden seeds", seeds.size());
         }
     }
 }

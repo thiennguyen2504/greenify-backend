@@ -302,6 +302,58 @@ public class VoucherServiceImpl implements VoucherService {
         return voucherMapper.toVoucherTemplateResponse(template);
     }
 
+    /**
+     * Programmatic voucher issue path for reward scenarios.
+     * This flow does not deduct points, so it intentionally does not write point_ledger entries.
+     */
+    @Override
+    @Transactional
+    public UserVoucherEntity grantVoucherToUser(String userId, String voucherTemplateId, VoucherSource source) {
+        if (userId == null || userId.isBlank()) {
+            throw new AppException("User ID is required", HttpStatus.BAD_REQUEST);
+        }
+        if (voucherTemplateId == null || voucherTemplateId.isBlank()) {
+            throw new AppException("Voucher template ID is required", HttpStatus.BAD_REQUEST);
+        }
+        if (source == null || source == VoucherSource.REDEEM) {
+            throw new AppException("Reward source is required for programmatic voucher grants", HttpStatus.BAD_REQUEST);
+        }
+
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        VoucherTemplateEntity template = voucherTemplateRepository.findByIdForUpdate(voucherTemplateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+
+        validateVoucherTemplateForExchange(template);
+
+        int updatedRemainingStock = template.getRemainingStock() - 1;
+        template.setRemainingStock(updatedRemainingStock);
+        if (updatedRemainingStock <= 0) {
+            template.setStatus(VoucherTemplateStatus.DEPLETED);
+        }
+        voucherTemplateRepository.save(template);
+
+        UserVoucherEntity userVoucher = UserVoucherEntity.builder()
+                .user(user)
+                .voucherTemplate(template)
+                .voucherCode(generateUniqueVoucherCode())
+                .source(source)
+                .status(UserVoucherStatus.AVAILABLE)
+                .expiresAt(template.getValidUntil())
+                .build();
+
+        userVoucher = userVoucherRepository.save(userVoucher);
+
+        log.info("Granted voucher {} to user {} from template {} with source {}",
+                userVoucher.getId(),
+                userId,
+                voucherTemplateId,
+                source);
+
+        return userVoucher;
+    }
+
     private void validateVoucherTemplateForExchange(VoucherTemplateEntity template) {
         if (template.getStatus() != VoucherTemplateStatus.ACTIVE) {
             throw new AppException("Voucher is not available for exchange", HttpStatus.BAD_REQUEST);

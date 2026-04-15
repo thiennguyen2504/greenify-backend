@@ -15,6 +15,7 @@ import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.PostReviewRepository;
 import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.greenaction.service.ReviewService;
+import com.webdev.greenify.streak.service.StreakService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final GreenActionMapper greenActionMapper;
     private final ReviewMapper reviewMapper;
     private final PointService pointService;
+    private final StreakService streakService;
 
     @Override
     @Transactional(readOnly = true)
@@ -137,6 +139,10 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Award points if post becomes VERIFIED
         if (newStatus == PostStatus.VERIFIED) {
+            streakService.handleVerifiedPost(
+                    post.getUser().getId(),
+                    post.getActionDate(),
+                    post.getPostImage() != null ? post.getPostImage().getImageUrl() : null);
             awardPointsForVerifiedPost(post);
         }
 
