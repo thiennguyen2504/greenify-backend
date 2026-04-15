@@ -20,7 +20,6 @@ public class PostReviewResponse {
     private String reviewerId;
     private String reviewerDisplayName;
     private ReviewDecision decision;
-    private String rejectReasonCode;
-    private String rejectReasonNote;
+    private String rejectReason;
     private LocalDateTime createdAt;
 }

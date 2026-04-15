@@ -56,7 +56,7 @@ public class SeedEntity extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "cycle_type", length = 30, nullable = false)
-    private PlantCycleType cycleType = PlantCycleType.SHORT_TERM;
+    private PlantCycleType cycleType = PlantCycleType.EASY;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reward_voucher_template_id")

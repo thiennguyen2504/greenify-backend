@@ -3,6 +3,7 @@ package com.webdev.greenify.greenaction.repository;
 import com.webdev.greenify.greenaction.entity.PostReviewEntity;
 import com.webdev.greenify.greenaction.enumeration.ReviewDecision;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -72,4 +73,13 @@ public interface PostReviewRepository extends JpaRepository<PostReviewEntity, St
             ORDER BY r.createdAt DESC
             """)
     List<PostReviewEntity> findByPostIdsAndIsValidTrue(@Param("postIds") List<String> postIds);
+
+    @Modifying
+    @Query("""
+            UPDATE PostReviewEntity r
+            SET r.isValid = false
+            WHERE r.post.id = :postId
+            AND r.isValid = true
+            """)
+    int invalidateValidReviewsByPostId(@Param("postId") String postId);
 }

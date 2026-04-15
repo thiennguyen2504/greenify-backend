@@ -372,12 +372,13 @@ public class GardenServiceImpl implements GardenService {
             return 0;
         }
 
-        PlantCycleType effectiveCycleType = cycleType != null ? cycleType : PlantCycleType.SHORT_TERM;
-        if (effectiveCycleType == PlantCycleType.LONG_TERM) {
-            return missedDays >= 3 ? (missedDays - 2) : 0;
-        }
+        PlantCycleType effectiveCycleType = cycleType != null ? cycleType : PlantCycleType.EASY;
 
-        return missedDays;
+        return switch (effectiveCycleType) {
+            case EASY -> missedDays;
+            case MEDIUM -> Math.max(0, missedDays - 1);
+            case HARD -> Math.max(0, missedDays - 2);
+        };
     }
 
     private int valueOrZero(Integer value) {

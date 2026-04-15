@@ -16,7 +16,5 @@ public class SubmitReviewRequest {
     @NotNull(message = "Decision is required")
     private ReviewDecision decision;
 
-    private String rejectReasonCode;
-
-    private String rejectReasonNote;
+    private String rejectReason;
 }

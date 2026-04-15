@@ -12,6 +12,9 @@ import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
+import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
+import com.webdev.greenify.voucher.enumeration.VoucherTemplateStatus;
+import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -22,9 +25,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -34,6 +41,9 @@ import java.util.Set;
 public class SeedData implements CommandLineRunner {
 
         private static final String SEEDED_PASSWORD = "password123";
+        private static final String STAGE_SEED_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hat%202.png?updatedAt=1776237615245";
+        private static final String STAGE_SPROUT_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/nay%20mam.png?updatedAt=1776237615268";
+        private static final String STAGE_GROWING_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/leaf-plant.png?updatedAt=1776237615257";
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -41,6 +51,7 @@ public class SeedData implements CommandLineRunner {
     private final GreenActionTypeRepository greenActionTypeRepository;
     private final WasteTypeRepository wasteTypeRepository;
         private final SeedRepository seedRepository;
+        private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -118,9 +129,12 @@ public class SeedData implements CommandLineRunner {
         // Seed Waste Types
         seedWasteTypes();
 
-                // Seed Garden Seeds
-                seedGardenSeeds();
-        }
+        // Seed vouchers for garden rewards
+        Map<PlantCycleType, VoucherTemplateEntity> rewardVoucherByCycle = seedGardenRewardVouchers();
+
+        // Seed Garden Seeds
+        seedGardenSeeds(rewardVoucherByCycle);
+    }
 
         private void normalizeSoftDeleteFlags() {
                 try {
@@ -407,54 +421,215 @@ public class SeedData implements CommandLineRunner {
         }
     }
 
-    private void seedGardenSeeds() {
-        if (seedRepository.count() == 0) {
-            List<SeedEntity> seeds = new ArrayList<>();
-
-            seeds.add(SeedEntity.builder()
-                    .name("Sunflower")
-                    .stage1ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage1/600/600")
-                    .stage2ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage2/600/600")
-                    .stage3ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage3/600/600")
-                    .stage4ImageUrl("https://picsum.photos/seed/greenify-sunflower-stage4/600/600")
-                    .daysToMature(14)
-                    .stage2FromDay(3)
-                    .stage3FromDay(7)
-                    .stage4FromDay(12)
-                    .cycleType(PlantCycleType.SHORT_TERM)
-                    .isActive(true)
-                    .build());
-
-            seeds.add(SeedEntity.builder()
-                    .name("Lavender")
-                    .stage1ImageUrl("https://picsum.photos/seed/greenify-lavender-stage1/600/600")
-                    .stage2ImageUrl("https://picsum.photos/seed/greenify-lavender-stage2/600/600")
-                    .stage3ImageUrl("https://picsum.photos/seed/greenify-lavender-stage3/600/600")
-                    .stage4ImageUrl("https://picsum.photos/seed/greenify-lavender-stage4/600/600")
-                    .daysToMature(21)
-                    .stage2FromDay(5)
-                    .stage3FromDay(10)
-                    .stage4FromDay(16)
-                    .cycleType(PlantCycleType.LONG_TERM)
-                    .isActive(true)
-                    .build());
-
-            seeds.add(SeedEntity.builder()
-                    .name("Rose")
-                    .stage1ImageUrl("https://picsum.photos/seed/greenify-rose-stage1/600/600")
-                    .stage2ImageUrl("https://picsum.photos/seed/greenify-rose-stage2/600/600")
-                    .stage3ImageUrl("https://picsum.photos/seed/greenify-rose-stage3/600/600")
-                    .stage4ImageUrl("https://picsum.photos/seed/greenify-rose-stage4/600/600")
-                    .daysToMature(30)
-                    .stage2FromDay(6)
-                    .stage3FromDay(14)
-                    .stage4FromDay(24)
-                    .cycleType(PlantCycleType.LONG_TERM)
-                    .isActive(true)
-                    .build());
-
-            seedRepository.saveAll(seeds);
-            log.info("Seeded {} garden seeds", seeds.size());
+    private Map<PlantCycleType, VoucherTemplateEntity> seedGardenRewardVouchers() {
+        Map<String, VoucherTemplateEntity> existingByName = new HashMap<>();
+        for (VoucherTemplateEntity template : voucherTemplateRepository.findAll()) {
+            existingByName.put(template.getName(), template);
         }
+
+        LocalDateTime validUntil = LocalDateTime.now().plusYears(3);
+        Map<PlantCycleType, VoucherTemplateEntity> rewardVoucherByCycle = new EnumMap<>(PlantCycleType.class);
+
+        rewardVoucherByCycle.put(
+                PlantCycleType.EASY,
+                upsertRewardVoucherTemplate(
+                        existingByName,
+                        "Garden Reward - Easy",
+                        "Greenify Rewards",
+                        new BigDecimal("30"),
+                        800,
+                        validUntil,
+                        "Reward voucher for easy plants (30-45 days)."));
+
+        rewardVoucherByCycle.put(
+                PlantCycleType.MEDIUM,
+                upsertRewardVoucherTemplate(
+                        existingByName,
+                        "Garden Reward - Medium",
+                        "Greenify Rewards",
+                        new BigDecimal("50"),
+                        600,
+                        validUntil,
+                        "Reward voucher for medium plants (50-80 days)."));
+
+        rewardVoucherByCycle.put(
+                PlantCycleType.HARD,
+                upsertRewardVoucherTemplate(
+                        existingByName,
+                        "Garden Reward - Hard",
+                        "Greenify Rewards",
+                        new BigDecimal("80"),
+                        400,
+                        validUntil,
+                        "Reward voucher for hard plants (90-150 days)."));
+
+        log.info("Seeded/updated {} garden reward voucher templates", rewardVoucherByCycle.size());
+        return rewardVoucherByCycle;
+    }
+
+    private VoucherTemplateEntity upsertRewardVoucherTemplate(
+            Map<String, VoucherTemplateEntity> existingByName,
+            String name,
+            String partnerName,
+            BigDecimal requiredPoints,
+            int totalStock,
+            LocalDateTime validUntil,
+            String description) {
+
+        VoucherTemplateEntity template = existingByName.get(name);
+        if (template == null) {
+            template = VoucherTemplateEntity.builder()
+                    .name(name)
+                    .build();
+        }
+
+        template.setPartnerName(partnerName);
+        template.setDescription(description);
+        template.setRequiredPoints(requiredPoints);
+        template.setTotalStock(totalStock);
+        template.setRemainingStock(totalStock);
+        template.setUsageConditions("Issued automatically when a garden plant matures.");
+        template.setValidUntil(validUntil);
+        template.setStatus(VoucherTemplateStatus.ACTIVE);
+
+        VoucherTemplateEntity saved = voucherTemplateRepository.save(template);
+        existingByName.put(name, saved);
+        return saved;
+    }
+
+    private void seedGardenSeeds(Map<PlantCycleType, VoucherTemplateEntity> rewardVoucherByCycle) {
+        List<SeedEntity> existingSeeds = seedRepository.findAll();
+        Map<String, SeedEntity> existingByName = new HashMap<>();
+
+        for (SeedEntity seed : existingSeeds) {
+            existingByName.put(seed.getName(), seed);
+        }
+
+        Set<String> targetSeedNames = Set.of(
+                "Hướng dương",
+                "Hoa hồng",
+                "Cẩm chướng",
+                "Sen",
+                "Anh đào",
+                "Cây phong",
+                "Cây thông",
+                "Cây dừa",
+                "Hoa tulip",
+                "Hoa mai",
+                "Hoa lan",
+                "Cây táo",
+                "Tre",
+                "Xương rồng nở hoa");
+
+        List<SeedEntity> seedsToSave = new ArrayList<>();
+        int deactivatedLegacySeeds = 0;
+
+        for (SeedEntity existingSeed : existingSeeds) {
+            if (!targetSeedNames.contains(existingSeed.getName()) && Boolean.TRUE.equals(existingSeed.getIsActive())) {
+                existingSeed.setIsActive(false);
+                existingSeed.setRewardVoucherTemplate(null);
+                seedsToSave.add(existingSeed);
+                deactivatedLegacySeeds++;
+            }
+        }
+
+        seedsToSave.add(upsertSeed(existingByName, "Hướng dương", 30, 3, 8, 18,
+                PlantCycleType.EASY,
+                rewardVoucherByCycle.get(PlantCycleType.EASY),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/huong%20duong.png?updatedAt=1776237615262"));
+        seedsToSave.add(upsertSeed(existingByName, "Hoa hồng", 40, 4, 11, 23,
+                PlantCycleType.EASY,
+                rewardVoucherByCycle.get(PlantCycleType.EASY),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hoa%20hong.png?updatedAt=1776237615255"));
+        seedsToSave.add(upsertSeed(existingByName, "Cẩm chướng", 45, 4, 11, 26,
+                PlantCycleType.EASY,
+                rewardVoucherByCycle.get(PlantCycleType.EASY),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cam%20chuong.png?updatedAt=1776237615259"));
+        seedsToSave.add(upsertSeed(existingByName, "Hoa tulip", 30, 3, 8, 19,
+                PlantCycleType.EASY,
+                rewardVoucherByCycle.get(PlantCycleType.EASY),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/tulip.png?updatedAt=1776237615304"));
+
+        seedsToSave.add(upsertSeed(existingByName, "Sen", 50, 4, 11, 31,
+                PlantCycleType.MEDIUM,
+                rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/sen.png?updatedAt=1776237615287"));
+        seedsToSave.add(upsertSeed(existingByName, "Hoa mai", 60, 4, 11, 36,
+                PlantCycleType.MEDIUM,
+                rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hoa%20mai.png?updatedAt=1776237615240"));
+        seedsToSave.add(upsertSeed(existingByName, "Hoa lan", 70, 5, 13, 41,
+                PlantCycleType.MEDIUM,
+                rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/phong%20lan.png?updatedAt=1776237615251"));
+        seedsToSave.add(upsertSeed(existingByName, "Tre", 80, 5, 13, 41,
+                PlantCycleType.MEDIUM,
+                rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/tree.png?updatedAt=1776237615294"));
+        seedsToSave.add(upsertSeed(existingByName, "Xương rồng nở hoa", 60, 4, 11, 31,
+                PlantCycleType.MEDIUM,
+                rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/xuong%20rong.png?updatedAt=1776237615280"));
+
+        seedsToSave.add(upsertSeed(existingByName, "Anh đào", 90, 6, 16, 46,
+                PlantCycleType.HARD,
+                rewardVoucherByCycle.get(PlantCycleType.HARD),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/anh%20dao.png?updatedAt=1776237615253"));
+        seedsToSave.add(upsertSeed(existingByName, "Cây phong", 100, 6, 16, 51,
+                PlantCycleType.HARD,
+                rewardVoucherByCycle.get(PlantCycleType.HARD),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20phong.png?updatedAt=1776237615249"));
+        seedsToSave.add(upsertSeed(existingByName, "Cây thông", 120, 8, 22, 61,
+                PlantCycleType.HARD,
+                rewardVoucherByCycle.get(PlantCycleType.HARD),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20thong.png?updatedAt=1776237615270"));
+        seedsToSave.add(upsertSeed(existingByName, "Cây táo", 100, 6, 16, 51,
+                PlantCycleType.HARD,
+                rewardVoucherByCycle.get(PlantCycleType.HARD),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/cay%20tao.png?updatedAt=1776237615273"));
+        seedsToSave.add(upsertSeed(existingByName, "Cây dừa", 150, 8, 22, 71,
+                PlantCycleType.HARD,
+                rewardVoucherByCycle.get(PlantCycleType.HARD),
+                "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20dua.png?updatedAt=1776237615246"));
+
+        seedRepository.saveAll(seedsToSave);
+
+        log.info(
+                "Seeded/updated {} garden seeds and deactivated {} legacy seeds",
+                targetSeedNames.size(),
+                deactivatedLegacySeeds);
+    }
+
+    private SeedEntity upsertSeed(
+            Map<String, SeedEntity> existingByName,
+            String name,
+            int daysToMature,
+            int stage2FromDay,
+            int stage3FromDay,
+            int stage4FromDay,
+            PlantCycleType cycleType,
+            VoucherTemplateEntity rewardVoucherTemplate,
+            String stage4ImageUrl) {
+
+        SeedEntity seed = existingByName.get(name);
+        if (seed == null) {
+            seed = SeedEntity.builder().name(name).build();
+            existingByName.put(name, seed);
+        }
+
+        seed.setName(name);
+        seed.setStage1ImageUrl(STAGE_SEED_IMAGE_URL);
+        seed.setStage2ImageUrl(STAGE_SPROUT_IMAGE_URL);
+        seed.setStage3ImageUrl(STAGE_GROWING_IMAGE_URL);
+        seed.setStage4ImageUrl(stage4ImageUrl);
+        seed.setDaysToMature(daysToMature);
+        seed.setStage2FromDay(stage2FromDay);
+        seed.setStage3FromDay(stage3FromDay);
+        seed.setStage4FromDay(stage4FromDay);
+        seed.setCycleType(cycleType);
+        seed.setRewardVoucherTemplate(rewardVoucherTemplate);
+        seed.setIsActive(true);
+
+        return seed;
     }
 }
