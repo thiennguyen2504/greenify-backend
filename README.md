@@ -48,6 +48,19 @@ This will start:
 
 Open [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
 
+### 5. API Documentation (Swagger)
+
+After the app is running, open:
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- OpenAPI JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+- OpenAPI YAML: [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml)
+
+Use the **Authorize** button in Swagger UI and paste only the access token (without `Bearer ` prefix):
+
+```text
+<your-access-token>
+```
+
 ---
 
 ## Common Docker Commands
