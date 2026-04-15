@@ -1,6 +1,7 @@
 package com.webdev.greenify.greenaction.service;
 
 import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
+import com.webdev.greenify.greenaction.dto.response.GreenActionTypeResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -12,6 +13,8 @@ import java.util.List;
 public interface GreenActionService {
 
     GreenActionPostDetailResponse createPost(CreateGreenActionPostRequest request);
+
+    List<GreenActionTypeResponse> getAllActionTypes();
 
     List<GreenActionPostSummaryResponse> getTopPosts(int limit);
 

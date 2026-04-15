@@ -5,6 +5,7 @@ import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.file.entity.PostImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
+import com.webdev.greenify.greenaction.dto.response.GreenActionTypeResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
 import com.webdev.greenify.greenaction.dto.response.PostReviewResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
@@ -110,6 +111,14 @@ public class GreenActionServiceImpl implements GreenActionService {
         response.setReviews(List.of());
         return response;
     }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<GreenActionTypeResponse> getAllActionTypes() {
+                return actionTypeRepository.findAllByOrderByGroupNameAscActionNameAsc().stream()
+                                .map(this::toActionTypeResponse)
+                                .toList();
+        }
 
     @Override
     @Transactional(readOnly = true)
@@ -271,6 +280,17 @@ public class GreenActionServiceImpl implements GreenActionService {
     private int clampPageSize(int size) {
         return Math.min(Math.max(size, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
     }
+
+        private GreenActionTypeResponse toActionTypeResponse(GreenActionTypeEntity actionType) {
+                return GreenActionTypeResponse.builder()
+                                .id(actionType.getId())
+                                .groupName(actionType.getGroupName())
+                                .actionName(actionType.getActionName())
+                                .suggestedPoints(actionType.getSuggestedPoints())
+                                .locationRequired(actionType.getLocationRequired())
+                                .isActive(actionType.getIsActive())
+                                .build();
+        }
 
     private String getCurrentUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
