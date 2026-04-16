@@ -77,8 +77,15 @@ jwt:
 # Domain URL
 domain:
   url: ${DOMAIN_URL:http://localhost:3000}
+  cloud-front: ${CLOUDFRONT_URL:placeholder}
 
 goong:
   api-key: ${GOONG_API_KEY:}
   geocode-url: ${GOONG_GEOCODE_URL:https://rsapi.goong.io/v2/geocode}
   timeout-millis: ${GOONG_TIMEOUT_MILLIS:2500}
+
+# AWS S3 Configuration
+storage:
+  access-key: ${AWS_ACCESS_KEY:placeholder}
+  secret-key: ${AWS_SECRET_KEY:placeholder}
+  bucket-name: ${AWS_BUCKET:greenify-images-942004241415-ap-southeast-1-an}
