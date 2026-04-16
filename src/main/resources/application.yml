@@ -2,6 +2,10 @@ spring:
   application:
     name: greenify
 
+  # Run local development with dev profile by default.
+  profiles:
+    default: dev
+
   # Database Configuration
   # Local: H2 in-memory (default)
   # Docker: PostgreSQL (set DB_URL, DB_USER, DB_PASSWORD)
