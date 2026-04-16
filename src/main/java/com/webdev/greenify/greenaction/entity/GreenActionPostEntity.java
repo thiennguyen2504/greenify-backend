@@ -54,6 +54,9 @@ public class GreenActionPostEntity extends BaseEntity {
     @Column(precision = 9, scale = 6)
     private BigDecimal longitude;
 
+    @Column(columnDefinition = "TEXT")
+    private String location;
+
     @Column(name = "action_date")
     private LocalDate actionDate;
 

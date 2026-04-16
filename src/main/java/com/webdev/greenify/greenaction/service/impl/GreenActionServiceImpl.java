@@ -20,6 +20,7 @@ import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.greenaction.repository.PostReviewRepository;
 import com.webdev.greenify.greenaction.service.GreenActionService;
+import com.webdev.greenify.greenaction.service.LocationSnapshotService;
 import com.webdev.greenify.greenaction.specification.GreenActionPostSpecification;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
@@ -35,7 +36,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +57,7 @@ public class GreenActionServiceImpl implements GreenActionService {
     private final GreenActionMapper greenActionMapper;
     private final ReviewMapper reviewMapper;
     private final ImageMapper imageMapper;
+    private final LocationSnapshotService locationSnapshotService;
 
     @Override
     @Transactional
@@ -90,6 +91,7 @@ public class GreenActionServiceImpl implements GreenActionService {
                 .caption(request.getCaption())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .location(locationSnapshotService.resolveLocationSnapshot(request.getLatitude(), request.getLongitude()))
                 .actionDate(effectiveActionDate)
                 .status(PostStatus.PENDING_REVIEW)
                 .approveCount(0)
@@ -107,7 +109,6 @@ public class GreenActionServiceImpl implements GreenActionService {
         log.info("Green action post created with ID: {} by user: {}", post.getId(), currentUserId);
 
         GreenActionPostDetailResponse response = greenActionMapper.toDetailResponse(post);
-        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
         response.setReviews(List.of());
         return response;
     }
@@ -135,7 +136,6 @@ public class GreenActionServiceImpl implements GreenActionService {
         return posts.stream()
                 .map(post -> {
                     GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
-                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
                     response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
                     return response;
                 })
@@ -174,7 +174,6 @@ public class GreenActionServiceImpl implements GreenActionService {
         List<GreenActionPostSummaryResponse> content = postsPage.getContent().stream()
                 .map(post -> {
                     GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
-                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
                     response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
                     return response;
                 })
@@ -217,7 +216,6 @@ public class GreenActionServiceImpl implements GreenActionService {
         List<GreenActionPostSummaryResponse> content = postsPage.getContent().stream()
                 .map(post -> {
                     GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
-                    response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
                     response.setReviews(reviewsByPostId.getOrDefault(post.getId(), List.of()));
                     return response;
                 })
@@ -248,7 +246,6 @@ public class GreenActionServiceImpl implements GreenActionService {
         }
 
         GreenActionPostDetailResponse response = greenActionMapper.toDetailResponse(post);
-        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
         response.setReviews(reviewMapper.toPostReviewResponseList(
                 reviewRepository.findByPostIdAndIsValidTrueOrderByCreatedAtDesc(post.getId())));
         return response;
@@ -264,17 +261,6 @@ public class GreenActionServiceImpl implements GreenActionService {
                 review -> review.getPost().getId(),
                 LinkedHashMap::new,
                 Collectors.mapping(reviewMapper::toPostReviewResponse, Collectors.toList())));
-    }
-
-    private String buildMockLocation(BigDecimal latitude, BigDecimal longitude) {
-        if (latitude == null || longitude == null) {
-            return "Vi tri mo phong: chua co toa do";
-        }
-        return "tes ("
-                + latitude.stripTrailingZeros().toPlainString()
-                + ", "
-                + longitude.stripTrailingZeros().toPlainString()
-                + ")";
     }
 
     private int clampPageSize(int size) {

@@ -31,6 +31,7 @@ Edit `.env` and fill in your values:
 - `DB_PASSWORD` - database password
 - `JWT_SECRET` - your 256-bit secret key
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - from Google Cloud Console
+- `GOONG_API_KEY` - Goong key for reverse geocoding location snapshot
 - `MAIL_USERNAME` / `MAIL_PASSWORD` - Gmail app password
 
 ### 3. Start all services
