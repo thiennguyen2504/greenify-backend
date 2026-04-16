@@ -80,7 +80,6 @@ public class ReviewServiceImpl implements ReviewService {
         response.setAlreadyReviewed(false);
         response.setReviews(reviewMapper.toPostReviewResponseList(
                 reviewRepository.findByPostIdAndIsValidTrueOrderByCreatedAtDesc(postId)));
-        response.setLocation(buildMockLocation(post.getLatitude(), post.getLongitude()));
         return response;
     }
 
@@ -244,16 +243,5 @@ public class ReviewServiceImpl implements ReviewService {
 
     private String getCurrentUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private String buildMockLocation(BigDecimal latitude, BigDecimal longitude) {
-        if (latitude == null || longitude == null) {
-            return "Vi tri mo phong: chua co toa do";
-        }
-        return "Vi tri mo phong tu toa do ("
-                + latitude.stripTrailingZeros().toPlainString()
-                + ", "
-                + longitude.stripTrailingZeros().toPlainString()
-                + ")";
     }
 }

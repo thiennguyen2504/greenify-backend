@@ -1,5 +1,8 @@
 CREATE SCHEMA IF NOT EXISTS public;
 
+ALTER TABLE IF EXISTS green_action_posts
+	ADD COLUMN IF NOT EXISTS location TEXT;
+
 -- Review schema updates: simplify reject fields and allow re-review cycles.
 ALTER TABLE IF EXISTS post_reviews
 	ADD COLUMN IF NOT EXISTS reject_reason TEXT;

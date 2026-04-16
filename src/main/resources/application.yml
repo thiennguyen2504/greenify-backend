@@ -73,3 +73,8 @@ jwt:
 # Domain URL
 domain:
   url: ${DOMAIN_URL:http://localhost:3000}
+
+goong:
+  api-key: ${GOONG_API_KEY:}
+  geocode-url: ${GOONG_GEOCODE_URL:https://rsapi.goong.io/v2/geocode}
+  timeout-millis: ${GOONG_TIMEOUT_MILLIS:2500}
