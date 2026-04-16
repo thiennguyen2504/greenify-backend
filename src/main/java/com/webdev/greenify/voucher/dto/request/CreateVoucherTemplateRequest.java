@@ -1,5 +1,7 @@
 package com.webdev.greenify.voucher.dto.request;
 
+import com.webdev.greenify.file.dto.ImageRequestDTO;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
@@ -9,7 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -42,7 +43,9 @@ public class CreateVoucherTemplateRequest {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime validUntil;
 
-    private MultipartFile partnerLogo;
+    @Valid
+    private ImageRequestDTO partnerLogo;
 
-    private MultipartFile thumbnail;
+    @Valid
+    private ImageRequestDTO thumbnail;
 }
