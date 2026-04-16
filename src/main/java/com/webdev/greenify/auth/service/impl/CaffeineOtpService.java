@@ -84,7 +84,7 @@ public class CaffeineOtpService implements OtpService {
 
         // Generate 6 digit OTP
         String otp = generateNumericOtp(6);
-        log.info("Generated OTP for {}: {}", identifier, otp); // in real environment, avoid saving plain OTP
+        log.info("Generated OTP for {}", identifier);
 
         // Hash OTP and save
         String hashedOtp = passwordEncoder.encode(otp);
@@ -94,13 +94,17 @@ public class CaffeineOtpService implements OtpService {
         // Update rate limit
         rateLimitCache.put(identifier, (count == null ? 0 : count) + 1);
 
-        // Send OTP
-        if (identifier.contains("@")) {
-            // Simulated otp sending via email
-            log.info("Simulating Email sent to {}: Your OTP is {}", identifier, otp);
-        } else {
-            // Simulated otp sending via sms
-            log.info("Simulating SMS sent to {}: Your OTP is {}", identifier, otp);
+        try {
+            // Send OTP
+            if (identifier.contains("@")) {
+                sendOtpEmail(identifier, otp);
+            } else {
+                // Simulated otp sending via sms
+                log.info("Simulating SMS sent to {}: Your OTP is {}", identifier, otp);
+            }
+        } catch (RuntimeException ex) {
+            rollbackOtpState(identifier, count);
+            throw ex;
         }
 
         // Put in cooldown cache after successful send
@@ -156,5 +160,32 @@ public class CaffeineOtpService implements OtpService {
             sb.append(random.nextInt(10));
         }
         return sb.toString();
+    }
+
+    private void sendOtpEmail(String email, String otp) {
+        String subject = "Greenify Registration OTP";
+        String content = String.format(
+                "<p>Xin chào,</p>" +
+                        "<p>Mã OTP đăng ký tài khoản Greenify của bạn là: <strong>%s</strong></p>" +
+                        "<p>Mã có hiệu lực trong %d phút.</p>" +
+                        "<p>ếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>",
+                otp,
+                OTP_EXPIRE_MINUTES);
+
+        emailService.sendEmail(email, subject, content);
+        log.info("OTP email sent to {}", email);
+    }
+
+    private void rollbackOtpState(String identifier, Integer previousCount) {
+        otpHashCache.invalidate(identifier);
+        otpAttemptCache.invalidate(identifier);
+        otpCooldownCache.invalidate(identifier);
+
+        if (previousCount == null) {
+            rateLimitCache.invalidate(identifier);
+            return;
+        }
+
+        rateLimitCache.put(identifier, previousCount);
     }
 }
