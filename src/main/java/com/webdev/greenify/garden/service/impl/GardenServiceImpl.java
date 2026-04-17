@@ -24,6 +24,7 @@ import com.webdev.greenify.garden.repository.PlantDailyLogRepository;
 import com.webdev.greenify.garden.repository.PlantProgressRepository;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.garden.service.GardenService;
+import com.webdev.greenify.garden.specification.PlantDailyLogSpecification;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
@@ -38,6 +39,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -141,9 +143,16 @@ public class GardenServiceImpl implements GardenService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PlantDailyLogResponse> getCurrentUserDailyLogs() {
+    public List<PlantDailyLogResponse> getCurrentUserDailyLogs(LocalDate fromDate, LocalDate toDate) {
         String userId = getCurrentUserId();
-        List<PlantDailyLogEntity> dailyLogs = plantDailyLogRepository.findByUserIdOrderByLogDateAsc(userId);
+        Specification<PlantDailyLogEntity> specification = PlantDailyLogSpecification.buildSpecification(
+                userId,
+                fromDate,
+                toDate);
+
+        List<PlantDailyLogEntity> dailyLogs = plantDailyLogRepository.findAll(
+                specification,
+                Sort.by(Sort.Direction.ASC, "logDate"));
 
         List<PlantDailyLogResponse> responses = new ArrayList<>(dailyLogs.size());
         PlantStage previousStage = null;

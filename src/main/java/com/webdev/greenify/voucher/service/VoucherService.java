@@ -31,10 +31,14 @@ public interface VoucherService {
     UserVoucherResponse exchangeVoucher(ExchangeVoucherRequest request);
 
     /**
-     * Get current user's voucher wallet with optional status filtering and pagination.
+         * Get current user's voucher wallet with optional status/source filtering and pagination.
      * Expired AVAILABLE vouchers are auto-marked as EXPIRED before query.
      */
-    PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(UserVoucherStatus status, int page, int size);
+        PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(
+            UserVoucherStatus status,
+            VoucherSource source,
+            int page,
+            int size);
 
     /**
      * Create a voucher template as DRAFT and initialize remaining stock = total stock.

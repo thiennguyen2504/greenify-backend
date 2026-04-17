@@ -19,7 +19,7 @@ public interface GardenService {
 
     PlantProgressResponse getCurrentPlantProgress();
 
-    List<PlantDailyLogResponse> getCurrentUserDailyLogs();
+    List<PlantDailyLogResponse> getCurrentUserDailyLogs(LocalDate fromDate, LocalDate toDate);
 
     PagedResponse<GardenArchiveResponse> getGardenArchives(int page, int size);
 
