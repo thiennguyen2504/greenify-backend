@@ -723,9 +723,16 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         }
         List<String> ids = spotsPage.getContent().stream().map(TrashSpotEntity::getId).toList();
         Map<String, TrashSpotEntity> enrichedMap = trashSpotRepository.findByIdIn(ids).stream()
-                .collect(Collectors.toMap(TrashSpotEntity::getId, e -> e));
+                .collect(Collectors.toMap(TrashSpotEntity::getId, e -> e, (existing, replacement) -> existing));
         return spotsPage.getContent().stream()
-                .map(e -> trashSpotMapper.toSummaryResponse(enrichedMap.getOrDefault(e.getId(), e)))
+                .map(e -> {
+                    TrashSpotEntity enriched = enrichedMap.get(e.getId());
+                    if (enriched == null) {
+                        log.warn("Enriched entity not found for trash spot id={}, falling back to partial entity", e.getId());
+                        return trashSpotMapper.toSummaryResponse(e);
+                    }
+                    return trashSpotMapper.toSummaryResponse(enriched);
+                })
                 .toList();
     }
 
