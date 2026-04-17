@@ -42,4 +42,9 @@ public interface PointService {
      * Called by scheduled job.
      */
     void processExpiredPoints();
+
+    /**
+     * Invalidate lazily-loaded action-type derived caches.
+     */
+    void invalidateActionTypeCache();
 }

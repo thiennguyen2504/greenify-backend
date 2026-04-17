@@ -27,10 +27,6 @@ public class VoucherTemplateResponse {
     private String usageConditions;
     private LocalDateTime validUntil;
     private String partnerLogoUrl;
-    private String partnerLogoBucket;
-    private String partnerLogoObjectKey;
     private String thumbnailUrl;
-    private String thumbnailBucket;
-    private String thumbnailObjectKey;
     private VoucherTemplateStatus status;
 }

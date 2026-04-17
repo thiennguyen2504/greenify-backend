@@ -3,6 +3,7 @@ package com.webdev.greenify.trashspot.service.impl;
 import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.file.dto.ImageRequestDTO;
+import com.webdev.greenify.greenaction.constant.ActionTypeConstants;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
@@ -68,14 +69,6 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private static final double DUPLICATE_RADIUS_METERS = 200.0;
     private static final int REOPEN_RESOLVED_WINDOW_DAYS = 30;
     private static final int VERIFY_THRESHOLD = 3;
-
-    private static final List<String> REPORTER_ACTION_NAMES = List.of(
-            "Báo cáo môi trường",
-            "Report illegal dumping/polluted spots");
-
-    private static final List<String> REVIEWER_ACTION_NAMES = List.of(
-            "Duyệt bài hợp lệ với tư cách CTV",
-            "Review posts as a Contributor");
 
     private final TrashSpotRepository trashSpotRepository;
     private final TrashSpotVerificationRepository trashSpotVerificationRepository;
@@ -484,6 +477,13 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         return updatedCount;
     }
 
+    @Override
+    public void invalidateActionTypeCache() {
+        // These caches are lazily hydrated from green_action_types and must be refreshed after admin updates.
+        reporterActionTypeCache = null;
+        reviewerActionTypeCache = null;
+    }
+
     private TrashSpotDetailResponse toDetailResponse(TrashSpotEntity spot) {
         TrashSpotDetailResponse response = trashSpotMapper.toDetailResponse(spot);
 
@@ -568,7 +568,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
         synchronized (this) {
             if (reporterActionTypeCache == null) {
-                reporterActionTypeCache = resolveActionTypeOrThrow(REPORTER_ACTION_NAMES, "báo cáo môi trường");
+                reporterActionTypeCache = resolveActionTypeOrThrow(ActionTypeConstants.REPORTER_ACTION_NAMES, "báo cáo môi trường");
             }
             return reporterActionTypeCache;
         }
@@ -582,7 +582,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
         synchronized (this) {
             if (reviewerActionTypeCache == null) {
-                reviewerActionTypeCache = resolveActionTypeOrThrow(REVIEWER_ACTION_NAMES, "duyệt xác minh");
+                reviewerActionTypeCache = resolveActionTypeOrThrow(ActionTypeConstants.REVIEWER_ACTION_NAMES, "duyệt xác minh");
             }
             return reviewerActionTypeCache;
         }

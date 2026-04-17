@@ -3,6 +3,7 @@ package com.webdev.greenify.voucher.service;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.voucher.dto.request.CreateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.request.ExchangeVoucherRequest;
+import com.webdev.greenify.voucher.dto.request.UpdateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.response.UserVoucherResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherMarketplaceResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
@@ -49,6 +50,11 @@ public interface VoucherService {
      * Update voucher template status for explicit publish/unpublish flow.
      */
     VoucherTemplateResponse updateVoucherTemplateStatus(String voucherTemplateId, VoucherTemplateStatus status);
+
+    /**
+     * Unified partial update endpoint for voucher templates.
+     */
+    VoucherTemplateResponse updateVoucherTemplate(String voucherTemplateId, UpdateVoucherTemplateRequest request);
 
     /**
      * Programmatically grant a voucher without point deduction (e.g. leaderboard or garden rewards).

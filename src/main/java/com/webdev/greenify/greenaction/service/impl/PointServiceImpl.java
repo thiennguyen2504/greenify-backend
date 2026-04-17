@@ -249,6 +249,12 @@ public class PointServiceImpl implements PointService {
         }
     }
 
+    @Override
+    public void invalidateActionTypeCache() {
+        // reviewerPointsCache is lazily resolved from action type definitions.
+        reviewerPointsCache = null;
+    }
+
     private PointHistoryResponse toPointHistoryResponse(
             PointTransactionEntity transaction,
             Map<String, GreenActionPostEntity> postsById,

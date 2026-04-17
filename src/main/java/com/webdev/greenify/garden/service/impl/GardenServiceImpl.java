@@ -4,6 +4,7 @@ import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
+import com.webdev.greenify.garden.dto.request.UpdateSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
 import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
@@ -31,8 +32,10 @@ import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.voucher.entity.UserVoucherEntity;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
 import com.webdev.greenify.voucher.enumeration.VoucherSource;
+import com.webdev.greenify.voucher.mapper.VoucherMapper;
 import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
 import com.webdev.greenify.voucher.service.VoucherService;
+import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,8 +52,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +72,7 @@ public class GardenServiceImpl implements GardenService {
     private final UserRepository userRepository;
     private final VoucherTemplateRepository voucherTemplateRepository;
     private final VoucherService voucherService;
+    private final VoucherMapper voucherMapper;
     private final SeedMapper seedMapper;
     private final PlantProgressMapper plantProgressMapper;
     private final GardenArchiveMapper gardenArchiveMapper;
@@ -94,6 +100,20 @@ public class GardenServiceImpl implements GardenService {
                 seedsPage.getSize(),
                 seedsPage.getTotalElements(),
                 seedsPage.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public VoucherTemplateResponse getRewardVoucherTemplateBySeedId(String seedId) {
+        SeedEntity seed = seedRepository.findByIdAndIsActiveTrue(seedId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seed not found or inactive"));
+
+        VoucherTemplateEntity rewardVoucherTemplate = seed.getRewardVoucherTemplate();
+        if (rewardVoucherTemplate == null) {
+            throw new ResourceNotFoundException("Reward voucher template not configured for this seed");
+        }
+
+        return voucherMapper.toVoucherTemplateResponse(rewardVoucherTemplate);
     }
 
     @Override
@@ -303,6 +323,42 @@ public class GardenServiceImpl implements GardenService {
         return seedMapper.toSeedResponse(seed);
     }
 
+    @Override
+    @Transactional
+    public SeedResponse updateSeed(String seedId, UpdateSeedRequest request) {
+        String adminId = getCurrentUserId();
+
+        SeedEntity seed = seedRepository.findById(seedId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seed not found"));
+
+        validateSeedThresholdsForUpdate(request, seed);
+
+        Set<String> changedFields = collectUpdatedSeedFields(request);
+        seedMapper.updateSeedFromDto(request, seed);
+
+        if (request.getRewardVoucherTemplateId() != null) {
+            String rewardVoucherTemplateId = request.getRewardVoucherTemplateId().trim();
+            if (rewardVoucherTemplateId.isEmpty()) {
+                seed.setRewardVoucherTemplate(null);
+            } else {
+                VoucherTemplateEntity rewardVoucherTemplate = voucherTemplateRepository.findById(rewardVoucherTemplateId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Reward voucher template not found"));
+                seed.setRewardVoucherTemplate(rewardVoucherTemplate);
+            }
+        }
+
+        seed = seedRepository.save(seed);
+
+        log.info("Admin {} updated seed {} fields={} rewardVoucherTemplateId={} isActive={}",
+                adminId,
+                seed.getId(),
+                changedFields,
+                seed.getRewardVoucherTemplate() != null ? seed.getRewardVoucherTemplate().getId() : null,
+                seed.getIsActive());
+
+        return seedMapper.toSeedResponse(seed);
+    }
+
     /**
      * Mature a plant, archive the result, then issue voucher reward if configured.
      */
@@ -395,15 +451,77 @@ public class GardenServiceImpl implements GardenService {
     }
 
     private void validateSeedThresholds(CreateSeedRequest request) {
-        int daysToMature = request.getDaysToMature();
-        int stage2 = request.getStage2FromDay();
-        int stage3 = request.getStage3FromDay();
-        int stage4 = request.getStage4FromDay();
+        validateSeedThresholds(
+                request.getDaysToMature(),
+                request.getStage2FromDay(),
+                request.getStage3FromDay(),
+                request.getStage4FromDay());
+    }
 
+    private void validateSeedThresholdsForUpdate(UpdateSeedRequest request, SeedEntity seed) {
+        if (request.getDaysToMature() == null
+                && request.getStage2FromDay() == null
+                && request.getStage3FromDay() == null
+                && request.getStage4FromDay() == null) {
+            return;
+        }
+
+        int daysToMature = request.getDaysToMature() != null ? request.getDaysToMature() : seed.getDaysToMature();
+        int stage2 = request.getStage2FromDay() != null ? request.getStage2FromDay() : seed.getStage2FromDay();
+        int stage3 = request.getStage3FromDay() != null ? request.getStage3FromDay() : seed.getStage3FromDay();
+        int stage4 = request.getStage4FromDay() != null ? request.getStage4FromDay() : seed.getStage4FromDay();
+
+        validateSeedThresholds(daysToMature, stage2, stage3, stage4);
+    }
+
+    private void validateSeedThresholds(int daysToMature, int stage2, int stage3, int stage4) {
         if (!(stage2 < stage3 && stage3 < stage4 && stage4 < daysToMature)) {
             throw new AppException("Stage thresholds must satisfy stage2 < stage3 < stage4 < daysToMature",
                     HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private Set<String> collectUpdatedSeedFields(UpdateSeedRequest request) {
+        Set<String> changedFields = new LinkedHashSet<>();
+
+        if (request.getName() != null) {
+            changedFields.add("name");
+        }
+        if (request.getStage1Image() != null) {
+            changedFields.add("stage1Image");
+        }
+        if (request.getStage2Image() != null) {
+            changedFields.add("stage2Image");
+        }
+        if (request.getStage3Image() != null) {
+            changedFields.add("stage3Image");
+        }
+        if (request.getStage4Image() != null) {
+            changedFields.add("stage4Image");
+        }
+        if (request.getDaysToMature() != null) {
+            changedFields.add("daysToMature");
+        }
+        if (request.getStage2FromDay() != null) {
+            changedFields.add("stage2FromDay");
+        }
+        if (request.getStage3FromDay() != null) {
+            changedFields.add("stage3FromDay");
+        }
+        if (request.getStage4FromDay() != null) {
+            changedFields.add("stage4FromDay");
+        }
+        if (request.getCycleType() != null) {
+            changedFields.add("cycleType");
+        }
+        if (request.getRewardVoucherTemplateId() != null) {
+            changedFields.add("rewardVoucherTemplateId");
+        }
+        if (request.getIsActive() != null) {
+            changedFields.add("isActive");
+        }
+
+        return changedFields;
     }
 
     private int clampPageSize(int size) {
