@@ -21,8 +21,10 @@ import java.util.Optional;
 public interface TrashSpotRepository extends JpaRepository<TrashSpotEntity, String>, JpaSpecificationExecutor<TrashSpotEntity> {
 
     @Override
-    @EntityGraph(attributePaths = {"images", "wasteTypes"})
     Page<TrashSpotEntity> findAll(Specification<TrashSpotEntity> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"images", "wasteTypes"})
+    List<TrashSpotEntity> findByIdIn(Collection<String> ids);
 
     @EntityGraph(attributePaths = {"reporter", "assignedNgo", "images", "wasteTypes"})
     Optional<TrashSpotEntity> findByIdAndIsDeletedFalse(String id);

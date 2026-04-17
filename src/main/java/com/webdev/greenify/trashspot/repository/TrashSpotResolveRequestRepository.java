@@ -18,9 +18,9 @@ public interface TrashSpotResolveRequestRepository extends JpaRepository<TrashSp
     @EntityGraph(attributePaths = {"trashSpot", "ngo", "reviewedBy", "images"})
     Optional<TrashSpotResolveRequestEntity> findByIdAndIsDeletedFalse(String id);
 
-    @EntityGraph(attributePaths = {"trashSpot", "ngo", "reviewedBy", "images"})
+    @EntityGraph(attributePaths = {"trashSpot", "ngo", "reviewedBy"})
     Page<TrashSpotResolveRequestEntity> findByStatusAndIsDeletedFalse(ResolveRequestStatus status, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"trashSpot", "ngo", "reviewedBy", "images"})
+    @EntityGraph(attributePaths = {"trashSpot", "ngo", "reviewedBy"})
     Page<TrashSpotResolveRequestEntity> findByIsDeletedFalse(Pageable pageable);
 }

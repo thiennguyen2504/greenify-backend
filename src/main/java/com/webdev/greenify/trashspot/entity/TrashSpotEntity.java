@@ -33,7 +33,9 @@ import java.util.List;
 import java.util.Set;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(
+        callSuper = true,
+        exclude = {"reporter", "assignedNgo", "images", "wasteTypes", "verifications", "resolveRequests"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -53,8 +53,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -116,7 +118,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 resolvedSpot.setAssignedNgo(null);
                 resolvedSpot.setClaimedAt(null);
                 resolvedSpot.setResolvedAt(null);
-                resolvedSpot.setVerificationCount(1);
+                resolvedSpot.setVerificationCount(0);
 
                 trashSpotVerificationRepository.deleteByTrashSpotId(resolvedSpot.getId());
 
@@ -172,9 +174,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         }
 
         Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = spotsPage.getContent().stream()
-                .map(trashSpotMapper::toSummaryResponse)
-                .toList();
+        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
 
         return PagedResponse.of(
                 content,
@@ -206,7 +206,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         }
 
         if (trashSpotVerificationRepository.existsByTrashSpotIdAndVerifierIdAndIsDeletedFalse(spot.getId(), currentUserId)) {
-            throw new AppException("이미 확인하셨습니다", HttpStatus.CONFLICT);
+            throw new AppException("Bạn đã xác minh điểm rác này rồi", HttpStatus.CONFLICT);
         }
 
         UserEntity verifier = getCurrentUser();
@@ -223,7 +223,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         try {
             verification = trashSpotVerificationRepository.saveAndFlush(verification);
         } catch (DataIntegrityViolationException ex) {
-            throw new AppException("이미 확인하셨습니다", HttpStatus.CONFLICT);
+            throw new AppException("Bạn đã xác minh điểm rác này rồi", HttpStatus.CONFLICT);
         }
 
         int currentVerificationCount = spot.getVerificationCount() != null ? spot.getVerificationCount() : 0;
@@ -255,9 +255,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                         TrashSpotStatus.IN_PROGRESS)));
 
         Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = spotsPage.getContent().stream()
-                .map(trashSpotMapper::toSummaryResponse)
-                .toList();
+        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
 
         return PagedResponse.of(
                 content,
@@ -341,9 +339,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         }
 
         Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = spotsPage.getContent().stream()
-                .map(trashSpotMapper::toSummaryResponse)
-                .toList();
+        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
 
         return PagedResponse.of(
                 content,
@@ -716,8 +712,21 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     }
 
     private TrashSpotEntity getTrashSpotForWrite(String id) {
-        return trashSpotRepository.findByIdAndIsDeletedFalse(id)
+        return trashSpotRepository.findByIdForUpdate(id)
+                .filter(spot -> !Boolean.TRUE.equals(spot.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+    }
+
+    private List<TrashSpotSummaryResponse> toEnrichedSummaryList(Page<TrashSpotEntity> spotsPage) {
+        if (spotsPage.isEmpty()) {
+            return List.of();
+        }
+        List<String> ids = spotsPage.getContent().stream().map(TrashSpotEntity::getId).toList();
+        Map<String, TrashSpotEntity> enrichedMap = trashSpotRepository.findByIdIn(ids).stream()
+                .collect(Collectors.toMap(TrashSpotEntity::getId, e -> e));
+        return spotsPage.getContent().stream()
+                .map(e -> trashSpotMapper.toSummaryResponse(enrichedMap.getOrDefault(e.getId(), e)))
+                .toList();
     }
 
     private Specification<TrashSpotEntity> baseSpecification() {

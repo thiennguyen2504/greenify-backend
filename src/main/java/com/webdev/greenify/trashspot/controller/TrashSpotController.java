@@ -33,7 +33,7 @@ public class TrashSpotController {
 
     private final TrashSpotService trashSpotService;
 
-        @PostMapping("/trash-spots")
+    @PostMapping("/trash-spots")
     @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
     public ResponseEntity<TrashSpotDetailResponse> createOrMergeTrashSpot(
             @Valid @RequestBody CreateTrashSpotRequest request) {
@@ -82,7 +82,7 @@ public class TrashSpotController {
         return ResponseEntity.ok(trashSpotService.claimSpot(id));
     }
 
-        @PostMapping("/ngo/trash-spots/{id}/resolve-requests")
+    @PostMapping("/ngo/trash-spots/{id}/resolve-requests")
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<ResolveRequestResponse> createResolveRequest(
             @PathVariable String id,

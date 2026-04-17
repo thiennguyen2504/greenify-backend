@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"trashSpot", "images"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
