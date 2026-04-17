@@ -6,7 +6,6 @@ import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.common.exception.VoucherExpiredException;
 import com.webdev.greenify.common.exception.VoucherOutOfStockException;
 import com.webdev.greenify.file.dto.ImageRequestDTO;
-import com.webdev.greenify.file.service.FileService;
 import com.webdev.greenify.greenaction.entity.PointTransactionEntity;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
@@ -45,7 +44,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -71,7 +69,6 @@ public class VoucherServiceImpl implements VoucherService {
     private final PointLedgerRepository pointLedgerRepository;
     private final PointTransactionRepository pointTransactionRepository;
     private final UserRepository userRepository;
-    private final FileService fileService;
     private final EmailService emailService;
     private final VoucherMapper voucherMapper;
 
@@ -249,15 +246,15 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     /**
-     * Admin creates draft template and uploads partner/thumbnail images via shared file service.
+     * Admin creates draft template using image metadata from pre-uploaded files.
      */
     @Override
     @Transactional
     public VoucherTemplateResponse createVoucherTemplate(CreateVoucherTemplateRequest request) {
         validateCreateRequest(request);
 
-        UploadedImage partnerLogo = uploadImage(request.getPartnerLogo());
-        UploadedImage thumbnail = uploadImage(request.getThumbnail());
+        ImageRequestDTO partnerLogo = request.getPartnerLogo();
+        ImageRequestDTO thumbnail = request.getThumbnail();
 
         VoucherTemplateEntity entity = VoucherTemplateEntity.builder()
                 .name(request.getName())
@@ -269,12 +266,12 @@ public class VoucherServiceImpl implements VoucherService {
                 .usageConditions(request.getUsageConditions())
                 .validUntil(request.getValidUntil())
                 .status(VoucherTemplateStatus.DRAFT)
-                .partnerLogoUrl(partnerLogo.imageUrl())
-                .partnerLogoBucket(partnerLogo.bucketName())
-                .partnerLogoObjectKey(partnerLogo.objectKey())
-                .thumbnailUrl(thumbnail.imageUrl())
-                .thumbnailBucket(thumbnail.bucketName())
-                .thumbnailObjectKey(thumbnail.objectKey())
+                .partnerLogoUrl(partnerLogo != null ? partnerLogo.getImageUrl() : null)
+                .partnerLogoBucket(partnerLogo != null ? partnerLogo.getBucketName() : null)
+                .partnerLogoObjectKey(partnerLogo != null ? partnerLogo.getObjectKey() : null)
+                .thumbnailUrl(thumbnail != null ? thumbnail.getImageUrl() : null)
+                .thumbnailBucket(thumbnail != null ? thumbnail.getBucketName() : null)
+                .thumbnailObjectKey(thumbnail != null ? thumbnail.getObjectKey() : null)
                 .build();
 
         entity = voucherTemplateRepository.save(entity);
@@ -398,25 +395,6 @@ public class VoucherServiceImpl implements VoucherService {
             return description;
         }
         return description.substring(0, MAX_ACTION_DESCRIPTION_LENGTH);
-    }
-
-    private UploadedImage uploadImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return UploadedImage.empty();
-        }
-
-        ImageRequestDTO uploadedImage = fileService.uploadImage(file);
-        return UploadedImage.of(uploadedImage);
-    }
-
-    private record UploadedImage(String bucketName, String objectKey, String imageUrl) {
-        private static UploadedImage of(ImageRequestDTO dto) {
-            return new UploadedImage(dto.getBucketName(), dto.getObjectKey(), dto.getImageUrl());
-        }
-
-        private static UploadedImage empty() {
-            return new UploadedImage(null, null, null);
-        }
     }
 
     private String generateUniqueVoucherCode() {

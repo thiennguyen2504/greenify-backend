@@ -13,6 +13,7 @@ import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
 import com.webdev.greenify.greenaction.service.PointService;
+import com.webdev.greenify.leaderboard.service.LeaderboardService;
 import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.point.entity.PointWalletEntity;
 import com.webdev.greenify.point.repository.PointWalletRepository;
@@ -61,6 +62,7 @@ public class PointServiceImpl implements PointService {
     private final EventRepository eventRepository;
     private final PointWalletRepository pointWalletRepository;
     private final PointMapper pointMapper;
+    private final LeaderboardService leaderboardService;
 
     private volatile BigDecimal reviewerPointsCache;
 
@@ -85,8 +87,9 @@ public class PointServiceImpl implements PointService {
                 .expiresAt(expiresAt)
                 .build();
 
-        increaseWalletPoints(user, points);
         transaction = pointTransactionRepository.save(transaction);
+        PointWalletEntity updatedWallet = increaseWalletPoints(user, points, transaction.getCreatedAt());
+        leaderboardService.updateScore(user.getId(), updatedWallet.getWeeklyPoints(), updatedWallet.getLastPointEarnedAt());
 
         log.info("Awarded {} points to user {} for post {}, expires at {}",
                 points, user.getId(), post.getId(), expiresAt);
@@ -115,6 +118,11 @@ public class PointServiceImpl implements PointService {
 
         increaseWalletPoints(reviewer, reviewerPoints);
         transaction = pointTransactionRepository.save(transaction);
+        PointWalletEntity updatedWallet = increaseWalletPoints(reviewer, CTV_REVIEW_POINTS, transaction.getCreatedAt());
+        leaderboardService.updateScore(
+            reviewer.getId(),
+            updatedWallet.getWeeklyPoints(),
+            updatedWallet.getLastPointEarnedAt());
 
         log.info("Awarded {} points to reviewer {} for reviewing post {}, expires at {}",
             reviewerPoints, reviewer.getId(), post.getId(), expiresAt);
@@ -363,45 +371,50 @@ public class PointServiceImpl implements PointService {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-        private void increaseWalletPoints(UserEntity user, BigDecimal amount) {
-                PointWalletEntity wallet = getOrCreateWalletForUpdate(user);
-                wallet.setAvailablePoints(wallet.getAvailablePoints().add(amount));
-                wallet.setTotalPoints(wallet.getTotalPoints().add(amount));
-                pointWalletRepository.save(wallet);
+    private PointWalletEntity increaseWalletPoints(UserEntity user, BigDecimal amount, LocalDateTime pointEarnedAt) {
+        PointWalletEntity wallet = getOrCreateWalletForUpdate(user);
+        BigDecimal currentWeeklyPoints = wallet.getWeeklyPoints() != null ? wallet.getWeeklyPoints() : ZERO_POINTS;
+
+        wallet.setAvailablePoints(wallet.getAvailablePoints().add(amount));
+        wallet.setTotalPoints(wallet.getTotalPoints().add(amount));
+        wallet.setWeeklyPoints(currentWeeklyPoints.add(amount));
+        wallet.setLastPointEarnedAt(pointEarnedAt != null ? pointEarnedAt : LocalDateTime.now());
+
+        return pointWalletRepository.save(wallet);
+    }
+
+    private BigDecimal decreaseWalletAvailablePoints(UserEntity user, BigDecimal amount) {
+        PointWalletEntity wallet = getOrCreateWalletForUpdate(user);
+        BigDecimal currentAvailablePoints = wallet.getAvailablePoints().max(ZERO_POINTS);
+        BigDecimal deductedPoints = amount.min(currentAvailablePoints);
+        BigDecimal newAvailablePoints = currentAvailablePoints.subtract(deductedPoints);
+        wallet.setAvailablePoints(newAvailablePoints);
+        pointWalletRepository.save(wallet);
+        return deductedPoints;
+    }
+
+    private PointWalletEntity getOrCreateWalletForUpdate(UserEntity user) {
+        return pointWalletRepository.findByUserIdForUpdate(user.getId())
+                .orElseGet(() -> bootstrapWallet(user));
+    }
+
+    private PointWalletEntity bootstrapWallet(UserEntity user) {
+        BigDecimal accumulatedPoints = pointTransactionRepository.sumAccumulatedPointsByUserId(user.getId());
+        BigDecimal availablePoints = pointTransactionRepository.sumAvailablePointsByUserId(user.getId());
+
+        PointWalletEntity wallet = PointWalletEntity.builder()
+                .user(user)
+                .availablePoints(availablePoints.max(ZERO_POINTS))
+                .totalPoints(accumulatedPoints)
+                .weeklyPoints(ZERO_POINTS)
+                .status(DEFAULT_WALLET_STATUS)
+                .build();
+
+        try {
+            return pointWalletRepository.save(wallet);
+        } catch (DataIntegrityViolationException ex) {
+            return pointWalletRepository.findByUserIdForUpdate(user.getId())
+                    .orElseThrow(() -> ex);
         }
-
-        private BigDecimal decreaseWalletAvailablePoints(UserEntity user, BigDecimal amount) {
-                PointWalletEntity wallet = getOrCreateWalletForUpdate(user);
-                BigDecimal currentAvailablePoints = wallet.getAvailablePoints().max(ZERO_POINTS);
-                BigDecimal deductedPoints = amount.min(currentAvailablePoints);
-                BigDecimal newAvailablePoints = currentAvailablePoints.subtract(deductedPoints);
-                wallet.setAvailablePoints(newAvailablePoints);
-                pointWalletRepository.save(wallet);
-                return deductedPoints;
-        }
-
-        private PointWalletEntity getOrCreateWalletForUpdate(UserEntity user) {
-                return pointWalletRepository.findByUserIdForUpdate(user.getId())
-                                .orElseGet(() -> bootstrapWallet(user));
-        }
-
-        private PointWalletEntity bootstrapWallet(UserEntity user) {
-                BigDecimal accumulatedPoints = pointTransactionRepository.sumAccumulatedPointsByUserId(user.getId());
-                BigDecimal availablePoints = pointTransactionRepository.sumAvailablePointsByUserId(user.getId());
-
-                PointWalletEntity wallet = PointWalletEntity.builder()
-                                .user(user)
-                                .availablePoints(availablePoints.max(ZERO_POINTS))
-                                .totalPoints(accumulatedPoints)
-                                .weeklyPoints(ZERO_POINTS)
-                                .status(DEFAULT_WALLET_STATUS)
-                                .build();
-
-                try {
-                        return pointWalletRepository.save(wallet);
-                } catch (DataIntegrityViolationException ex) {
-                        return pointWalletRepository.findByUserIdForUpdate(user.getId())
-                                        .orElseThrow(() -> ex);
-                }
-        }
+    }
 }

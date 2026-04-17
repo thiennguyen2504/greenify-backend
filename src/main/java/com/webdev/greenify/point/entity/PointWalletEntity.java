@@ -45,6 +45,9 @@ public class PointWalletEntity {
     @Column(name = "weekly_points", precision = 10, scale = 2)
     private BigDecimal weeklyPoints;
 
+    @Column(name = "last_point_earned_at")
+    private LocalDateTime lastPointEarnedAt;
+
     @Column(name = "status", length = 20)
     private String status;
 
