@@ -713,7 +713,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     private TrashSpotEntity getTrashSpotForWrite(String id) {
         return trashSpotRepository.findByIdForUpdate(id)
-                .filter(spot -> !Boolean.TRUE.equals(spot.getIsDeleted()))
+                .filter(spot -> !spot.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
     }
 

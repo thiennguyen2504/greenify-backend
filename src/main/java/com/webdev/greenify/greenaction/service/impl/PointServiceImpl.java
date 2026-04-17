@@ -109,28 +109,27 @@ public class PointServiceImpl implements PointService {
 
         PointTransactionEntity transaction = PointTransactionEntity.builder()
                 .user(reviewer)
-            .points(reviewerPoints)
+                .points(reviewerPoints)
                 .actionDescription(CTV_REVIEW_ACTION_DESCRIPTION)
                 .sourcePostId(post.getId())
                 .sourceReviewId(reviewId)
                 .expiresAt(expiresAt)
                 .build();
 
-        increaseWalletPoints(reviewer, reviewerPoints);
         transaction = pointTransactionRepository.save(transaction);
-        PointWalletEntity updatedWallet = increaseWalletPoints(reviewer, CTV_REVIEW_POINTS, transaction.getCreatedAt());
+        PointWalletEntity updatedWallet = increaseWalletPoints(reviewer, reviewerPoints, transaction.getCreatedAt());
         leaderboardService.updateScore(
-            reviewer.getId(),
-            updatedWallet.getWeeklyPoints(),
-            updatedWallet.getLastPointEarnedAt());
+                reviewer.getId(),
+                updatedWallet.getWeeklyPoints(),
+                updatedWallet.getLastPointEarnedAt());
 
         log.info("Awarded {} points to reviewer {} for reviewing post {}, expires at {}",
-            reviewerPoints, reviewer.getId(), post.getId(), expiresAt);
+                reviewerPoints, reviewer.getId(), post.getId(), expiresAt);
 
         return transaction;
     }
 
-        private BigDecimal resolveReviewerPoints() {
+    private BigDecimal resolveReviewerPoints() {
         BigDecimal cachedPoints = reviewerPointsCache;
         if (cachedPoints != null) {
             return cachedPoints;
@@ -138,17 +137,17 @@ public class PointServiceImpl implements PointService {
 
         synchronized (this) {
             if (reviewerPointsCache == null) {
-            reviewerPointsCache = REVIEWER_ACTION_TYPE_NAMES.stream()
-                .map(greenActionTypeRepository::findFirstByActionNameIgnoreCaseAndIsActiveTrue)
-                .flatMap(Optional::stream)
-                .map(GreenActionTypeEntity::getSuggestedPoints)
-                .filter(points -> points != null && points.compareTo(BigDecimal.ZERO) > 0)
-                .findFirst()
-                .orElse(DEFAULT_CTV_REVIEW_POINTS);
+                reviewerPointsCache = REVIEWER_ACTION_TYPE_NAMES.stream()
+                        .map(greenActionTypeRepository::findFirstByActionNameIgnoreCaseAndIsActiveTrue)
+                        .flatMap(Optional::stream)
+                        .map(GreenActionTypeEntity::getSuggestedPoints)
+                        .filter(points -> points != null && points.compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(DEFAULT_CTV_REVIEW_POINTS);
             }
             return reviewerPointsCache;
         }
-        }
+    }
 
     @Override
     @Transactional(readOnly = true)
