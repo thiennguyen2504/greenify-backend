@@ -6,6 +6,7 @@ import com.webdev.greenify.greenaction.enumeration.GreenEventType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 
 public class EventSpecification {
 
@@ -13,8 +14,8 @@ public class EventSpecification {
         // Utility class
     }
 
-    public static Specification<EventEntity> hasStatus(GreenEventStatus status) {
-        return (root, query, cb) -> status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
+    public static Specification<EventEntity> hasStatusIn(Collection<GreenEventStatus> statuses) {
+        return (root, query, cb) -> statuses == null || statuses.isEmpty() ? cb.conjunction() : root.get("status").in(statuses);
     }
 
     public static Specification<EventEntity> hasEventType(GreenEventType eventType) {
@@ -35,21 +36,27 @@ public class EventSpecification {
         return (root, query, cb) -> to == null ? cb.conjunction() : cb.lessThanOrEqualTo(root.get("endTime"), to);
     }
 
+    public static Specification<EventEntity> hasOrganizerId(String organizerId) {
+        return (root, query, cb) -> organizerId == null ? cb.conjunction() : cb.equal(root.get("organizer").get("id"), organizerId);
+    }
+
     public static Specification<EventEntity> isNotDeleted() {
         return (root, query, cb) -> cb.equal(root.get("isDeleted"), false);
     }
 
     public static Specification<EventEntity> buildSpecification(
-            GreenEventStatus status,
+            Collection<GreenEventStatus> statuses,
             GreenEventType eventType,
             String title,
             LocalDateTime from,
-            LocalDateTime to) {
-        return Specification.where(hasStatus(status))
+            LocalDateTime to,
+            String organizerId) {
+        return Specification.where(hasStatusIn(statuses))
                 .and(hasEventType(eventType))
                 .and(titleContains(title))
                 .and(startTimeAfter(from))
                 .and(endTimeBefore(to))
+                .and(hasOrganizerId(organizerId))
                 .and(isNotDeleted());
     }
 }

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/events")
@@ -38,21 +39,34 @@ public class EventController {
         return ResponseEntity.status(HttpStatus.CREATED).body(eventService.createEvent(request));
     }
 
+    // Admin API: Management and full visibility
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<PagedResponse<EventResponseDTO>> getEvents(
-            @RequestParam(required = false) GreenEventStatus status,
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getEventsForAdmin(
+            @RequestParam(required = false) List<GreenEventStatus> statuses,
+            @RequestParam(required = false) GreenEventType eventType,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam(required = false) String organizerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getEventsForAdmin(statuses, eventType, title, from, to, organizerId, page, size));
+    }
+
+    // Public API: Only published events
+    @GetMapping("/public")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getEventsForPublic(
             @RequestParam(required = false) GreenEventType eventType,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(eventService.getEventsWithFilter(status, eventType, title, from, to, page, size));
+        return ResponseEntity.ok(eventService.getEventsForPublic(eventType, title, from, to, page, size));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN', 'NGO')")
     public ResponseEntity<EventResponseDTO> getEventDetail(@PathVariable String id) {
         return ResponseEntity.ok(eventService.getEventDetail(id));
     }
@@ -60,7 +74,7 @@ public class EventController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<EventResponseDTO> updateEvent(
-            @PathVariable String id,
+            @PathVariable String id, 
             @Valid @RequestBody EventRequestDTO request) {
         return ResponseEntity.ok(eventService.updateEvent(id, request));
     }
@@ -70,6 +84,13 @@ public class EventController {
     public ResponseEntity<Void> deleteEvent(@PathVariable String id) {
         eventService.deleteEvent(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("hasRole('NGO')")
+    public ResponseEntity<Void> submitEvent(@PathVariable String id) {
+        eventService.submitEvent(id);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/approve")
@@ -82,9 +103,25 @@ public class EventController {
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> rejectEvent(
-            @PathVariable String id,
+            @PathVariable String id, 
             @Valid @RequestBody EventStatusRequestDTO request) {
         eventService.rejectEvent(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/my-events")
+    @PreAuthorize("hasRole('NGO')")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getMyEvents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getMyEvents(page, size));
+    }
+
+    @GetMapping("/ngo/{ngoId}")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getNGOEventsPublic(
+            @PathVariable String ngoId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getNGOEventsPublic(ngoId, page, size));
     }
 }
