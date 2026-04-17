@@ -354,6 +354,14 @@ public class SeedData implements CommandLineRunner {
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
+                    .groupName("Environmental Reporting")
+                    .actionName("Báo cáo môi trường")
+                    .suggestedPoints(new BigDecimal("4"))
+                    .locationRequired(true)
+                    .isActive(true)
+                    .build());
+
+            actionTypes.add(GreenActionTypeEntity.builder()
                     .groupName("Creative Recycling")
                     .actionName("DIY products from recycled materials")
                     .suggestedPoints(new BigDecimal("7"))
@@ -372,6 +380,14 @@ public class SeedData implements CommandLineRunner {
             actionTypes.add(GreenActionTypeEntity.builder()
                     .groupName("Community Contribution")
                     .actionName("Review posts as a Contributor")
+                    .suggestedPoints(new BigDecimal("1"))
+                    .locationRequired(false)
+                    .isActive(true)
+                    .build());
+
+            actionTypes.add(GreenActionTypeEntity.builder()
+                    .groupName("Community Contribution")
+                    .actionName("Duyệt bài hợp lệ với tư cách CTV")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)

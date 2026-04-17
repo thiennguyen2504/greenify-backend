@@ -10,5 +10,7 @@ public interface GreenActionTypeRepository extends JpaRepository<GreenActionType
 
     Optional<GreenActionTypeEntity> findByIdAndIsActiveTrue(String id);
 
+    Optional<GreenActionTypeEntity> findFirstByActionNameIgnoreCaseAndIsActiveTrue(String actionName);
+
     List<GreenActionTypeEntity> findAllByOrderByGroupNameAscActionNameAsc();
 }

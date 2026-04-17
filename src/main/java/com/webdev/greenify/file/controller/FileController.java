@@ -20,7 +20,7 @@ public class FileController {
     private final FileService fileService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'CTV')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'CTV', 'NGO')")
     public ResponseEntity<ImageRequestDTO> uploadImage(@RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(fileService.uploadImage(file));
     }
