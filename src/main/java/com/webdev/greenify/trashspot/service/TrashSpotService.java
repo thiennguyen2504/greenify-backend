@@ -48,7 +48,7 @@ public interface TrashSpotService {
 
     int recalculateAllActiveHotScores();
 
-        void invalidateActionTypeCache();
+    void invalidateActionTypeCache();
 
     record CreateOrMergeResult(TrashSpotDetailResponse response, boolean created) {
     }

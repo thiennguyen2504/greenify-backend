@@ -43,8 +43,8 @@ public interface PointService {
      */
     void processExpiredPoints();
 
-        /**
-         * Invalidate lazily-loaded action-type derived caches.
-         */
-        void invalidateActionTypeCache();
+    /**
+     * Invalidate lazily-loaded action-type derived caches.
+     */
+    void invalidateActionTypeCache();
 }

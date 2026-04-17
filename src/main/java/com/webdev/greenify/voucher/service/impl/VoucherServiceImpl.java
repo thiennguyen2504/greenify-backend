@@ -534,7 +534,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     private void validatePatchStatus(VoucherTemplateStatus status) {
         if (status == VoucherTemplateStatus.DRAFT) {
-            throw new AppException("Unsupported status for update", HttpStatus.BAD_REQUEST);
+            throw new AppException("Cannot set status to DRAFT via this endpoint", HttpStatus.BAD_REQUEST);
         }
     }
 
