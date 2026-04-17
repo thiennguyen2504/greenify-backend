@@ -29,7 +29,7 @@ import java.util.Set;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"roles", "userProfile", "events"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
