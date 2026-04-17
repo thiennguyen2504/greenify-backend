@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,4 +50,7 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
     @Override
     @EntityGraph(attributePaths = {"user", "actionType"})
     Page<GreenActionPostEntity> findAll(Specification<GreenActionPostEntity> spec, Pageable pageable);
+
+        @EntityGraph(attributePaths = {"actionType", "postImage"})
+        List<GreenActionPostEntity> findByIdIn(Collection<String> ids);
 }

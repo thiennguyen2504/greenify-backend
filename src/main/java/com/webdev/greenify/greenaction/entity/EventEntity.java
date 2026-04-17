@@ -91,6 +91,13 @@ public class EventEntity extends BaseEntity {
     @Column
     private Integer rejectedCount = 0;
 
+    @Column
+    private Long participantCount = 0L;
+
+    @Column(columnDefinition = "TEXT")
+    @Lob
+    String participationConditions;
+
     @OneToMany(mappedBy = "event", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE}, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<EventImageEntity> images = new ArrayList<>();

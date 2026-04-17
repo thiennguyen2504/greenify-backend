@@ -20,8 +20,8 @@ import lombok.ToString;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"user", "avatar"})
+@ToString(callSuper = true, exclude = {"user", "avatar"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

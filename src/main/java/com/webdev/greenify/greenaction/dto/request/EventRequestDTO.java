@@ -79,4 +79,6 @@ public class EventRequestDTO {
     @NotNull(message = "Address is required")
     @Valid
     private AddressRequestDTO address;
+
+    private String participationConditions;
 }

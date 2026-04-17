@@ -12,22 +12,28 @@ import org.mapstruct.Named;
 public interface GreenActionMapper {
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
+    @Mapping(target = "authorAvatarUrl", source = ".", qualifiedByName = "getAuthorAvatarUrl")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "reviews", ignore = true)
     GreenActionPostSummaryResponse toSummaryResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
+    @Mapping(target = "authorAvatarUrl", source = ".", qualifiedByName = "getAuthorAvatarUrl")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "reviews", ignore = true)
     GreenActionPostDetailResponse toDetailResponse(GreenActionPostEntity entity);
 
     @Mapping(target = "authorDisplayName", source = ".", qualifiedByName = "getAuthorDisplayName")
+    @Mapping(target = "authorAvatarUrl", source = ".", qualifiedByName = "getAuthorAvatarUrl")
     @Mapping(target = "actionTypeId", source = "actionType.id")
     @Mapping(target = "actionTypeName", source = "actionType.actionName")
     @Mapping(target = "groupName", source = "actionType.groupName")
     @Mapping(target = "mediaUrl", source = ".", qualifiedByName = "getMediaUrl")
+    @Mapping(target = "reviews", ignore = true)
     @Mapping(target = "alreadyReviewed", ignore = true)
     GreenActionPostReviewerResponse toReviewerResponse(GreenActionPostEntity entity);
 
@@ -42,6 +48,16 @@ public interface GreenActionMapper {
             return username;
         }
         return entity.getUser().getEmail();
+    }
+
+    @Named("getAuthorAvatarUrl")
+    default String getAuthorAvatarUrl(GreenActionPostEntity entity) {
+        if (entity.getUser() == null
+                || entity.getUser().getUserProfile() == null
+                || entity.getUser().getUserProfile().getAvatar() == null) {
+            return null;
+        }
+        return entity.getUser().getUserProfile().getAvatar().getImageUrl();
     }
 
     @Named("getMediaUrl")

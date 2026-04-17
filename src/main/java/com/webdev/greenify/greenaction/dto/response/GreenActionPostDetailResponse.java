@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -19,11 +20,16 @@ public class GreenActionPostDetailResponse {
 
     private String id;
     private String authorDisplayName;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String authorAvatarUrl;
     private String actionTypeName;
     private String groupName;
     private String caption;
     private String mediaUrl;
     private Integer approveCount;
+    private Integer rejectCount;
+    private String location;
+    private List<PostReviewResponse> reviews;
     private LocalDate actionDate;
     private PostStatus status;
     private LocalDateTime createdAt;

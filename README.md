@@ -31,6 +31,7 @@ Edit `.env` and fill in your values:
 - `DB_PASSWORD` - database password
 - `JWT_SECRET` - your 256-bit secret key
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - from Google Cloud Console
+- `GOONG_API_KEY` - Goong key for reverse geocoding location snapshot
 - `MAIL_USERNAME` / `MAIL_PASSWORD` - Gmail app password
 
 ### 3. Start all services
@@ -47,6 +48,19 @@ This will start:
 ### 4. Verify
 
 Open [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
+
+### 5. API Documentation (Swagger)
+
+After the app is running, open:
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- OpenAPI JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+- OpenAPI YAML: [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml)
+
+Use the **Authorize** button in Swagger UI and paste only the access token (without `Bearer ` prefix):
+
+```text
+<your-access-token>
+```
 
 ---
 
