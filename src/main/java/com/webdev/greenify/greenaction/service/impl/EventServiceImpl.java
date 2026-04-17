@@ -27,14 +27,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +49,19 @@ public class EventServiceImpl implements EventService {
     private final EventMapper eventMapper;
     private final ImageMapper imageMapper;
 
+    private static final Set<GreenEventStatus> PUBLIC_STATUSES = EnumSet.of(
+            GreenEventStatus.PUBLISHED,
+            GreenEventStatus.IN_PROGRESS,
+            GreenEventStatus.COMPLETED,
+            GreenEventStatus.CANCELLED
+    );
+
+    private static final Set<GreenEventStatus> SENSITIVE_STATUSES = EnumSet.of(
+            GreenEventStatus.DRAFT,
+            GreenEventStatus.APPROVAL_WAITING,
+            GreenEventStatus.REJECTED
+    );
+
     @Override
     @Transactional
     public EventResponseDTO createEvent(EventRequestDTO request) {
@@ -56,6 +72,8 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         EventEntity event = eventMapper.toEntity(request);
+        event.setRejectedCount(0);
+        event.setParticipantCount(0L);
         event.setOrganizer(organizer);
 
         if (event.getStatus() == null) {
@@ -72,8 +90,24 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<EventResponseDTO> getEventsWithFilter(
-            GreenEventStatus status,
+    public PagedResponse<EventResponseDTO> getEventsForAdmin(
+            Collection<GreenEventStatus> statuses,
+            GreenEventType eventType,
+            String title,
+            LocalDateTime from,
+            LocalDateTime to,
+            String organizerId,
+            int page,
+            int size) {
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(statuses, eventType, title, from, to, organizerId);
+        return toPagedResponse(eventRepository.findAll(spec, pageable));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<EventResponseDTO> getEventsForPublic(
             GreenEventType eventType,
             String title,
             LocalDateTime from,
@@ -82,20 +116,8 @@ public class EventServiceImpl implements EventService {
             int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Specification<EventEntity> spec = EventSpecification.buildSpecification(status, eventType, title, from, to);
-        
-        Page<EventEntity> eventPage = eventRepository.findAll(spec, pageable);
-
-        List<EventResponseDTO> content = eventPage.getContent().stream()
-                .map(eventMapper::toResponse)
-                .toList();
-
-        return PagedResponse.of(
-                content,
-                eventPage.getNumber(),
-                eventPage.getSize(),
-                eventPage.getTotalElements(),
-                eventPage.getTotalPages());
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(PUBLIC_STATUSES, eventType, title, from, to, null);
+        return toPagedResponse(eventRepository.findAll(spec, pageable));
     }
 
     @Override
@@ -105,6 +127,10 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
         
         if (event.isDeleted()) {
+            throw new ResourceNotFoundException("Event not found");
+        }
+
+        if (isPublicUser() && SENSITIVE_STATUSES.contains(event.getStatus())) {
             throw new ResourceNotFoundException("Event not found");
         }
         
@@ -120,6 +146,7 @@ public class EventServiceImpl implements EventService {
         if (event.isDeleted()) {
             throw new ResourceNotFoundException("Event not found");
         }
+
         EnumSet<GreenEventStatus> allowableStatuses = EnumSet.of(
                 GreenEventStatus.DRAFT, 
                 GreenEventStatus.APPROVAL_WAITING, 
@@ -145,7 +172,7 @@ public class EventServiceImpl implements EventService {
     public void deleteEvent(String id) {
         EventEntity event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-
+        
         event.setDeleted(true);
         eventRepository.save(event);
         log.info("Event soft-deleted with ID: {}", id);
@@ -185,6 +212,61 @@ public class EventServiceImpl implements EventService {
         log.info("Event rejected with ID: {} Reason: {}", id, request.getReason());
     }
 
+    @Override
+    @Transactional
+    public void submitEvent(String id) {
+        EventEntity event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        
+        if (event.getStatus() != GreenEventStatus.DRAFT && event.getStatus() != GreenEventStatus.REJECTED) {
+            throw new AppException("Only DRAFT or REJECTED events can be submitted", HttpStatus.BAD_REQUEST);
+        }
+
+        event.setStatus(GreenEventStatus.APPROVAL_WAITING);
+        eventRepository.save(event);
+        log.info("Event submitted for approval: {}", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<EventResponseDTO> getMyEvents(int page, int size) {
+        String currentUserId = getCurrentUserId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(null, null, null, null, null, currentUserId);
+        return toPagedResponse(eventRepository.findAll(spec, pageable));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<EventResponseDTO> getNGOEventsPublic(String ngoId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(PUBLIC_STATUSES, null, null, null, null, ngoId);
+        return toPagedResponse(eventRepository.findAll(spec, pageable));
+    }
+
+    private PagedResponse<EventResponseDTO> toPagedResponse(Page<EventEntity> eventPage) {
+        List<EventResponseDTO> content = eventPage.getContent().stream()
+                .map(eventMapper::toResponse)
+                .toList();
+
+        return PagedResponse.of(
+                content,
+                eventPage.getNumber(),
+                eventPage.getSize(),
+                eventPage.getTotalElements(),
+                eventPage.getTotalPages());
+    }
+
+    private boolean isPublicUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return true;
+        
+        boolean hasPrivilegedRole = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_NGO"));
+        
+        return !hasPrivilegedRole;
+    }
+
     private void prepareEventRelationships(EventEntity event, EventRequestDTO request) {
         if (event.getAddress() != null) {
             event.getAddress().setEvent(event);
@@ -194,11 +276,22 @@ public class EventServiceImpl implements EventService {
         if (eventImages == null) {
             eventImages = new ArrayList<>();
             event.setImages(eventImages);
+        } else {
+            try {
+                EventImageEntity temp = new EventImageEntity();
+                eventImages.add(temp);
+                eventImages.remove(temp);
+            } catch (UnsupportedOperationException e) {
+                eventImages = new ArrayList<>(eventImages);
+                event.setImages(eventImages);
+            }
         }
+
         eventImages.forEach(image -> {
             image.setEvent(event);
             image.setImageType(EventImageType.DETAIL);
         });
+
         if (request.getThumbnail() != null) {
             EventImageEntity thumbnail = imageMapper.toEventImageEntity(request.getThumbnail());
             thumbnail.setEvent(event);
