@@ -7,6 +7,7 @@ import com.webdev.greenify.voucher.dto.response.UserVoucherResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherMarketplaceResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
 import com.webdev.greenify.voucher.enumeration.UserVoucherStatus;
+import com.webdev.greenify.voucher.enumeration.VoucherSource;
 import com.webdev.greenify.voucher.enumeration.VoucherTemplateStatus;
 import com.webdev.greenify.voucher.service.VoucherService;
 import jakarta.validation.Valid;
@@ -60,9 +61,10 @@ public class VoucherController {
     @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN', 'NGO')")
     public ResponseEntity<PagedResponse<UserVoucherResponse>> getUserVoucherWallet(
             @RequestParam(required = false) UserVoucherStatus status,
+            @RequestParam(required = false) VoucherSource source,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(voucherService.getCurrentUserVoucherWallet(status, page, size));
+        return ResponseEntity.ok(voucherService.getCurrentUserVoucherWallet(status, source, page, size));
     }
 
     @PostMapping(value = "/admin/vouchers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

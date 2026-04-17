@@ -220,7 +220,11 @@ public class VoucherServiceImpl implements VoucherService {
      */
     @Override
     @Transactional
-    public PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(UserVoucherStatus status, int page, int size) {
+    public PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(
+            UserVoucherStatus status,
+            VoucherSource source,
+            int page,
+            int size) {
         String userId = getCurrentUserId();
         int effectivePage = Math.max(page, 0);
         int effectiveSize = clampPageSize(size);
@@ -232,9 +236,11 @@ public class VoucherServiceImpl implements VoucherService {
                 LocalDateTime.now());
 
         Pageable pageable = PageRequest.of(effectivePage, effectiveSize);
-        Page<UserVoucherEntity> vouchersPage = status == null
-                ? userVoucherRepository.findByUserId(userId, pageable)
-                : userVoucherRepository.findByUserIdAndStatus(userId, status, pageable);
+            Page<UserVoucherEntity> vouchersPage = userVoucherRepository.findByUserIdWithFilters(
+                userId,
+                status,
+                source,
+                pageable);
 
         List<UserVoucherResponse> content = vouchersPage.getContent().stream()
                 .map(voucherMapper::toUserVoucherResponse)

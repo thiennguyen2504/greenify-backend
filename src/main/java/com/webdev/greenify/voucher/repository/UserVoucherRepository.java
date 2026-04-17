@@ -2,6 +2,7 @@ package com.webdev.greenify.voucher.repository;
 
 import com.webdev.greenify.voucher.entity.UserVoucherEntity;
 import com.webdev.greenify.voucher.enumeration.UserVoucherStatus;
+import com.webdev.greenify.voucher.enumeration.VoucherSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -38,6 +39,21 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucherEntity, 
             """)
     Page<UserVoucherEntity> findByUserId(
             @Param("userId") String userId,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"voucherTemplate"})
+    @Query("""
+            SELECT uv
+            FROM UserVoucherEntity uv
+            WHERE uv.user.id = :userId
+            AND (:status IS NULL OR uv.status = :status)
+            AND (:source IS NULL OR uv.source = :source)
+            ORDER BY uv.createdAt DESC
+            """)
+    Page<UserVoucherEntity> findByUserIdWithFilters(
+            @Param("userId") String userId,
+            @Param("status") UserVoucherStatus status,
+            @Param("source") VoucherSource source,
             Pageable pageable);
 
     @Modifying
