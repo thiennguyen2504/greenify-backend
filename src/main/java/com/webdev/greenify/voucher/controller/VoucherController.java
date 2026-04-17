@@ -3,6 +3,7 @@ package com.webdev.greenify.voucher.controller;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.voucher.dto.request.CreateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.request.ExchangeVoucherRequest;
+import com.webdev.greenify.voucher.dto.request.UpdateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.response.UserVoucherResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherMarketplaceResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -72,6 +74,14 @@ public class VoucherController {
     public ResponseEntity<VoucherTemplateResponse> createVoucherTemplate(
             @Valid @ModelAttribute CreateVoucherTemplateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(voucherService.createVoucherTemplate(request));
+    }
+
+    @PatchMapping("/admin/vouchers/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VoucherTemplateResponse> updateVoucherTemplate(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateVoucherTemplateRequest request) {
+        return ResponseEntity.ok(voucherService.updateVoucherTemplate(id, request));
     }
 
     @PatchMapping("/admin/vouchers/{id}/status")

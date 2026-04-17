@@ -488,6 +488,13 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         return updatedCount;
     }
 
+    @Override
+    public void invalidateActionTypeCache() {
+        // These caches are lazily hydrated from green_action_types and must be refreshed after admin updates.
+        reporterActionTypeCache = null;
+        reviewerActionTypeCache = null;
+    }
+
     private TrashSpotDetailResponse toDetailResponse(TrashSpotEntity spot) {
         TrashSpotDetailResponse response = trashSpotMapper.toDetailResponse(spot);
 

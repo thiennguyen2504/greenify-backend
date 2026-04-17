@@ -22,6 +22,9 @@ public class UserVoucherResponse {
     private String voucherTemplateId;
     private String voucherName;
     private String partnerName;
+    private String partnerLogoUrl;
+    private String description;
+    private String usageConditions;
     private String thumbnailUrl;
     private LocalDateTime expiresAt;
     private LocalDateTime usedAt;

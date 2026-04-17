@@ -4,7 +4,9 @@ import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.file.entity.PostImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
+import com.webdev.greenify.greenaction.dto.request.CreateActionTypeRequest;
 import com.webdev.greenify.greenaction.dto.request.CreateGreenActionPostRequest;
+import com.webdev.greenify.greenaction.dto.request.UpdateActionTypeRequest;
 import com.webdev.greenify.greenaction.dto.response.GreenActionTypeResponse;
 import com.webdev.greenify.greenaction.dto.response.GreenActionPostDetailResponse;
 import com.webdev.greenify.greenaction.dto.response.PostReviewResponse;
@@ -21,7 +23,9 @@ import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.greenaction.repository.PostReviewRepository;
 import com.webdev.greenify.greenaction.service.GreenActionService;
 import com.webdev.greenify.greenaction.service.LocationSnapshotService;
+import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.greenaction.specification.GreenActionPostSpecification;
+import com.webdev.greenify.trashspot.service.TrashSpotService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +40,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,6 +56,12 @@ public class GreenActionServiceImpl implements GreenActionService {
 
     private static final int MIN_PAGE_SIZE = 1;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final List<String> REPORTER_ACTION_NAMES = List.of(
+            "Báo cáo môi trường",
+            "Report illegal dumping/polluted spots");
+    private static final List<String> REVIEWER_ACTION_NAMES = List.of(
+            "Duyệt bài hợp lệ với tư cách CTV",
+            "Review posts as a Contributor");
 
     private final GreenActionPostRepository postRepository;
     private final GreenActionTypeRepository actionTypeRepository;
@@ -58,6 +71,8 @@ public class GreenActionServiceImpl implements GreenActionService {
     private final ReviewMapper reviewMapper;
     private final ImageMapper imageMapper;
     private final LocationSnapshotService locationSnapshotService;
+        private final PointService pointService;
+        private final TrashSpotService trashSpotService;
 
     @Override
     @Transactional
@@ -112,6 +127,111 @@ public class GreenActionServiceImpl implements GreenActionService {
         response.setReviews(List.of());
         return response;
     }
+
+        @Override
+        @Transactional
+        public GreenActionTypeResponse createActionType(CreateActionTypeRequest request) {
+                String adminId = getCurrentUserId();
+
+                if (request.getSuggestedPoints() == null || request.getSuggestedPoints().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new AppException("Suggested points must be greater than 0", HttpStatus.BAD_REQUEST);
+                }
+
+                String normalizedActionName = normalizeRequiredText(request.getActionName(), "Action name");
+
+                actionTypeRepository.findFirstByActionNameIgnoreCaseAndIsActiveTrue(normalizedActionName)
+                                .ifPresent(existing -> {
+                                        throw new AppException("Action type with this name already exists", HttpStatus.CONFLICT);
+                                });
+
+                GreenActionTypeEntity actionType = GreenActionTypeEntity.builder()
+                                .groupName(normalizeRequiredText(request.getGroupName(), "Group name"))
+                                .actionName(normalizedActionName)
+                                .suggestedPoints(request.getSuggestedPoints())
+                                .locationRequired(request.getLocationRequired())
+                                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                                .build();
+
+                actionType = actionTypeRepository.save(actionType);
+
+                if (isCacheSensitiveActionName(actionType.getActionName())) {
+                        invalidateActionTypeCaches(actionType.getActionName());
+                }
+
+                log.info("Admin {} created action type {} with actionName={} groupName={} isActive={}",
+                                adminId,
+                                actionType.getId(),
+                                actionType.getActionName(),
+                                actionType.getGroupName(),
+                                actionType.getIsActive());
+
+                return toActionTypeResponse(actionType);
+        }
+
+        @Override
+        @Transactional
+        public GreenActionTypeResponse updateActionType(String actionTypeId, UpdateActionTypeRequest request) {
+                String adminId = getCurrentUserId();
+
+                GreenActionTypeEntity actionType = actionTypeRepository.findById(actionTypeId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Action type not found"));
+
+                String oldActionName = actionType.getActionName();
+                List<String> changedFields = new ArrayList<>();
+
+                if (request.getGroupName() != null) {
+                        actionType.setGroupName(normalizeRequiredText(request.getGroupName(), "Group name"));
+                        changedFields.add("groupName");
+                }
+
+                if (request.getActionName() != null) {
+                        actionType.setActionName(normalizeRequiredText(request.getActionName(), "Action name"));
+                        changedFields.add("actionName");
+                }
+
+                if (request.getSuggestedPoints() != null) {
+                        if (request.getSuggestedPoints().compareTo(BigDecimal.ZERO) <= 0) {
+                                throw new AppException("Suggested points must be greater than 0", HttpStatus.BAD_REQUEST);
+                        }
+                        actionType.setSuggestedPoints(request.getSuggestedPoints());
+                        changedFields.add("suggestedPoints");
+                }
+
+                if (request.getLocationRequired() != null) {
+                        actionType.setLocationRequired(request.getLocationRequired());
+                        changedFields.add("locationRequired");
+                }
+
+                if (request.getIsActive() != null) {
+                        actionType.setIsActive(request.getIsActive());
+                        changedFields.add("isActive");
+                }
+
+                boolean shouldCheckUniqueByName = request.getActionName() != null || Boolean.TRUE.equals(actionType.getIsActive());
+                if (shouldCheckUniqueByName) {
+                        String currentActionTypeId = actionType.getId();
+                        actionTypeRepository.findFirstByActionNameIgnoreCaseAndIsActiveTrue(actionType.getActionName())
+                                        .filter(existing -> !existing.getId().equals(currentActionTypeId))
+                                        .ifPresent(existing -> {
+                                                throw new AppException("Action type with this name already exists", HttpStatus.CONFLICT);
+                                        });
+                }
+
+                actionType = actionTypeRepository.save(actionType);
+
+                if (requiresActionTypeCacheInvalidation(oldActionName, actionType.getActionName())) {
+                        invalidateActionTypeCaches(actionType.getActionName());
+                }
+
+                log.info("Admin {} updated action type {} fields={} actionName={} isActive={}",
+                                adminId,
+                                actionType.getId(),
+                                changedFields,
+                                actionType.getActionName(),
+                                actionType.getIsActive());
+
+                return toActionTypeResponse(actionType);
+        }
 
         @Override
         @Transactional(readOnly = true)
@@ -266,6 +386,34 @@ public class GreenActionServiceImpl implements GreenActionService {
     private int clampPageSize(int size) {
         return Math.min(Math.max(size, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
     }
+
+        private boolean requiresActionTypeCacheInvalidation(String previousActionName, String currentActionName) {
+                return isCacheSensitiveActionName(previousActionName) || isCacheSensitiveActionName(currentActionName);
+        }
+
+        private boolean isCacheSensitiveActionName(String actionName) {
+                if (actionName == null || actionName.isBlank()) {
+                        return false;
+                }
+
+                return REPORTER_ACTION_NAMES.stream().anyMatch(candidate -> candidate.equalsIgnoreCase(actionName))
+                                || REVIEWER_ACTION_NAMES.stream().anyMatch(candidate -> candidate.equalsIgnoreCase(actionName));
+        }
+
+        private void invalidateActionTypeCaches(String actionName) {
+                // These caches are lazily loaded from green_action_types in PointServiceImpl/TrashSpotServiceImpl.
+                pointService.invalidateActionTypeCache();
+                trashSpotService.invalidateActionTypeCache();
+
+                log.info("Invalidated action-type caches after admin updated cache-sensitive action name {}", actionName);
+        }
+
+        private String normalizeRequiredText(String value, String fieldName) {
+                if (value == null || value.isBlank()) {
+                        throw new AppException(fieldName + " is required", HttpStatus.BAD_REQUEST);
+                }
+                return value.trim();
+        }
 
         private GreenActionTypeResponse toActionTypeResponse(GreenActionTypeEntity actionType) {
                 return GreenActionTypeResponse.builder()

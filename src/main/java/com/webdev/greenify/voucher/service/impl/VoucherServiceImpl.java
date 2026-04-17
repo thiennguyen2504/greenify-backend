@@ -21,6 +21,7 @@ import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.voucher.dto.request.CreateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.request.ExchangeVoucherRequest;
+import com.webdev.greenify.voucher.dto.request.UpdateVoucherTemplateRequest;
 import com.webdev.greenify.voucher.dto.response.UserVoucherResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherMarketplaceResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
@@ -49,6 +50,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -308,6 +310,99 @@ public class VoucherServiceImpl implements VoucherService {
         return voucherMapper.toVoucherTemplateResponse(template);
     }
 
+    @Override
+    @Transactional
+    public VoucherTemplateResponse updateVoucherTemplate(String voucherTemplateId, UpdateVoucherTemplateRequest request) {
+        String adminId = getCurrentUserId();
+
+        VoucherTemplateEntity template = voucherTemplateRepository.findById(voucherTemplateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+
+        List<String> changedFields = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        if (request.getName() != null) {
+            template.setName(normalizeRequiredText(request.getName(), "Voucher name"));
+            changedFields.add("name");
+        }
+
+        if (request.getPartnerName() != null) {
+            template.setPartnerName(normalizeRequiredText(request.getPartnerName(), "Partner name"));
+            changedFields.add("partnerName");
+        }
+
+        if (request.getDescription() != null) {
+            template.setDescription(request.getDescription());
+            changedFields.add("description");
+        }
+
+        if (request.getRequiredPoints() != null) {
+            if (request.getRequiredPoints().compareTo(ZERO_POINTS) <= 0) {
+                throw new AppException("Required points must be greater than 0", HttpStatus.BAD_REQUEST);
+            }
+            template.setRequiredPoints(request.getRequiredPoints());
+            changedFields.add("requiredPoints");
+        }
+
+        if (request.getAdditionalStock() != null) {
+            if (request.getAdditionalStock() <= 0) {
+                throw new AppException("Additional stock must be greater than 0", HttpStatus.BAD_REQUEST);
+            }
+
+            int additionalStock = request.getAdditionalStock();
+            template.setTotalStock(template.getTotalStock() + additionalStock);
+            template.setRemainingStock(template.getRemainingStock() + additionalStock);
+            changedFields.add("additionalStock");
+        }
+
+        if (request.getUsageConditions() != null) {
+            template.setUsageConditions(request.getUsageConditions());
+            changedFields.add("usageConditions");
+        }
+
+        if (request.getValidUntil() != null) {
+            if (template.getStatus() == VoucherTemplateStatus.ACTIVE && request.getValidUntil().isBefore(now)) {
+                throw new AppException("Cannot set validUntil to a past date for an active template", HttpStatus.BAD_REQUEST);
+            }
+            template.setValidUntil(request.getValidUntil());
+            changedFields.add("validUntil");
+        }
+
+        if (request.getPartnerLogo() != null) {
+            template.setPartnerLogoBucket(request.getPartnerLogo().getBucketName());
+            template.setPartnerLogoObjectKey(request.getPartnerLogo().getObjectKey());
+            template.setPartnerLogoUrl(request.getPartnerLogo().getImageUrl());
+            changedFields.add("partnerLogo");
+        }
+
+        if (request.getThumbnail() != null) {
+            template.setThumbnailBucket(request.getThumbnail().getBucketName());
+            template.setThumbnailObjectKey(request.getThumbnail().getObjectKey());
+            template.setThumbnailUrl(request.getThumbnail().getImageUrl());
+            changedFields.add("thumbnail");
+        }
+
+        VoucherTemplateStatus requestedStatus = request.getStatus();
+        if (requestedStatus != null) {
+            validatePatchStatus(requestedStatus);
+            changedFields.add("status");
+        }
+
+        applyStatusRulesForPatch(template, requestedStatus, now);
+
+        template = voucherTemplateRepository.save(template);
+
+        log.info("Admin {} updated voucher template {} fields={} status={} totalStock={} remainingStock={}",
+                adminId,
+                template.getId(),
+                changedFields,
+                template.getStatus(),
+                template.getTotalStock(),
+                template.getRemainingStock());
+
+        return voucherMapper.toVoucherTemplateResponse(template);
+    }
+
     /**
      * Programmatic voucher issue path for reward scenarios.
      * This flow does not deduct points, so it intentionally does not write point_ledger entries.
@@ -435,6 +530,45 @@ public class VoucherServiceImpl implements VoucherService {
             }
         }
         throw new AppException("Failed to generate unique voucher code", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private void validatePatchStatus(VoucherTemplateStatus status) {
+        if (status == VoucherTemplateStatus.DRAFT) {
+            throw new AppException("Unsupported status for update", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void applyStatusRulesForPatch(
+            VoucherTemplateEntity template,
+            VoucherTemplateStatus requestedStatus,
+            LocalDateTime now) {
+        if (requestedStatus != null) {
+            if (requestedStatus == VoucherTemplateStatus.ACTIVE) {
+                if (template.getRemainingStock() == null || template.getRemainingStock() <= 0) {
+                    throw new AppException("Cannot set status ACTIVE when remaining stock is 0", HttpStatus.BAD_REQUEST);
+                }
+                if (template.getValidUntil() == null || template.getValidUntil().isBefore(now)) {
+                    throw new AppException("Cannot set status ACTIVE when validUntil is in the past", HttpStatus.BAD_REQUEST);
+                }
+            }
+            template.setStatus(requestedStatus);
+        }
+
+        if (template.getValidUntil() != null && template.getValidUntil().isBefore(now)) {
+            template.setStatus(VoucherTemplateStatus.EXPIRED);
+            return;
+        }
+
+        if (template.getRemainingStock() == null || template.getRemainingStock() <= 0) {
+            template.setStatus(VoucherTemplateStatus.DEPLETED);
+        }
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new AppException(fieldName + " is required", HttpStatus.BAD_REQUEST);
+        }
+        return value.trim();
     }
 
     private void registerVoucherExchangeNotification(

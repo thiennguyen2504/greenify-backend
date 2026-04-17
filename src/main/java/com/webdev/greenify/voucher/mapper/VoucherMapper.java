@@ -15,6 +15,9 @@ public interface VoucherMapper {
     @Mapping(target = "voucherTemplateId", source = "voucherTemplate.id")
     @Mapping(target = "voucherName", source = "voucherTemplate.name")
     @Mapping(target = "partnerName", source = "voucherTemplate.partnerName")
+    @Mapping(target = "partnerLogoUrl", source = "voucherTemplate.partnerLogoUrl")
+    @Mapping(target = "description", source = "voucherTemplate.description")
+    @Mapping(target = "usageConditions", source = "voucherTemplate.usageConditions")
     @Mapping(target = "thumbnailUrl", source = "voucherTemplate.thumbnailUrl")
     UserVoucherResponse toUserVoucherResponse(UserVoucherEntity entity);
 }
