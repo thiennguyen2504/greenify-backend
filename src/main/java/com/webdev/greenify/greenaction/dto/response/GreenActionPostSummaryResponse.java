@@ -1,6 +1,7 @@
 package com.webdev.greenify.greenaction.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,5 +31,6 @@ public class GreenActionPostSummaryResponse {
     private String location;
     private List<PostReviewResponse> reviews;
     private LocalDate actionDate;
+    private PostStatus status;
     private LocalDateTime createdAt;
 }
