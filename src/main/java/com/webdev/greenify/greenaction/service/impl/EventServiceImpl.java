@@ -26,10 +26,13 @@ import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.service.EventService;
 import com.webdev.greenify.greenaction.specification.EventRegistrationSpecification;
 import com.webdev.greenify.greenaction.specification.EventSpecification;
+import com.webdev.greenify.notification.enumeration.NotificationType;
+import com.webdev.greenify.notification.event.NotificationEvent;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +50,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -59,6 +61,7 @@ public class EventServiceImpl implements EventService {
     private final ImageMapper imageMapper;
     private final EventRegistrationRepository eventRegistrationRepository;
     private final EventRegistrationMapper eventRegistrationMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final Set<GreenEventStatus> PUBLIC_STATUSES = EnumSet.of(
             GreenEventStatus.PUBLISHED,
@@ -95,6 +98,18 @@ public class EventServiceImpl implements EventService {
 
         event = eventRepository.save(event);
         log.info("Event created with ID: {} by user: {}", event.getId(), currentUserId);
+
+        // Publish notification for event creation if it's not a draft
+        if (event.getStatus() != GreenEventStatus.DRAFT) {
+            eventPublisher.publishEvent(new NotificationEvent(
+                    this,
+                    currentUserId,
+                    "Tạo sự kiện thành công",
+                    "Sự kiện '" + event.getTitle() + "' của bạn đã được tạo thành công và đang chờ duyệt.",
+                    NotificationType.EVENT_CREATED_SUCCESS,
+                    event.getId()
+            ));
+        }
 
         return eventMapper.toResponse(event);
     }
@@ -203,6 +218,16 @@ public class EventServiceImpl implements EventService {
         event.setRejectReason(null);
         eventRepository.save(event);
         log.info("Event approved with ID: {}", id);
+
+        // Publish notification
+        eventPublisher.publishEvent(new NotificationEvent(
+                this,
+                event.getOrganizer().getId(),
+                "Sự kiện đã được duyệt",
+                "Sự kiện '" + event.getTitle() + "' của bạn đã được phê duyệt.",
+                NotificationType.EVENT_APPROVED,
+                event.getId()
+        ));
     }
 
     @Override
@@ -221,6 +246,16 @@ public class EventServiceImpl implements EventService {
         event.setRejectedCount(newRejectedCount);
         eventRepository.save(event);
         log.info("Event rejected with ID: {} Reason: {}", id, request.getReason());
+
+        // Publish notification
+        eventPublisher.publishEvent(new NotificationEvent(
+                this,
+                event.getOrganizer().getId(),
+                "Sự kiện bị từ chối",
+                "Sự kiện '" + event.getTitle() + "' của bạn đã bị từ chối. Lý do: " + request.getReason(),
+                NotificationType.EVENT_REJECTED,
+                event.getId()
+        ));
     }
 
     @Override
