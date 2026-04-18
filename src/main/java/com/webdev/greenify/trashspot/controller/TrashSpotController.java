@@ -47,9 +47,10 @@ public class TrashSpotController {
     public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getTrashSpots(
             @RequestParam(required = false) String province,
             @RequestParam(required = false) TrashSpotStatus status,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getTrashSpots(province, status, page, size));
+        return ResponseEntity.ok(trashSpotService.getTrashSpots(province, status, wasteTypeId, page, size));
     }
 
     @GetMapping("/trash-spots/{id}")
@@ -71,9 +72,10 @@ public class TrashSpotController {
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getNgoTrashSpots(
             @RequestParam(required = false) String province,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(province, page, size));
+        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(province, wasteTypeId, page, size));
     }
 
     @PatchMapping("/ngo/trash-spots/{id}/claim")
@@ -96,9 +98,10 @@ public class TrashSpotController {
     public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getAdminTrashSpots(
             @RequestParam(required = false) TrashSpotStatus status,
             @RequestParam(required = false) String province,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(status, province, page, size));
+        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(status, province, wasteTypeId, page, size));
     }
 
     @GetMapping("/admin/trash-spots/resolve-requests")

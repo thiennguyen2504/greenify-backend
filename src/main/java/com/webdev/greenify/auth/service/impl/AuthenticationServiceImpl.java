@@ -31,8 +31,12 @@ import com.webdev.greenify.common.exception.TokenException;
 import com.webdev.greenify.config.JwtProperties;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.entity.UserManagementActionEntity;
+import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.enumeration.UserManagementActionType;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
+import com.webdev.greenify.user.repository.UserManagementActionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -48,9 +52,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
 
+    private static final String SUSPENDED_MESSAGE_PREFIX = "Tài khoản của bạn đã bị khóa. Lý do: ";
+    private static final String DEFAULT_SUSPENDED_REASON = "Tài khoản đã bị khóa bởi quản trị viên";
+
     private final JwtProperties jwtProperties;
     private final UserRepository repository;
     private final RoleRepository roleRepository;
+    private final UserManagementActionRepository userManagementActionRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
     private final OtpService otpService;
@@ -102,7 +110,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .phoneNumber(phone)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(role))
-                .status(com.webdev.greenify.user.enumeration.AccountStatus.ACTIVE)
+            .status(AccountStatus.ACTIVE)
                 .build();
         repository.save(user);
 
@@ -125,6 +133,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Username or password is incorrect");
         }
+
+        validateAccountStatusForSignIn(user);
 
         String jwtToken = generateToken(user, jwtProperties.getExpiration());
         String refreshToken = generateToken(user, jwtProperties.getRefreshTokenExpiration());
@@ -181,6 +191,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         UserEntity user = repository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        validateAccountStatusForSignIn(user);
 
         if (isTokenValid(refreshToken, user)) {
             tokenBlacklistService.blacklistRefreshToken(refreshToken);
@@ -255,5 +267,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         } catch (JOSEException | ParseException e) {
             return false;
         }
+    }
+
+    private void validateAccountStatusForSignIn(UserEntity user) {
+        if (user.getStatus() == AccountStatus.SUSPENDED) {
+            String reason = userManagementActionRepository
+                    .findTopByUser_IdAndActionTypeOrderByCreatedAtDesc(user.getId(), UserManagementActionType.SUSPEND)
+                    .map(UserManagementActionEntity::getReason)
+                    .filter(this::hasText)
+                    .orElse(DEFAULT_SUSPENDED_REASON);
+            throw new AppException(SUSPENDED_MESSAGE_PREFIX + reason, HttpStatus.FORBIDDEN);
+        }
+
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            throw new AppException("Account is not active", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
