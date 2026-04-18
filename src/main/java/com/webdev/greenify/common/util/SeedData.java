@@ -12,6 +12,9 @@ import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
+import com.webdev.greenify.user.repository.NGOProfileRepository;
+import com.webdev.greenify.user.entity.NGOProfileEntity;
+import com.webdev.greenify.user.enumeration.NGOProfileStatus;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
 import com.webdev.greenify.voucher.enumeration.VoucherTemplateStatus;
 import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
@@ -53,6 +56,7 @@ public class SeedData implements CommandLineRunner {
         private final SeedRepository seedRepository;
         private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
+        private final NGOProfileRepository ngoProfileRepository;
 
     @Override
     @Transactional
@@ -134,6 +138,27 @@ public class SeedData implements CommandLineRunner {
 
         // Seed Garden Seeds
         seedGardenSeeds(rewardVoucherByCycle);
+
+        // Seed NGO Profile for tester
+        seedNGOProfiles();
+    }
+
+    private void seedNGOProfiles() {
+        UserEntity ngoUser = userRepository.findByIdentifier("ngo@example.com").orElse(null);
+        if (ngoUser != null && ngoProfileRepository.findByUserId(ngoUser.getId()).isEmpty()) {
+            NGOProfileEntity profile = NGOProfileEntity.builder()
+                    .orgName("Hành Tinh Xanh Foundation")
+                    .representativeName("Nguyễn Văn A")
+                    .hotline("0912345678")
+                    .contactEmail("contact@hanhtinhxanh.org")
+                    .description("Tổ chức phi lợi nhuận vì môi trường xanh.")
+                    .status(NGOProfileStatus.VERIFIED)
+                    .user(ngoUser)
+                    .rejectedCount(0)
+                    .build();
+            ngoProfileRepository.save(profile);
+            log.info("Seeded NGO profile for user: {}", ngoUser.getEmail());
+        }
     }
 
         private void normalizeSoftDeleteFlags() {

@@ -1,7 +1,9 @@
 package com.webdev.greenify.greenaction.controller;
 
+import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -143,5 +145,11 @@ public class EventController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(eventService.getParticipatedEvents(userId, title, status, address, page, size));
+    }
+
+    @PostMapping("/predict")
+    @PreAuthorize("hasAnyRole('NGO', 'ADMIN')")
+    public ResponseEntity<EventPredictionResponseDTO> predictEventFeasibility(@Valid @RequestBody EventPredictionRequestDTO request) {
+        return ResponseEntity.ok(eventService.predictEventFeasibility(request));
     }
 }

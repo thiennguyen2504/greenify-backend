@@ -15,7 +15,8 @@ public class EventSpecification {
     }
 
     public static Specification<EventEntity> hasStatusIn(Collection<GreenEventStatus> statuses) {
-        return (root, query, cb) -> statuses == null || statuses.isEmpty() ? cb.conjunction() : root.get("status").in(statuses);
+        return (root, query, cb) -> statuses == null || statuses.isEmpty() ? cb.conjunction()
+                : root.get("status").in(statuses);
     }
 
     public static Specification<EventEntity> hasEventType(GreenEventType eventType) {
@@ -23,13 +24,14 @@ public class EventSpecification {
     }
 
     public static Specification<EventEntity> titleContains(String title) {
-        return (root, query, cb) -> (title == null || title.isBlank()) 
-                ? cb.conjunction() 
+        return (root, query, cb) -> (title == null || title.isBlank())
+                ? cb.conjunction()
                 : cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%");
     }
 
     public static Specification<EventEntity> startTimeAfter(LocalDateTime from) {
-        return (root, query, cb) -> from == null ? cb.conjunction() : cb.greaterThanOrEqualTo(root.get("startTime"), from);
+        return (root, query, cb) -> from == null ? cb.conjunction()
+                : cb.greaterThanOrEqualTo(root.get("startTime"), from);
     }
 
     public static Specification<EventEntity> endTimeBefore(LocalDateTime to) {
@@ -37,7 +39,8 @@ public class EventSpecification {
     }
 
     public static Specification<EventEntity> hasOrganizerId(String organizerId) {
-        return (root, query, cb) -> organizerId == null ? cb.conjunction() : cb.equal(root.get("organizer").get("id"), organizerId);
+        return (root, query, cb) -> organizerId == null ? cb.conjunction()
+                : cb.equal(root.get("organizer").get("id"), organizerId);
     }
 
     public static Specification<EventEntity> isNotDeleted() {
