@@ -23,13 +23,13 @@ public class EventRegistrationController {
     private final EventRegistrationService registrationService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('USER', 'CTV', 'NGO', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'CTV')")
     public ResponseEntity<EventRegistrationResponseDTO> register(@Valid @RequestBody EventRegistrationRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(registrationService.register(request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'CTV', 'NGO', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'CTV')")
     public ResponseEntity<Void> cancel(@PathVariable String id) {
         registrationService.cancel(id);
         return ResponseEntity.noContent().build();

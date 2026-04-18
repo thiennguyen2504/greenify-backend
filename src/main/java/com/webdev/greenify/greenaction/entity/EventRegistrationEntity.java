@@ -53,4 +53,7 @@ public class EventRegistrationEntity extends BaseEntity {
 
     @Column
     private String note;
+
+    @Column
+    private String registrationCode;
 }
