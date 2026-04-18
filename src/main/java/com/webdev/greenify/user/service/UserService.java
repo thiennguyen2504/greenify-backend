@@ -1,13 +1,28 @@
 package com.webdev.greenify.user.service;
 
-import com.webdev.greenify.user.dto.UpdateUserRolesRequestDTO;
+import com.webdev.greenify.user.dto.ChangeUserRoleRequestDTO;
+import com.webdev.greenify.user.dto.CtvEligibilityResponseDTO;
+import com.webdev.greenify.user.dto.DemoteCtvRequestDTO;
+import com.webdev.greenify.user.dto.SuspendUserRequestDTO;
+import com.webdev.greenify.user.dto.UserAdminSummaryResponseDTO;
 import com.webdev.greenify.user.dto.UserDetailResponseDTO;
 
 import java.util.List;
 
 public interface UserService {
-    List<UserDetailResponseDTO> findAllUsers();
-    UserDetailResponseDTO findUserById(String id);
+    List<UserAdminSummaryResponseDTO> findAllUsersForAdmin();
+
+    UserAdminSummaryResponseDTO findUserByIdForAdmin(String id);
+
     UserDetailResponseDTO getCurrentUser();
-    UserDetailResponseDTO updateUserRoles(String userId, UpdateUserRolesRequestDTO request);
+
+    UserAdminSummaryResponseDTO suspendUser(String userId, SuspendUserRequestDTO request);
+
+    UserAdminSummaryResponseDTO changeUserRole(String userId, ChangeUserRoleRequestDTO request);
+
+    CtvEligibilityResponseDTO checkCurrentUserCtvEligibility();
+
+    UserAdminSummaryResponseDTO upgradeCurrentUserToCtv();
+
+    UserAdminSummaryResponseDTO demoteCtvToUser(String userId, DemoteCtvRequestDTO request);
 }
