@@ -69,12 +69,8 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     private Boolean isProfileComplete(UserProfileEntity user) {
-        if (user.getFirstName() == null || user.getLastName() == null || user.getDisplayName() == null
-                || user.getProvince() == null || user.getDistrict() == null || user.getWard() == null
-                || user.getAddressDetail() == null) {
-            return false;
-        }
-        return true;
+        return user.getDisplayName() != null
+                && user.getProvince() != null && user.getWard() != null;
     }
 
     @Override

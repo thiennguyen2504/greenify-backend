@@ -3,6 +3,7 @@ package com.webdev.greenify.greenaction.service;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.dto.response.PointHistoryResponse;
 import com.webdev.greenify.greenaction.dto.response.TotalPointsResponse;
+import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.PointTransactionEntity;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -26,6 +27,13 @@ public interface PointService {
             UserEntity reviewer,
             String reviewId,
             GreenActionPostEntity post);
+
+    /**
+     * Award points to user for participating in an event.
+     */
+    PointTransactionEntity awardPointsForEventParticipation(
+            UserEntity user,
+            EventEntity event);
 
     /**
      * Get total points for current user (accumulated and available).

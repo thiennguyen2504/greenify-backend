@@ -4,7 +4,9 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.webdev.greenify.common.exception.AppException;
@@ -21,6 +23,7 @@ import com.webdev.greenify.greenaction.mapper.EventRegistrationMapper;
 import com.webdev.greenify.greenaction.repository.EventRegistrationRepository;
 import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.service.EventRegistrationService;
+import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +48,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     private final UserRepository userRepository;
     private final EventRegistrationMapper registrationMapper;
     private final JwtProperties jwtProperties;
+    private final PointService pointService;
 
     @Override
     @Transactional
@@ -103,6 +107,95 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     @Override
     @Transactional
+    public EventRegistrationResponseDTO addToWaitlist(EventRegistrationRequestDTO request) {
+        String currentUserId = getCurrentUserId();
+        
+        EventEntity event = eventRepository.findById(request.getEventId())
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        if (event.getStatus() != GreenEventStatus.PUBLISHED) {
+            throw new AppException("Event is not open for registration", HttpStatus.BAD_REQUEST);
+        }
+
+        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndStatusNot(
+                event.getId(), currentUserId, RegistrationStatus.CANCELLED);
+        if (alreadyRegistered) {
+            throw new AppException("You are already registered or waitlisted for this event", HttpStatus.CONFLICT);
+        }
+
+        UserEntity user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        EventRegistrationEntity registration = EventRegistrationEntity.builder()
+                .event(event)
+                .user(user)
+                .status(RegistrationStatus.WAITLISTED)
+                .note(request.getNote())
+                .build();
+
+        registration = registrationRepository.save(registration);
+        log.info("User {} added to waitlist for event {}", currentUserId, event.getId());
+
+        return registrationMapper.toResponse(registration);
+    }
+
+    @Override
+    @Transactional
+    public void checkIn(String registrationCode) {
+        decodeRegistrationCode(registrationCode); // Verify token
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
+
+        if (!isEventHappen(registration.getEvent())) {
+            throw new AppException("Can only check in during the event time", HttpStatus.BAD_REQUEST);
+        }
+
+        if (registration.getStatus() != RegistrationStatus.REGISTERED) {
+            throw new AppException("Only registered participants can check in", HttpStatus.BAD_REQUEST);
+        }
+
+        if (registration.getCheckInTime() != null) {
+            throw new AppException("Already checked in", HttpStatus.BAD_REQUEST);
+        }
+
+        registration.setCheckInTime(LocalDateTime.now());
+        registrationRepository.save(registration);
+        log.info("User {} checked in for event {}", registration.getUser().getId(), registration.getEvent().getId());
+    }
+
+    @Override
+    @Transactional
+    public void checkOut(String registrationCode) {
+        decodeRegistrationCode(registrationCode); // Verify token
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
+
+        if (registration.getCheckInTime() == null) {
+            throw new AppException("Must check in before checking out", HttpStatus.BAD_REQUEST);
+        }
+
+        if (registration.getCheckOutTime() != null) {
+            throw new AppException("Already checked out", HttpStatus.BAD_REQUEST);
+        }
+
+        registration.setCheckOutTime(LocalDateTime.now());
+        registrationRepository.save(registration);
+        
+        // Award points
+        EventEntity event = registration.getEvent();
+        if (event.getRewardPoints() != null && event.getRewardPoints() > 0) {
+            pointService.awardPointsForEventParticipation(registration.getUser(), event);
+        }
+        
+        log.info("User {} checked out for event {} and awarded points", registration.getUser().getId(), event.getId());
+    }
+
+    private boolean isEventHappen(EventEntity event) {
+        return LocalDateTime.now().isBefore(event.getEndTime()) && LocalDateTime.now().isAfter(event.getStartTime());
+    }
+
+    @Override
+    @Transactional
     public void cancel(String id) {
         String currentUserId = getCurrentUserId();
         
@@ -138,10 +231,23 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         if (!waitlist.isEmpty()) {
             EventRegistrationEntity firstOnWaitlist = waitlist.getFirst();
             firstOnWaitlist.setStatus(RegistrationStatus.REGISTERED);
+            
+            // Generate registration code for the promoted user
+            String code = event.getId() + "-" + firstOnWaitlist.getUser().getId() + "-" + System.currentTimeMillis();
+            firstOnWaitlist.setRegistrationCode(signRegistrationCode(code));
+            
             registrationRepository.save(firstOnWaitlist);
             event.setParticipantCount(event.getParticipantCount() + 1);
             log.info("Promoted user {} from waitlist to registered for event {}", firstOnWaitlist.getUser().getId(), event.getId());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getRegistrationCode(String eventId, String userId) {
+        EventRegistrationEntity registration = registrationRepository.findByEventIdAndUserId(eventId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Registration not found"));
+        return registration.getRegistrationCode();
     }
 
     private String getCurrentUserId() {
@@ -163,6 +269,19 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             return signedJWT.serialize();
         } catch (JOSEException e) {
             throw new TokenException("Error signing registration code", e);
+        }
+    }
+
+    private String decodeRegistrationCode(String token) {
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            JWSVerifier verifier = new MACVerifier(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
+            if (!signedJWT.verify(verifier)) {
+                throw new AppException("Invalid registration code signature", HttpStatus.BAD_REQUEST);
+            }
+            return signedJWT.getJWTClaimsSet().getSubject();
+        } catch (Exception e) {
+            throw new AppException("Invalid registration code", HttpStatus.BAD_REQUEST);
         }
     }
 }

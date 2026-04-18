@@ -1,6 +1,7 @@
 package com.webdev.greenify.greenaction.dto.response;
 
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
+import com.webdev.greenify.user.dto.UserProfileResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,6 @@ public class EventRegistrationResponseDTO {
     private RegistrationStatus status;
     private LocalDateTime createdAt;
     private String note;
+    private String registrationCode;
+    private UserProfileResponseDTO userProfile;
 }

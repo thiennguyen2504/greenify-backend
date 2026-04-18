@@ -2,10 +2,12 @@ package com.webdev.greenify.greenaction.controller;
 
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.GreenEventType;
+import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import com.webdev.greenify.greenaction.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -123,5 +125,23 @@ public class EventController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(eventService.getNGOEventsPublic(ngoId, page, size));
+    }
+
+    @GetMapping("/{id}/registrations")
+    @PreAuthorize("hasAnyRole('ADMIN', 'NGO')")
+    public ResponseEntity<List<EventRegistrationResponseDTO>> getEventRegistrations(@PathVariable String id) {
+        return ResponseEntity.ok(eventService.getEventRegistrations(id));
+    }
+
+    @GetMapping("/participated/{userId}")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getParticipatedEvents(
+            @PathVariable String userId,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) RegistrationStatus status,
+            @RequestParam(required = false) String address,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getParticipatedEvents(userId, title, status, address, page, size));
     }
 }
