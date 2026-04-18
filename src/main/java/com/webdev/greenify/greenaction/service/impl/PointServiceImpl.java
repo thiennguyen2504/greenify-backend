@@ -20,6 +20,9 @@ import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.webdev.greenify.notification.enumeration.NotificationType;
+import com.webdev.greenify.notification.event.NotificationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -63,6 +66,7 @@ public class PointServiceImpl implements PointService {
     private final PointWalletRepository pointWalletRepository;
     private final PointMapper pointMapper;
     private final LeaderboardService leaderboardService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private volatile BigDecimal reviewerPointsCache;
 
@@ -93,6 +97,16 @@ public class PointServiceImpl implements PointService {
 
         log.info("Awarded {} points to user {} for post {}, expires at {}",
                 points, user.getId(), post.getId(), expiresAt);
+
+        // Publish notification
+        eventPublisher.publishEvent(new NotificationEvent(
+                this,
+                user.getId(),
+                "Nhận điểm thưởng",
+                "Bạn vừa nhận được " + points + " điểm từ hành động: " + actionDescription,
+                NotificationType.POINT_RECEIVED,
+                post.getId()
+        ));
 
         return transaction;
     }
@@ -126,6 +140,16 @@ public class PointServiceImpl implements PointService {
         log.info("Awarded {} points to reviewer {} for reviewing post {}, expires at {}",
                 reviewerPoints, reviewer.getId(), post.getId(), expiresAt);
 
+        // Publish notification
+        eventPublisher.publishEvent(new NotificationEvent(
+                this,
+                reviewer.getId(),
+                "Nhận điểm thưởng",
+                "Bạn vừa nhận được " + reviewerPoints + " điểm từ việc duyệt bài viết.",
+                NotificationType.POINT_RECEIVED,
+                post.getId()
+        ));
+
         return transaction;
     }
 
@@ -156,6 +180,16 @@ public class PointServiceImpl implements PointService {
 
         log.info("Awarded {} points to user {} for event participation {}, expires at {}",
                 points, user.getId(), event.getId(), expiresAt);
+
+        // Publish notification
+        eventPublisher.publishEvent(new NotificationEvent(
+                this,
+                user.getId(),
+                "Nhận điểm thưởng",
+                "Bạn vừa nhận được " + points + " điểm từ việc tham gia sự kiện: " + event.getTitle(),
+                NotificationType.POINT_RECEIVED,
+                event.getId()
+        ));
 
         return transaction;
     }
