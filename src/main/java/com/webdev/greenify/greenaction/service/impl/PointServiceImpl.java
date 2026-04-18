@@ -1,5 +1,6 @@
 package com.webdev.greenify.greenaction.service.impl;
 
+import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.dto.response.PointHistoryResponse;
 import com.webdev.greenify.greenaction.dto.response.TotalPointsResponse;
@@ -14,7 +15,6 @@ import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
 import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.leaderboard.service.LeaderboardService;
-import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.point.entity.PointWalletEntity;
 import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -125,6 +125,37 @@ public class PointServiceImpl implements PointService {
 
         log.info("Awarded {} points to reviewer {} for reviewing post {}, expires at {}",
                 reviewerPoints, reviewer.getId(), post.getId(), expiresAt);
+
+        return transaction;
+    }
+
+    @Override
+    @Transactional
+    public PointTransactionEntity awardPointsForEventParticipation(
+            UserEntity user,
+            EventEntity event) {
+
+        BigDecimal points = BigDecimal.valueOf(event.getRewardPoints());
+        String actionDescription = String.format(
+                "Tham gia sự kiện: %s",
+                event.getTitle());
+
+        LocalDateTime expiresAt = LocalDateTime.now().plusMonths(POINT_EXPIRATION_MONTHS);
+
+        PointTransactionEntity transaction = PointTransactionEntity.builder()
+                .user(user)
+                .points(points)
+                .actionDescription(actionDescription)
+                .sourcePostId(event.getId())
+                .expiresAt(expiresAt)
+                .build();
+
+        transaction = pointTransactionRepository.save(transaction);
+        PointWalletEntity updatedWallet = increaseWalletPoints(user, points, transaction.getCreatedAt());
+        leaderboardService.updateScore(user.getId(), updatedWallet.getWeeklyPoints(), updatedWallet.getLastPointEarnedAt());
+
+        log.info("Awarded {} points to user {} for event participation {}, expires at {}",
+                points, user.getId(), event.getId(), expiresAt);
 
         return transaction;
     }

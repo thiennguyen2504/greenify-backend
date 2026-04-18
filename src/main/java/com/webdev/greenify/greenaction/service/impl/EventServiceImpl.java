@@ -8,14 +8,20 @@ import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.EventEntity;
+import com.webdev.greenify.greenaction.entity.EventRegistrationEntity;
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.GreenEventType;
+import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import com.webdev.greenify.greenaction.mapper.EventMapper;
+import com.webdev.greenify.greenaction.mapper.EventRegistrationMapper;
+import com.webdev.greenify.greenaction.repository.EventRegistrationRepository;
 import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.service.EventService;
+import com.webdev.greenify.greenaction.specification.EventRegistrationSpecification;
 import com.webdev.greenify.greenaction.specification.EventSpecification;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
@@ -48,6 +54,8 @@ public class EventServiceImpl implements EventService {
     private final UserRepository userRepository;
     private final EventMapper eventMapper;
     private final ImageMapper imageMapper;
+    private final EventRegistrationRepository eventRegistrationRepository;
+    private final EventRegistrationMapper eventRegistrationMapper;
 
     private static final Set<GreenEventStatus> PUBLIC_STATUSES = EnumSet.of(
             GreenEventStatus.PUBLISHED,
@@ -304,6 +312,45 @@ public class EventServiceImpl implements EventService {
         if (!TimeUtils.isValidTime(start, end)) {
             throw new AppException("Start time must be before end time", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventRegistrationResponseDTO> getEventRegistrations(String eventId) {
+        if (!eventRepository.existsById(eventId)) {
+            throw new ResourceNotFoundException("Event not found");
+        }
+        
+        return eventRegistrationRepository.findAllByEventId(eventId).stream()
+                .map(eventRegistrationMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<EventResponseDTO> getParticipatedEvents(
+            String userId,
+            String title,
+            RegistrationStatus status,
+            String address,
+            int page,
+            int size) {
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Specification<EventRegistrationEntity> spec = EventRegistrationSpecification.buildSpecification(userId, title, status, address);
+        
+        Page<EventRegistrationEntity> registrationPage = eventRegistrationRepository.findAll(spec, pageable);
+        
+        List<EventResponseDTO> content = registrationPage.getContent().stream()
+                .map(registration -> eventMapper.toResponse(registration.getEvent()))
+                .toList();
+
+        return PagedResponse.of(
+                content,
+                registrationPage.getNumber(),
+                registrationPage.getSize(),
+                registrationPage.getTotalElements(),
+                registrationPage.getTotalPages());
     }
 
     private String getCurrentUserId() {
