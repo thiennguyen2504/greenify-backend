@@ -64,6 +64,9 @@ public class ProfileServiceImpl implements ProfileService {
             image.setUserProfile(profile);
             profile.setAvatar(image);
         }
+
+        user.setUserProfile(profile);
+
         UserProfileEntity savedUserProfile = userProfileRepository.save(profile);
         return userProfileMapper.toDto(savedUserProfile);
     }

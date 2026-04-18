@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 @Mapper(uses = UserProfileMapper.class)
 public interface UserMapper {
     @Mapping(target = "roles", source = "roles", qualifiedByName = "mapRoleNames")
+    @Mapping(target = "userProfile", source = "userProfile")
     UserDetailResponseDTO toDto(UserEntity userEntity);
 
     @Named("mapRoleNames")
