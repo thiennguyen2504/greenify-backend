@@ -19,6 +19,7 @@ public interface TrashSpotService {
     PagedResponse<TrashSpotSummaryResponse> getTrashSpots(
             String province,
             TrashSpotStatus status,
+            String wasteTypeId,
             int page,
             int size);
 
@@ -26,7 +27,7 @@ public interface TrashSpotService {
 
     TrashSpotVerificationResponse submitVerification(String id, SubmitVerificationRequest request);
 
-    PagedResponse<TrashSpotSummaryResponse> getNgoTrashSpots(String province, int page, int size);
+        PagedResponse<TrashSpotSummaryResponse> getNgoTrashSpots(String province, String wasteTypeId, int page, int size);
 
     TrashSpotDetailResponse claimSpot(String id);
 
@@ -35,6 +36,7 @@ public interface TrashSpotService {
     PagedResponse<TrashSpotSummaryResponse> getAdminTrashSpots(
             TrashSpotStatus status,
             String province,
+            String wasteTypeId,
             int page,
             int size);
 

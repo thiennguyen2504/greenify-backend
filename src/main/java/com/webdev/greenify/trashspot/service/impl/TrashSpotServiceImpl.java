@@ -34,6 +34,7 @@ import com.webdev.greenify.trashspot.repository.TrashSpotVerificationRepository;
 import com.webdev.greenify.trashspot.service.TrashSpotService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -153,12 +154,14 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public PagedResponse<TrashSpotSummaryResponse> getTrashSpots(
             String province,
             TrashSpotStatus status,
+            String wasteTypeId,
             int page,
             int size) {
 
         Pageable pageable = buildDefaultPageable(page, size);
         Specification<TrashSpotEntity> specification = baseSpecification()
-                .and(hasProvince(province));
+                .and(hasProvince(province))
+                .and(hasWasteTypeId(wasteTypeId));
 
         if (status != null) {
             specification = specification.and(hasStatus(status));
@@ -238,10 +241,11 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<TrashSpotSummaryResponse> getNgoTrashSpots(String province, int page, int size) {
+    public PagedResponse<TrashSpotSummaryResponse> getNgoTrashSpots(String province, String wasteTypeId, int page, int size) {
         Pageable pageable = buildDefaultPageable(page, size);
         Specification<TrashSpotEntity> specification = baseSpecification()
                 .and(hasProvince(province))
+                .and(hasWasteTypeId(wasteTypeId))
                 .and(statusIn(Set.of(
                         TrashSpotStatus.VERIFIED,
                         TrashSpotStatus.REOPENED,
@@ -320,12 +324,14 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public PagedResponse<TrashSpotSummaryResponse> getAdminTrashSpots(
             TrashSpotStatus status,
             String province,
+            String wasteTypeId,
             int page,
             int size) {
 
         Pageable pageable = buildDefaultPageable(page, size);
         Specification<TrashSpotEntity> specification = baseSpecification()
-                .and(hasProvince(province));
+                .and(hasProvince(province))
+                .and(hasWasteTypeId(wasteTypeId));
 
         if (status != null) {
             specification = specification.and(hasStatus(status));
@@ -746,6 +752,19 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         }
         String normalizedProvince = province.trim().toLowerCase();
         return (root, query, cb) -> cb.equal(cb.lower(root.get("province")), normalizedProvince);
+    }
+
+    private Specification<TrashSpotEntity> hasWasteTypeId(String wasteTypeId) {
+        if (wasteTypeId == null || wasteTypeId.isBlank()) {
+            return null;
+        }
+        String normalizedWasteTypeId = wasteTypeId.trim();
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.distinct(true);
+            }
+            return cb.equal(root.join("wasteTypes", JoinType.INNER).get("id"), normalizedWasteTypeId);
+        };
     }
 
     private Specification<TrashSpotEntity> hasStatus(TrashSpotStatus status) {
