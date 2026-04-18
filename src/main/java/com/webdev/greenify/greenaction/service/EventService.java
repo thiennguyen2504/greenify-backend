@@ -12,6 +12,8 @@ import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
 
 public interface EventService {
     EventResponseDTO createEvent(EventRequestDTO request);
@@ -54,4 +56,6 @@ public interface EventService {
             String address,
             int page,
             int size);
+
+    EventPredictionResponseDTO predictEventFeasibility(EventPredictionRequestDTO request);
 }

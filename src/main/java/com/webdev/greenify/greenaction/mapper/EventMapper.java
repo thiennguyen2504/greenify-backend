@@ -8,6 +8,7 @@ import com.webdev.greenify.greenaction.dto.response.EventImageResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.station.mapper.AddressMapper;
+import com.webdev.greenify.user.mapper.NGOProfileMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -16,13 +17,13 @@ import org.mapstruct.Named;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Mapper(uses = {AddressMapper.class, ImageMapper.class})
+@Mapper(componentModel = "spring", uses = {AddressMapper.class, ImageMapper.class, NGOProfileMapper.class})
 public interface EventMapper {
 
     @Mapping(target = "organizer", ignore = true)
     EventEntity toEntity(EventRequestDTO dto);
 
-    @Mapping(target = "organizer", ignore = true)
+    @Mapping(target = "organizer", source = "organizer.ngoProfile")
     @Mapping(target = "thumbnail", source = "images", qualifiedByName = "mapThumbnailField")
     @Mapping(target = "images", source = "images", qualifiedByName = "mapDetailImages")
     EventResponseDTO toResponse(EventEntity entity);

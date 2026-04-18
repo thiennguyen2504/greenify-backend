@@ -6,13 +6,16 @@ import com.webdev.greenify.common.util.TimeUtils;
 import com.webdev.greenify.file.entity.EventImageEntity;
 import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.file.mapper.ImageMapper;
+import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.greenaction.entity.EventRegistrationEntity;
+import com.webdev.greenify.greenaction.enumeration.EventFeasibilityConclusion;
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.GreenEventType;
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
@@ -351,6 +354,53 @@ public class EventServiceImpl implements EventService {
                 registrationPage.getSize(),
                 registrationPage.getTotalElements(),
                 registrationPage.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventPredictionResponseDTO predictEventFeasibility(EventPredictionRequestDTO request) {
+        int startHour = request.getStartTime().getHour();
+        int endHour = request.getEndTime().getHour();
+        Double averageParticipants = eventRepository.getAverageParticipantsByCriteria(
+                request.getEventType(),
+                request.getProvince(),
+                startHour,
+                endHour);
+
+        double minRatio = 0.0;
+        if (request.getMinParticipants() > 0) {
+            minRatio = (averageParticipants / request.getMinParticipants()) * 100;
+        }
+
+        double expectedRatio = 0.0;
+        if (request.getExpectedParticipants() > 0) {
+            expectedRatio = (averageParticipants / request.getExpectedParticipants()) * 100;
+        }
+
+        EventFeasibilityConclusion conclusion;
+        String message;
+
+        if (averageParticipants >= request.getExpectedParticipants()) {
+            conclusion = EventFeasibilityConclusion.HIGHLY_FEASIBLE;
+            message = String.format("Dựa trên lịch sử, các sự kiện tương tự có trung bình %.1f người tham gia, vượt mức dự kiến của bạn.", averageParticipants);
+        } else if (averageParticipants >= request.getMinParticipants()) {
+            conclusion = EventFeasibilityConclusion.FEASIBLE;
+            message = String.format("Dựa trên lịch sử, các sự kiện tương tự có trung bình %.1f người tham gia, đạt mức tối thiểu đề ra.", averageParticipants);
+        } else if (averageParticipants > 0) {
+            conclusion = EventFeasibilityConclusion.RISKY;
+            message = String.format("Dựa trên lịch sử, các sự kiện tương tự chỉ đạt trung bình %.1f người tham gia, thấp hơn mức tối thiểu.", averageParticipants);
+        } else {
+            conclusion = EventFeasibilityConclusion.NO_DATA;
+            message = "Hiện chưa có dữ liệu quá khứ cho loại sự kiện này tại tỉnh thành này trong khung giờ đã chọn.";
+        }
+
+        return EventPredictionResponseDTO.builder()
+                .averageParticipants(averageParticipants)
+                .minRequirementRatio(minRatio)
+                .expectedRequirementRatio(expectedRatio)
+                .conclusion(conclusion)
+                .message(message)
+                .build();
     }
 
     private String getCurrentUserId() {
