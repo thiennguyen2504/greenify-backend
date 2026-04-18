@@ -2,6 +2,7 @@ package com.webdev.greenify.station.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
 import com.webdev.greenify.greenaction.entity.EventEntity;
+import com.webdev.greenify.user.entity.NGOProfileEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToOne;
@@ -47,4 +48,7 @@ public class AddressEntity extends BaseEntity {
 
     @OneToOne(mappedBy = "address")
     private EventEntity event;
+
+    @OneToOne(mappedBy = "address")
+    private NGOProfileEntity ngoProfile;
 }
