@@ -1,8 +1,10 @@
 package com.webdev.greenify.user.controller;
 
+import com.webdev.greenify.user.dto.NGOProfileFilterRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRejectRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileResponseDTO;
+import com.webdev.greenify.user.dto.PagedResponse;
 import com.webdev.greenify.user.service.NGOProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +27,22 @@ public class NGOProfileController {
     private final NGOProfileService ngoProfileService;
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('NGO', 'USER')")
     public ResponseEntity<NGOProfileResponseDTO> getCurrentNGOProfile() {
         return ResponseEntity.ok(ngoProfileService.getCurrentNGOProfile());
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedResponse<NGOProfileResponseDTO>> searchNGOProfiles(
+            NGOProfileFilterRequestDTO filter) {
+        return ResponseEntity.ok(ngoProfileService.searchNGOProfiles(filter));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<NGOProfileResponseDTO> getNGOProfileById(@PathVariable String id) {
+        return ResponseEntity.ok(ngoProfileService.getNGOProfileById(id));
     }
 
     @PostMapping

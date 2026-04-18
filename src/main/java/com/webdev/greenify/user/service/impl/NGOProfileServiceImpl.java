@@ -7,9 +7,11 @@ import com.webdev.greenify.file.entity.NGOProfileImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.station.entity.AddressEntity;
 import com.webdev.greenify.station.mapper.AddressMapper;
+import com.webdev.greenify.user.dto.NGOProfileFilterRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRejectRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileResponseDTO;
+import com.webdev.greenify.user.dto.PagedResponse;
 import com.webdev.greenify.user.entity.NGOProfileEntity;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -20,15 +22,20 @@ import com.webdev.greenify.user.repository.NGOProfileRepository;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.user.service.NGOProfileService;
+import com.webdev.greenify.user.specification.NGOProfileSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -77,7 +84,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
                         doc.setStatus(ImageStatus.ACTIVE);
                         doc.setNgoProfile(entity);
                         return doc;
-                    }).collect(Collectors.toList());
+                    }).toList();
             entity.setVerificationDocs(docs);
         }
 
@@ -126,7 +133,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
                         doc.setStatus(ImageStatus.ACTIVE);
                         doc.setNgoProfile(entity);
                         return doc;
-                    }).collect(Collectors.toList());
+                    }).toList();
             entity.getVerificationDocs().addAll(docs);
         }
 
@@ -171,6 +178,49 @@ public class NGOProfileServiceImpl implements NGOProfileService {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         NGOProfileEntity entity = ngoProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+        return ngoProfileMapper.toDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<NGOProfileResponseDTO> searchNGOProfiles(NGOProfileFilterRequestDTO filter) {
+        Pageable pageable = PageRequest.of(
+                filter.getPage(),
+                filter.getSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Specification<NGOProfileEntity> spec = NGOProfileSpecification.buildSpecification(
+                filter.getOrgName(),
+                filter.getStatus(),
+                filter.getSearch()
+        );
+
+        Page<NGOProfileEntity> page = ngoProfileRepository.findAll(spec, pageable);
+
+        List<NGOProfileResponseDTO> content = page.getContent().stream()
+                .map(ngoProfileMapper::toDto)
+                .toList();
+
+        return PagedResponse.of(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NGOProfileResponseDTO getNGOProfileById(String id) {
+        NGOProfileEntity entity = ngoProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+
+        if (entity.getStatus() != NGOProfileStatus.VERIFIED) {
+            throw new ResourceNotFoundException("NGO profile not found");
+        }
+
         return ngoProfileMapper.toDto(entity);
     }
 }
