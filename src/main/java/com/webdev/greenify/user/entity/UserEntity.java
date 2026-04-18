@@ -67,6 +67,9 @@ public class UserEntity extends BaseEntity {
     @OneToOne(mappedBy = "user")
     private UserProfileEntity userProfile;
 
+    @OneToOne(mappedBy = "user")
+    private NGOProfileEntity ngoProfile;
+
     @OneToMany(mappedBy = "organizer", fetch = FetchType.LAZY)
     private List<EventEntity> events = new ArrayList<>();
 }

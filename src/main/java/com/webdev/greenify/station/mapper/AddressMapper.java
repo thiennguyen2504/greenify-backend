@@ -10,10 +10,14 @@ import org.mapstruct.MappingTarget;
 @Mapper
 public interface AddressMapper {
     @Mapping(target = "recyclingStation", ignore = true)
+    @Mapping(target = "event", ignore = true)
+    @Mapping(target = "ngoProfile", ignore = true)
     AddressEntity toAddressEntity(AddressRequestDTO dto);
 
     AddressResponseDTO toAddressResponseDTO(AddressEntity entity);
 
     @Mapping(target = "recyclingStation", ignore = true)
+    @Mapping(target = "event", ignore = true)
+    @Mapping(target = "ngoProfile", ignore = true)
     void updateAddress(@MappingTarget AddressEntity entity, AddressRequestDTO dto);
 }
