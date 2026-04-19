@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class TrashSpotSummaryResponse {
+public class TrashSpotReportTrashSpotResponse {
 
     private String id;
     private String name;

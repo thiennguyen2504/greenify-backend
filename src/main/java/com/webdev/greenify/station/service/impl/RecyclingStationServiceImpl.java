@@ -12,8 +12,6 @@ import com.webdev.greenify.station.repository.RecyclingStationRepository;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.station.service.RecyclingStationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,9 +45,10 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<RecyclingStationResponseDTO> getAllStations(Pageable pageable) {
-        return recyclingStationRepository.findByIsDeletedFalse(pageable)
-                .map(recyclingStationMapper::toRecyclingStationResponseDTO);
+    public List<RecyclingStationResponseDTO> getAllStations(String wasteTypeId) {
+        return recyclingStationRepository.findAllActiveByWasteTypeId(wasteTypeId).stream()
+                .map(recyclingStationMapper::toRecyclingStationResponseDTO)
+                .toList();
     }
 
     @Override

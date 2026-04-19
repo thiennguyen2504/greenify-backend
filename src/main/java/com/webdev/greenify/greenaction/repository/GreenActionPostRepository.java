@@ -18,6 +18,8 @@ import java.util.Optional;
 public interface GreenActionPostRepository extends JpaRepository<GreenActionPostEntity, String>,
         JpaSpecificationExecutor<GreenActionPostEntity> {
 
+        long countByUser_IdAndIsDeletedFalse(String userId);
+
     /**
      * Fetch top posts with JOIN FETCH to prevent N+1 queries.
      * Only returns VERIFIED posts, ordered by approveCount DESC, then createdAt DESC.

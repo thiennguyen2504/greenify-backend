@@ -20,11 +20,13 @@ import java.util.List;
 public class TrashSpotDetailResponse {
 
     private String id;
+    private String name;
     private String reporterId;
     private String reporterDisplayName;
     private String description;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private String location;
     private String province;
     private TrashSpotStatus status;
     private Integer verificationCount;

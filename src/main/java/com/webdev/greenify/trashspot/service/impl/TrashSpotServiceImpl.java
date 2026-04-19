@@ -7,21 +7,25 @@ import com.webdev.greenify.greenaction.constant.ActionTypeConstants;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
+import com.webdev.greenify.greenaction.service.LocationSnapshotService;
 import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.trashspot.dto.request.CreateResolveRequestRequest;
 import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotRequest;
+import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotReportRequest;
 import com.webdev.greenify.trashspot.dto.request.ReviewResolveRequest;
 import com.webdev.greenify.trashspot.dto.request.SubmitVerificationRequest;
 import com.webdev.greenify.trashspot.dto.response.ResolveRequestResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotDetailResponse;
+import com.webdev.greenify.trashspot.dto.response.TrashSpotReportResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotSummaryResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotVerificationResponse;
 import com.webdev.greenify.trashspot.entity.TrashSpotEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotImageEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotResolveImageEntity;
+import com.webdev.greenify.trashspot.entity.TrashSpotReportEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotResolveRequestEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotVerificationEntity;
 import com.webdev.greenify.trashspot.enumeration.ResolveRequestStatus;
@@ -29,11 +33,13 @@ import com.webdev.greenify.trashspot.enumeration.SeverityTier;
 import com.webdev.greenify.trashspot.enumeration.TrashSpotStatus;
 import com.webdev.greenify.trashspot.mapper.TrashSpotMapper;
 import com.webdev.greenify.trashspot.repository.TrashSpotRepository;
+import com.webdev.greenify.trashspot.repository.TrashSpotReportRepository;
 import com.webdev.greenify.trashspot.repository.TrashSpotResolveRequestRepository;
 import com.webdev.greenify.trashspot.repository.TrashSpotVerificationRepository;
 import com.webdev.greenify.trashspot.service.TrashSpotService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -73,9 +79,11 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private final TrashSpotRepository trashSpotRepository;
     private final TrashSpotVerificationRepository trashSpotVerificationRepository;
     private final TrashSpotResolveRequestRepository trashSpotResolveRequestRepository;
+    private final TrashSpotReportRepository trashSpotReportRepository;
     private final WasteTypeRepository wasteTypeRepository;
     private final UserRepository userRepository;
     private final TrashSpotMapper trashSpotMapper;
+    private final LocationSnapshotService locationSnapshotService;
     private final PointService pointService;
     private final GreenActionTypeRepository greenActionTypeRepository;
 
@@ -87,11 +95,17 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public CreateOrMergeResult createOrMerge(CreateTrashSpotRequest request) {
         UserEntity reporter = getCurrentUser();
         Set<WasteTypeEntity> wasteTypes = resolveWasteTypes(request.getWasteTypeIds());
+        String normalizedSpotName = normalizeSpotName(request.getName());
+        String resolvedLocation = locationSnapshotService.resolveLocationSnapshot(
+                request.getLatitude(),
+                request.getLongitude());
 
         OptionalNearbySpots nearbySpots = findNearbySpots(request.getLatitude(), request.getLongitude());
 
         if (nearbySpots.nonResolvedSpotId() != null) {
             TrashSpotEntity mergedSpot = getTrashSpotForWrite(nearbySpots.nonResolvedSpotId());
+            updateSpotName(mergedSpot, normalizedSpotName);
+            mergedSpot.setLocation(resolvedLocation);
             appendDescription(mergedSpot, request.getDescription());
             mergedSpot.getWasteTypes().addAll(wasteTypes);
             addSpotImages(mergedSpot, request.getImages(), reporter);
@@ -112,6 +126,8 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 resolvedSpot.setClaimedAt(null);
                 resolvedSpot.setResolvedAt(null);
                 resolvedSpot.setVerificationCount(0);
+                updateSpotName(resolvedSpot, normalizedSpotName);
+                resolvedSpot.setLocation(resolvedLocation);
 
                 trashSpotVerificationRepository.deleteByTrashSpotId(resolvedSpot.getId());
 
@@ -130,9 +146,11 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
         TrashSpotEntity newSpot = TrashSpotEntity.builder()
                 .reporter(reporter)
+                .name(normalizedSpotName)
                 .description(normalizeDescription(request.getDescription()))
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .location(resolvedLocation)
                 .province(request.getProvince())
                 .status(TrashSpotStatus.PENDING_VERIFY)
                 .verificationCount(0)
@@ -150,15 +168,16 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<TrashSpotSummaryResponse> getTrashSpots(
+    public List<TrashSpotSummaryResponse> getTrashSpots(
             String province,
             TrashSpotStatus status,
-            int page,
-            int size) {
+            SeverityTier severity,
+            String wasteTypeId) {
 
-        Pageable pageable = buildDefaultPageable(page, size);
         Specification<TrashSpotEntity> specification = baseSpecification()
-                .and(hasProvince(province));
+                .and(hasProvince(province))
+                .and(hasSeverityTier(severity))
+                .and(hasWasteTypeId(wasteTypeId));
 
         if (status != null) {
             specification = specification.and(hasStatus(status));
@@ -166,15 +185,8 @@ public class TrashSpotServiceImpl implements TrashSpotService {
             specification = specification.and(notStatus(TrashSpotStatus.RESOLVED));
         }
 
-        Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
-
-        return PagedResponse.of(
-                content,
-                spotsPage.getNumber(),
-                spotsPage.getSize(),
-                spotsPage.getTotalElements(),
-                spotsPage.getTotalPages());
+        List<TrashSpotEntity> spots = trashSpotRepository.findAll(specification, buildDefaultSort());
+        return toEnrichedSummaryList(spots);
     }
 
     @Override
@@ -237,25 +249,54 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     }
 
     @Override
+    @Transactional
+    public TrashSpotReportResponse reportTrashSpot(String id, CreateTrashSpotReportRequest request) {
+        TrashSpotEntity spot = getTrashSpotOrThrow(id);
+        String currentUserId = getCurrentUserId();
+
+        if (spot.getReporter() != null && spot.getReporter().getId().equals(currentUserId)) {
+            throw new AppException("Không thể báo cáo điểm rác do chính bạn tạo", HttpStatus.FORBIDDEN);
+        }
+
+        if (trashSpotReportRepository.existsByTrashSpotIdAndReporterIdAndIsDeletedFalse(spot.getId(), currentUserId)) {
+            throw new AppException("Bạn đã báo cáo điểm rác này rồi", HttpStatus.CONFLICT);
+        }
+
+        UserEntity reporter = getCurrentUser();
+        TrashSpotReportEntity report = TrashSpotReportEntity.builder()
+                .trashSpot(spot)
+                .reporter(reporter)
+                .note(normalizeDescription(request.getNote()))
+                .build();
+
+        try {
+            report = trashSpotReportRepository.saveAndFlush(report);
+        } catch (DataIntegrityViolationException ex) {
+            throw new AppException("Bạn đã báo cáo điểm rác này rồi", HttpStatus.CONFLICT);
+        }
+
+        log.info("User {} reported trash spot {} with report {}",
+                reporter.getId(),
+                spot.getId(),
+                report.getId());
+
+        return trashSpotMapper.toReportResponse(report);
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public PagedResponse<TrashSpotSummaryResponse> getNgoTrashSpots(String province, int page, int size) {
-        Pageable pageable = buildDefaultPageable(page, size);
+        public List<TrashSpotSummaryResponse> getNgoTrashSpots(String province, SeverityTier severity, String wasteTypeId) {
         Specification<TrashSpotEntity> specification = baseSpecification()
                 .and(hasProvince(province))
+            .and(hasSeverityTier(severity))
+                .and(hasWasteTypeId(wasteTypeId))
                 .and(statusIn(Set.of(
                         TrashSpotStatus.VERIFIED,
                         TrashSpotStatus.REOPENED,
                         TrashSpotStatus.IN_PROGRESS)));
 
-        Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
-
-        return PagedResponse.of(
-                content,
-                spotsPage.getNumber(),
-                spotsPage.getSize(),
-                spotsPage.getTotalElements(),
-                spotsPage.getTotalPages());
+        List<TrashSpotEntity> spots = trashSpotRepository.findAll(specification, buildDefaultSort());
+        return toEnrichedSummaryList(spots);
     }
 
     @Override
@@ -317,29 +358,23 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<TrashSpotSummaryResponse> getAdminTrashSpots(
+    public List<TrashSpotSummaryResponse> getAdminTrashSpots(
             TrashSpotStatus status,
             String province,
-            int page,
-            int size) {
+            SeverityTier severity,
+            String wasteTypeId) {
 
-        Pageable pageable = buildDefaultPageable(page, size);
         Specification<TrashSpotEntity> specification = baseSpecification()
-                .and(hasProvince(province));
+                .and(hasProvince(province))
+                .and(hasSeverityTier(severity))
+                .and(hasWasteTypeId(wasteTypeId));
 
         if (status != null) {
             specification = specification.and(hasStatus(status));
         }
 
-        Page<TrashSpotEntity> spotsPage = trashSpotRepository.findAll(specification, pageable);
-        List<TrashSpotSummaryResponse> content = toEnrichedSummaryList(spotsPage);
-
-        return PagedResponse.of(
-                content,
-                spotsPage.getNumber(),
-                spotsPage.getSize(),
-                spotsPage.getTotalElements(),
-                spotsPage.getTotalPages());
+        List<TrashSpotEntity> spots = trashSpotRepository.findAll(specification, buildDefaultSort());
+        return toEnrichedSummaryList(spots);
     }
 
     @Override
@@ -365,6 +400,28 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 resolveRequests.getTotalElements(),
                 resolveRequests.getTotalPages());
     }
+
+            @Override
+            @Transactional(readOnly = true)
+            public PagedResponse<TrashSpotReportResponse> getTrashSpotReports(int page, int size) {
+            Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                clampPageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+            Page<TrashSpotReportEntity> reports = trashSpotReportRepository.findByIsDeletedFalse(pageable);
+
+            List<TrashSpotReportResponse> content = reports.getContent().stream()
+                .map(trashSpotMapper::toReportResponse)
+                .toList();
+
+            return PagedResponse.of(
+                content,
+                reports.getNumber(),
+                reports.getSize(),
+                reports.getTotalElements(),
+                reports.getTotalPages());
+            }
 
     @Override
     @Transactional
@@ -447,6 +504,16 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
         log.info("Trash spot {} manually reopened by admin", spot.getId());
         return toDetailResponse(getTrashSpotOrThrow(spot.getId()));
+    }
+
+    @Override
+    @Transactional
+    public void deleteTrashSpot(String id) {
+        TrashSpotEntity spot = getTrashSpotForWrite(id);
+        spot.setDeleted(true);
+        trashSpotRepository.save(spot);
+
+        log.info("Trash spot {} soft-deleted by admin", spot.getId());
     }
 
     @Override
@@ -706,6 +773,23 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         return description.trim();
     }
 
+    private String normalizeSpotName(String name) {
+        if (name == null) {
+            return null;
+        }
+
+        String normalized = name.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void updateSpotName(TrashSpotEntity spot, String normalizedSpotName) {
+        if (normalizedSpotName == null) {
+            return;
+        }
+
+        spot.setName(normalizedSpotName);
+    }
+
     private TrashSpotEntity getTrashSpotOrThrow(String id) {
         return trashSpotRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
@@ -717,14 +801,14 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
     }
 
-    private List<TrashSpotSummaryResponse> toEnrichedSummaryList(Page<TrashSpotEntity> spotsPage) {
-        if (spotsPage.isEmpty()) {
+    private List<TrashSpotSummaryResponse> toEnrichedSummaryList(List<TrashSpotEntity> spots) {
+        if (spots.isEmpty()) {
             return List.of();
         }
-        List<String> ids = spotsPage.getContent().stream().map(TrashSpotEntity::getId).toList();
+        List<String> ids = spots.stream().map(TrashSpotEntity::getId).toList();
         Map<String, TrashSpotEntity> enrichedMap = trashSpotRepository.findByIdIn(ids).stream()
                 .collect(Collectors.toMap(TrashSpotEntity::getId, e -> e, (existing, replacement) -> existing));
-        return spotsPage.getContent().stream()
+        return spots.stream()
                 .map(e -> {
                     TrashSpotEntity enriched = enrichedMap.get(e.getId());
                     if (enriched == null) {
@@ -748,6 +832,26 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         return (root, query, cb) -> cb.equal(cb.lower(root.get("province")), normalizedProvince);
     }
 
+    private Specification<TrashSpotEntity> hasSeverityTier(SeverityTier severity) {
+        if (severity == null) {
+            return null;
+        }
+        return (root, query, cb) -> cb.equal(root.get("severityTier"), severity);
+    }
+
+    private Specification<TrashSpotEntity> hasWasteTypeId(String wasteTypeId) {
+        if (wasteTypeId == null || wasteTypeId.isBlank()) {
+            return null;
+        }
+        String normalizedWasteTypeId = wasteTypeId.trim();
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.distinct(true);
+            }
+            return cb.equal(root.join("wasteTypes", JoinType.INNER).get("id"), normalizedWasteTypeId);
+        };
+    }
+
     private Specification<TrashSpotEntity> hasStatus(TrashSpotStatus status) {
         return (root, query, cb) -> cb.equal(root.get("status"), status);
     }
@@ -760,11 +864,8 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         return (root, query, cb) -> root.get("status").in(statuses);
     }
 
-    private Pageable buildDefaultPageable(int page, int size) {
-        return PageRequest.of(
-                Math.max(page, 0),
-                clampPageSize(size),
-                Sort.by(Sort.Direction.DESC, "hotScore").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+    private Sort buildDefaultSort() {
+        return Sort.by(Sort.Direction.DESC, "hotScore").and(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     private int clampPageSize(int size) {

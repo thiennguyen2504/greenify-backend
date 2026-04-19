@@ -5,8 +5,11 @@ import com.webdev.greenify.auth.service.AuthenticationService;
 import com.webdev.greenify.auth.dto.AuthenticationResponse;
 import com.webdev.greenify.config.JwtProperties;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.entity.UserManagementActionEntity;
+import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.enumeration.UserManagementActionType;
+import com.webdev.greenify.user.repository.UserManagementActionRepository;
 import com.webdev.greenify.user.repository.UserRepository;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +25,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
+    private static final String SUSPENDED_MESSAGE_PREFIX = "Tài khoản của bạn đã bị khóa. Lý do: ";
+    private static final String DEFAULT_SUSPENDED_REASON = "Tài khoản đã bị khóa bởi quản trị viên";
+
     private final JwtProperties jwtProperties;
     private final AuthenticationService authenticationService;
     private final UserRepository userRepository;
+    private final UserManagementActionRepository userManagementActionRepository;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -35,6 +42,23 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         if (userOptional.isPresent()) {
             UserEntity userEntity = userOptional.get();
+            if (userEntity.getStatus() == AccountStatus.SUSPENDED) {
+                String reason = userManagementActionRepository
+                        .findTopByUser_IdAndActionTypeOrderByCreatedAtDesc(
+                                userEntity.getId(),
+                                UserManagementActionType.SUSPEND)
+                        .map(UserManagementActionEntity::getReason)
+                        .filter(this::hasText)
+                        .orElse(DEFAULT_SUSPENDED_REASON);
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, SUSPENDED_MESSAGE_PREFIX + reason);
+                return;
+            }
+
+            if (userEntity.getStatus() != AccountStatus.ACTIVE) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Account is not active");
+                return;
+            }
+
             try {
                 String accessToken = authenticationService.generateToken(userEntity, jwtProperties.getExpiration());
                 String refreshToken = authenticationService.generateToken(userEntity, jwtProperties.getRefreshTokenExpiration());
@@ -52,6 +76,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         } else {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "UserEntity not found in database");
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
 }

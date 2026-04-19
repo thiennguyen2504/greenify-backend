@@ -3,13 +3,13 @@ package com.webdev.greenify.station.service;
 import com.webdev.greenify.station.dto.RecyclingStationRequestDTO;
 import com.webdev.greenify.station.dto.RecyclingStationResponseDTO;
 import com.webdev.greenify.station.dto.UpdateStationStatusRequestDTO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface RecyclingStationService {
     RecyclingStationResponseDTO createStation(RecyclingStationRequestDTO request);
 
-    Page<RecyclingStationResponseDTO> getAllStations(Pageable pageable);
+    List<RecyclingStationResponseDTO> getAllStations(String wasteTypeId);
 
     RecyclingStationResponseDTO getStationById(String id);
 

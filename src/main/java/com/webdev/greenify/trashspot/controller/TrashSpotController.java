@@ -3,13 +3,16 @@ package com.webdev.greenify.trashspot.controller;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.trashspot.dto.request.CreateResolveRequestRequest;
 import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotRequest;
+import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotReportRequest;
 import com.webdev.greenify.trashspot.dto.request.ReviewResolveRequest;
 import com.webdev.greenify.trashspot.dto.request.SubmitVerificationRequest;
 import com.webdev.greenify.trashspot.dto.response.ResolveRequestResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotDetailResponse;
+import com.webdev.greenify.trashspot.dto.response.TrashSpotReportResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotSummaryResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotVerificationResponse;
 import com.webdev.greenify.trashspot.enumeration.ResolveRequestStatus;
+import com.webdev.greenify.trashspot.enumeration.SeverityTier;
 import com.webdev.greenify.trashspot.enumeration.TrashSpotStatus;
 import com.webdev.greenify.trashspot.service.TrashSpotService;
 import jakarta.validation.Valid;
@@ -17,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -44,12 +50,12 @@ public class TrashSpotController {
 
     @GetMapping("/trash-spots")
     @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN', 'NGO')")
-    public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getTrashSpots(
+    public ResponseEntity<List<TrashSpotSummaryResponse>> getTrashSpots(
             @RequestParam(required = false) String province,
             @RequestParam(required = false) TrashSpotStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getTrashSpots(province, status, page, size));
+            @RequestParam(required = false) SeverityTier severity,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
+        return ResponseEntity.ok(trashSpotService.getTrashSpots(province, status, severity, wasteTypeId));
     }
 
     @GetMapping("/trash-spots/{id}")
@@ -67,13 +73,22 @@ public class TrashSpotController {
                 .body(trashSpotService.submitVerification(id, request));
     }
 
+        @PostMapping("/trash-spots/{id}/reports")
+        @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+        public ResponseEntity<TrashSpotReportResponse> reportTrashSpot(
+            @PathVariable String id,
+            @Valid @RequestBody CreateTrashSpotReportRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(trashSpotService.reportTrashSpot(id, request));
+        }
+
     @GetMapping("/ngo/trash-spots")
     @PreAuthorize("hasRole('NGO')")
-    public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getNgoTrashSpots(
+    public ResponseEntity<List<TrashSpotSummaryResponse>> getNgoTrashSpots(
             @RequestParam(required = false) String province,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(province, page, size));
+            @RequestParam(required = false) SeverityTier severity,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
+        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(province, severity, wasteTypeId));
     }
 
     @PatchMapping("/ngo/trash-spots/{id}/claim")
@@ -93,12 +108,19 @@ public class TrashSpotController {
 
     @GetMapping("/admin/trash-spots")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PagedResponse<TrashSpotSummaryResponse>> getAdminTrashSpots(
+    public ResponseEntity<List<TrashSpotSummaryResponse>> getAdminTrashSpots(
             @RequestParam(required = false) TrashSpotStatus status,
             @RequestParam(required = false) String province,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(status, province, page, size));
+            @RequestParam(required = false) SeverityTier severity,
+            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
+        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(status, province, severity, wasteTypeId));
+    }
+
+    @DeleteMapping("/admin/trash-spots/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteTrashSpot(@PathVariable String id) {
+        trashSpotService.deleteTrashSpot(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/admin/trash-spots/resolve-requests")
@@ -108,6 +130,14 @@ public class TrashSpotController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(trashSpotService.getResolveRequests(status, page, size));
+    }
+
+    @GetMapping("/admin/trash-spots/reports")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedResponse<TrashSpotReportResponse>> getTrashSpotReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(trashSpotService.getTrashSpotReports(page, size));
     }
 
     @PostMapping("/admin/trash-spots/resolve-requests/{id}/approve")
