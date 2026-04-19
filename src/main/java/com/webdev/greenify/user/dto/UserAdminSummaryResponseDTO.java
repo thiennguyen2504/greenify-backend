@@ -26,4 +26,6 @@ public class UserAdminSummaryResponseDTO {
     private BigDecimal availableGreenPoints;
     private long greenPostCount;
     private String suspensionReason;
+    private UserProfileResponseDTO userProfile;
+    private NGOProfileResponseDTO ngoProfile;
 }

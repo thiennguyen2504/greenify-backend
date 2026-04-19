@@ -9,20 +9,31 @@ import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.dto.ChangeUserRoleRequestDTO;
 import com.webdev.greenify.user.dto.CtvEligibilityResponseDTO;
 import com.webdev.greenify.user.dto.DemoteCtvRequestDTO;
+import com.webdev.greenify.user.dto.PagedResponse;
 import com.webdev.greenify.user.dto.SuspendUserRequestDTO;
 import com.webdev.greenify.user.dto.UserAdminSummaryResponseDTO;
 import com.webdev.greenify.user.dto.UserDetailResponseDTO;
+import com.webdev.greenify.user.dto.UserProfileResponseDTO;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.entity.UserManagementActionEntity;
-import com.webdev.greenify.user.mapper.UserMapper;
 import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.enumeration.RoleName;
 import com.webdev.greenify.user.enumeration.UserManagementActionType;
+import com.webdev.greenify.user.mapper.NGOProfileMapper;
+import com.webdev.greenify.user.mapper.UserMapper;
+import com.webdev.greenify.user.mapper.UserProfileMapper;
 import com.webdev.greenify.user.repository.RoleRepository;
-import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.user.repository.UserManagementActionRepository;
+import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.user.service.UserService;
+import com.webdev.greenify.user.specification.UserSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,8 +52,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    private static final int MIN_PAGE_SIZE = 1;
+    private static final int MAX_PAGE_SIZE = 50;
     private static final String ROLE_USER = "USER";
     private static final String ROLE_CTV = "CTV";
+    private static final String ROLE_NGO = "NGO";
     private static final BigDecimal MIN_CTV_ACCUMULATED_POINTS = new BigDecimal("100");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String DEFAULT_SUSPENDED_REASON = "Tài khoản đã bị khóa bởi quản trị viên";
@@ -54,24 +68,45 @@ public class UserServiceImpl implements UserService {
     private final PointTransactionRepository pointTransactionRepository;
     private final GreenActionPostRepository greenActionPostRepository;
     private final UserManagementActionRepository userManagementActionRepository;
+    private final UserProfileMapper userProfileMapper;
+    private final NGOProfileMapper ngoProfileMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserAdminSummaryResponseDTO> findAllUsersForAdmin() {
-        List<UserEntity> users = userRepository.findAllWithDetails();
-        if (users.isEmpty()) {
-            return List.of();
+    public PagedResponse<UserAdminSummaryResponseDTO> findAllUsersForAdmin(RoleName role, String search, int page, int size) {
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                clampPageSize(size),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Specification<UserEntity> specification = UserSpecification.buildSpecification(role, search);
+        Page<UserEntity> usersPage = userRepository.findAll(specification, pageable);
+
+        if (usersPage.isEmpty()) {
+            return PagedResponse.of(
+                    List.of(),
+                    usersPage.getNumber(),
+                    usersPage.getSize(),
+                    usersPage.getTotalElements(),
+                    usersPage.getTotalPages());
         }
 
-        Set<String> userIds = users.stream()
+        Set<String> userIds = usersPage.getContent().stream()
                 .map(UserEntity::getId)
                 .collect(Collectors.toSet());
         Map<String, PointWalletEntity> walletsByUserId = pointWalletRepository.findByUserIdIn(userIds).stream()
                 .collect(Collectors.toMap(PointWalletEntity::getUserId, Function.identity()));
 
-        return users.stream()
+        List<UserAdminSummaryResponseDTO> content = usersPage.getContent().stream()
                 .map(user -> toAdminSummary(user, walletsByUserId.get(user.getId())))
                 .toList();
+
+        return PagedResponse.of(
+                content,
+                usersPage.getNumber(),
+                usersPage.getSize(),
+                usersPage.getTotalElements(),
+                usersPage.getTotalPages());
     }
 
     @Override
@@ -80,7 +115,7 @@ public class UserServiceImpl implements UserService {
         UserEntity user = userRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         PointWalletEntity wallet = pointWalletRepository.findByUserId(id).orElse(null);
-        return toAdminSummary(user, wallet);
+        return toAdminDetail(user, wallet);
     }
 
     @Override
@@ -181,6 +216,23 @@ public class UserServiceImpl implements UserService {
                 .greenPostCount(greenActionPostRepository.countByUser_IdAndIsDeletedFalse(user.getId()))
                 .suspensionReason(resolveSuspensionReason(user))
                 .build();
+    }
+
+    private UserAdminSummaryResponseDTO toAdminDetail(UserEntity user, PointWalletEntity wallet) {
+        UserAdminSummaryResponseDTO response = toAdminSummary(user, wallet);
+
+        if (hasRole(user, ROLE_NGO)) {
+            response.setNgoProfile(user.getNgoProfile() == null ? null : ngoProfileMapper.toDto(user.getNgoProfile()));
+            response.setUserProfile(null);
+            return response;
+        }
+
+        UserProfileResponseDTO userProfile = user.getUserProfile() == null
+                ? null
+                : userProfileMapper.toDto(user.getUserProfile());
+        response.setUserProfile(userProfile);
+        response.setNgoProfile(null);
+        return response;
     }
 
     private BigDecimal resolveAvailablePoints(String userId, PointWalletEntity wallet) {
@@ -298,6 +350,10 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private int clampPageSize(int size) {
+        return Math.min(Math.max(size, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
     }
 }
