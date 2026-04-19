@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public interface UserMapper {
     @Mapping(target = "roles", source = "roles", qualifiedByName = "mapRoleNames")
     @Mapping(target = "userProfile", source = "userProfile")
+    @Mapping(target = "ngoProfile", source = "ngoProfile")
     UserDetailResponseDTO toDto(UserEntity userEntity);
 
     @Named("mapRoleNames")
