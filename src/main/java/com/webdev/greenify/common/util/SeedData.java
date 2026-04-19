@@ -1,20 +1,18 @@
 package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.garden.entity.SeedEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
-import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.repository.NGOProfileRepository;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
-import com.webdev.greenify.user.repository.NGOProfileRepository;
-import com.webdev.greenify.user.entity.NGOProfileEntity;
-import com.webdev.greenify.user.enumeration.NGOProfileStatus;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
 import com.webdev.greenify.voucher.enumeration.VoucherTemplateStatus;
 import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
@@ -57,6 +55,9 @@ public class SeedData implements CommandLineRunner {
         private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
         private final NGOProfileRepository ngoProfileRepository;
+    private final NGOSeed ngoSeed;
+    private final EventSeed eventSeed;
+    private final RegistrationSeed registrationSeed;
 
     @Override
     @Transactional
@@ -140,26 +141,15 @@ public class SeedData implements CommandLineRunner {
         seedGardenSeeds(rewardVoucherByCycle);
 
         // Seed NGO Profile for tester
-        seedNGOProfiles();
+        ngoSeed.seed();
+
+        // Seed Events
+        eventSeed.seed();
+
+        // Seed Registrations
+        registrationSeed.seed();
     }
 
-    private void seedNGOProfiles() {
-        UserEntity ngoUser = userRepository.findByIdentifier("ngo@example.com").orElse(null);
-        if (ngoUser != null && ngoProfileRepository.findByUserId(ngoUser.getId()).isEmpty()) {
-            NGOProfileEntity profile = NGOProfileEntity.builder()
-                    .orgName("Hành Tinh Xanh Foundation")
-                    .representativeName("Nguyễn Văn A")
-                    .hotline("0912345678")
-                    .contactEmail("contact@hanhtinhxanh.org")
-                    .description("Tổ chức phi lợi nhuận vì môi trường xanh.")
-                    .status(NGOProfileStatus.VERIFIED)
-                    .user(ngoUser)
-                    .rejectedCount(0)
-                    .build();
-            ngoProfileRepository.save(profile);
-            log.info("Seeded NGO profile for user: {}", ngoUser.getEmail());
-        }
-    }
 
         private void normalizeSoftDeleteFlags() {
                 try {
