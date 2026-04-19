@@ -26,7 +26,7 @@ public class UserSpecification {
         };
     }
 
-    public static Specification<UserEntity> searchByUserName(String search) {
+    public static Specification<UserEntity> searchByNameOrEmail(String search) {
         return (root, query, cb) -> {
             if (search == null || search.isBlank()) {
                 return cb.conjunction();
@@ -37,6 +37,7 @@ public class UserSpecification {
 
             return cb.or(
                     cb.like(cb.lower(root.get("username")), searchPattern),
+                    cb.like(cb.lower(root.get("email")), searchPattern),
                     cb.like(cb.lower(profile.get("displayName")), searchPattern),
                     cb.like(cb.lower(profile.get("firstName")), searchPattern),
                     cb.like(cb.lower(profile.get("lastName")), searchPattern));
@@ -50,6 +51,6 @@ public class UserSpecification {
     public static Specification<UserEntity> buildSpecification(RoleName role, String search) {
         return Specification.where(isNotDeleted())
                 .and(hasRole(role))
-                .and(searchByUserName(search));
+                .and(searchByNameOrEmail(search));
     }
 }
