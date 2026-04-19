@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+        
 @Data
 @EqualsAndHashCode(
         callSuper = true,
@@ -47,6 +47,9 @@ public class TrashSpotEntity extends BaseEntity {
     @JoinColumn(name = "reporter_id", nullable = false)
     private UserEntity reporter;
 
+    @Column(length = 255)
+    private String name;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
@@ -55,6 +58,9 @@ public class TrashSpotEntity extends BaseEntity {
 
     @Column(precision = 9, scale = 6, nullable = false)
     private BigDecimal longitude;
+
+    @Column(columnDefinition = "TEXT")
+    private String location;
 
     @Column(length = 100, nullable = false)
     private String province;

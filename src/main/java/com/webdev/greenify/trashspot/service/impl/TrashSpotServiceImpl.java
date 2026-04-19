@@ -7,6 +7,7 @@ import com.webdev.greenify.greenaction.constant.ActionTypeConstants;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
+import com.webdev.greenify.greenaction.service.LocationSnapshotService;
 import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
@@ -77,6 +78,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private final WasteTypeRepository wasteTypeRepository;
     private final UserRepository userRepository;
     private final TrashSpotMapper trashSpotMapper;
+    private final LocationSnapshotService locationSnapshotService;
     private final PointService pointService;
     private final GreenActionTypeRepository greenActionTypeRepository;
 
@@ -88,11 +90,17 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public CreateOrMergeResult createOrMerge(CreateTrashSpotRequest request) {
         UserEntity reporter = getCurrentUser();
         Set<WasteTypeEntity> wasteTypes = resolveWasteTypes(request.getWasteTypeIds());
+        String normalizedSpotName = normalizeSpotName(request.getName());
+        String resolvedLocation = locationSnapshotService.resolveLocationSnapshot(
+                request.getLatitude(),
+                request.getLongitude());
 
         OptionalNearbySpots nearbySpots = findNearbySpots(request.getLatitude(), request.getLongitude());
 
         if (nearbySpots.nonResolvedSpotId() != null) {
             TrashSpotEntity mergedSpot = getTrashSpotForWrite(nearbySpots.nonResolvedSpotId());
+            updateSpotName(mergedSpot, normalizedSpotName);
+            mergedSpot.setLocation(resolvedLocation);
             appendDescription(mergedSpot, request.getDescription());
             mergedSpot.getWasteTypes().addAll(wasteTypes);
             addSpotImages(mergedSpot, request.getImages(), reporter);
@@ -113,6 +121,8 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 resolvedSpot.setClaimedAt(null);
                 resolvedSpot.setResolvedAt(null);
                 resolvedSpot.setVerificationCount(0);
+                updateSpotName(resolvedSpot, normalizedSpotName);
+                resolvedSpot.setLocation(resolvedLocation);
 
                 trashSpotVerificationRepository.deleteByTrashSpotId(resolvedSpot.getId());
 
@@ -131,9 +141,11 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
         TrashSpotEntity newSpot = TrashSpotEntity.builder()
                 .reporter(reporter)
+                .name(normalizedSpotName)
                 .description(normalizeDescription(request.getDescription()))
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .location(resolvedLocation)
                 .province(request.getProvince())
                 .status(TrashSpotStatus.PENDING_VERIFY)
                 .verificationCount(0)
@@ -687,6 +699,23 @@ public class TrashSpotServiceImpl implements TrashSpotService {
             return null;
         }
         return description.trim();
+    }
+
+    private String normalizeSpotName(String name) {
+        if (name == null) {
+            return null;
+        }
+
+        String normalized = name.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void updateSpotName(TrashSpotEntity spot, String normalizedSpotName) {
+        if (normalizedSpotName == null) {
+            return;
+        }
+
+        spot.setName(normalizedSpotName);
     }
 
     private TrashSpotEntity getTrashSpotOrThrow(String id) {

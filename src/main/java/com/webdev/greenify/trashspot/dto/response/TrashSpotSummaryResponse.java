@@ -20,8 +20,10 @@ import java.util.List;
 public class TrashSpotSummaryResponse {
 
     private String id;
+    private String name;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private String location;
     private String province;
     private TrashSpotStatus status;
     private SeverityTier severityTier;
