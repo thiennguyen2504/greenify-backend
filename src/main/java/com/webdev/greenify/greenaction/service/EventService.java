@@ -44,7 +44,14 @@ public interface EventService {
     void approveEvent(String id);
     void rejectEvent(String id, EventStatusRequestDTO request);
     void submitEvent(String id);
-    PagedResponse<EventResponseDTO> getMyEvents(int page, int size);
+    PagedResponse<EventResponseDTO> getMyEvents(
+            GreenEventStatus status,
+            GreenEventType eventType,
+            String title,
+            LocalDateTime from,
+            LocalDateTime to,
+            int page,
+            int size);
     PagedResponse<EventResponseDTO> getNGOEventsPublic(String ngoId, int page, int size);
     
     List<EventRegistrationResponseDTO> getEventRegistrations(String eventId);
