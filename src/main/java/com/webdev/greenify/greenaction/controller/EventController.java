@@ -113,12 +113,16 @@ public class EventController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/my-events")
+    @GetMapping("/ngo/my-events")
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<PagedResponse<EventResponseDTO>> getMyEvents(
+            @RequestParam(required = false) GreenEventType eventType,
+            @RequestParam(required = false, name = "title") String title,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(eventService.getMyEvents(page, size));
+        return ResponseEntity.ok(eventService.getMyEvents(eventType, title, from, to, page, size));
     }
 
     @GetMapping("/ngo/{ngoId}")

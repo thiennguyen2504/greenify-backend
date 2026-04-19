@@ -275,10 +275,16 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<EventResponseDTO> getMyEvents(int page, int size) {
+    public PagedResponse<EventResponseDTO> getMyEvents(
+            GreenEventType eventType,
+            String title,
+            LocalDateTime from,
+            LocalDateTime to,
+            int page,
+            int size) {
         String currentUserId = getCurrentUserId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Specification<EventEntity> spec = EventSpecification.buildSpecification(null, null, null, null, null, currentUserId);
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(null, eventType, title, from, to, currentUserId);
         return toPagedResponse(eventRepository.findAll(spec, pageable));
     }
 
