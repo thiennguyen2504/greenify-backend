@@ -276,6 +276,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<EventResponseDTO> getMyEvents(
+            GreenEventStatus status,
             GreenEventType eventType,
             String title,
             LocalDateTime from,
@@ -284,7 +285,8 @@ public class EventServiceImpl implements EventService {
             int size) {
         String currentUserId = getCurrentUserId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Specification<EventEntity> spec = EventSpecification.buildSpecification(null, eventType, title, from, to, currentUserId);
+        Collection<GreenEventStatus> statuses = status == null ? null : List.of(status);
+        Specification<EventEntity> spec = EventSpecification.buildSpecification(statuses, eventType, title, from, to, currentUserId);
         return toPagedResponse(eventRepository.findAll(spec, pageable));
     }
 

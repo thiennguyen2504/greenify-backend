@@ -45,6 +45,7 @@ public interface EventService {
     void rejectEvent(String id, EventStatusRequestDTO request);
     void submitEvent(String id);
     PagedResponse<EventResponseDTO> getMyEvents(
+            GreenEventStatus status,
             GreenEventType eventType,
             String title,
             LocalDateTime from,
