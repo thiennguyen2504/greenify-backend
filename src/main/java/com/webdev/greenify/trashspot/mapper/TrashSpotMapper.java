@@ -3,10 +3,13 @@ package com.webdev.greenify.trashspot.mapper;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.trashspot.dto.response.ResolveRequestResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotDetailResponse;
+import com.webdev.greenify.trashspot.dto.response.TrashSpotReportResponse;
+import com.webdev.greenify.trashspot.dto.response.TrashSpotReportTrashSpotResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotSummaryResponse;
 import com.webdev.greenify.trashspot.dto.response.TrashSpotVerificationResponse;
 import com.webdev.greenify.trashspot.entity.TrashSpotEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotResolveImageEntity;
+import com.webdev.greenify.trashspot.entity.TrashSpotReportEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotResolveRequestEntity;
 import com.webdev.greenify.trashspot.entity.TrashSpotVerificationEntity;
 import com.webdev.greenify.user.entity.UserEntity;
@@ -40,6 +43,18 @@ public interface TrashSpotMapper {
     TrashSpotVerificationResponse toVerificationResponse(TrashSpotVerificationEntity entity);
 
     List<TrashSpotVerificationResponse> toVerificationResponseList(List<TrashSpotVerificationEntity> entities);
+
+    @Mapping(target = "trashSpot", source = "trashSpot")
+    @Mapping(target = "reporterId", source = "reporter.id")
+    @Mapping(target = "reporterDisplayName", source = ".", qualifiedByName = "getReportReporterDisplayName")
+    @Mapping(target = "reporterAvatarUrl", source = ".", qualifiedByName = "getReportReporterAvatarUrl")
+    TrashSpotReportResponse toReportResponse(TrashSpotReportEntity entity);
+
+    List<TrashSpotReportResponse> toReportResponseList(List<TrashSpotReportEntity> entities);
+
+    @Mapping(target = "primaryImageUrl", source = ".", qualifiedByName = "getPrimaryImageUrl")
+    @Mapping(target = "wasteTypeNames", source = ".", qualifiedByName = "getWasteTypeNames")
+    TrashSpotReportTrashSpotResponse toReportTrashSpotResponse(TrashSpotEntity entity);
 
     @Mapping(target = "trashSpotId", source = "trashSpot.id")
     @Mapping(target = "ngoId", source = "ngo.id")
@@ -106,6 +121,16 @@ public interface TrashSpotMapper {
         return getUserDisplayName(entity.getVerifier());
     }
 
+    @Named("getReportReporterDisplayName")
+    default String getReportReporterDisplayName(TrashSpotReportEntity entity) {
+        return getUserDisplayName(entity.getReporter());
+    }
+
+    @Named("getReportReporterAvatarUrl")
+    default String getReportReporterAvatarUrl(TrashSpotReportEntity entity) {
+        return getUserAvatarUrl(entity.getReporter());
+    }
+
     @Named("getNgoDisplayName")
     default String getNgoDisplayName(TrashSpotResolveRequestEntity entity) {
         return getUserDisplayName(entity.getNgo());
@@ -130,5 +155,12 @@ public interface TrashSpotMapper {
             return user.getUsername();
         }
         return user.getEmail();
+    }
+
+    default String getUserAvatarUrl(UserEntity user) {
+        if (user == null || user.getUserProfile() == null || user.getUserProfile().getAvatar() == null) {
+            return null;
+        }
+        return user.getUserProfile().getAvatar().getImageUrl();
     }
 }

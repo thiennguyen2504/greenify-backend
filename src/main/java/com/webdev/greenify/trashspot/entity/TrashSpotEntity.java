@@ -35,7 +35,7 @@ import java.util.Set;
 @Data
 @EqualsAndHashCode(
         callSuper = true,
-        exclude = {"reporter", "assignedNgo", "images", "wasteTypes", "verifications", "resolveRequests"})
+        exclude = {"reporter", "assignedNgo", "images", "wasteTypes", "verifications", "resolveRequests", "reports"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -115,4 +115,9 @@ public class TrashSpotEntity extends BaseEntity {
     @ToString.Exclude
     @Builder.Default
     private List<TrashSpotResolveRequestEntity> resolveRequests = new ArrayList<>();
+
+        @OneToMany(mappedBy = "trashSpot", cascade = CascadeType.ALL, orphanRemoval = true)
+        @ToString.Exclude
+        @Builder.Default
+        private List<TrashSpotReportEntity> reports = new ArrayList<>();
 }
