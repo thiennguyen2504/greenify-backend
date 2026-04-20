@@ -12,13 +12,15 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"recyclingStation", "event", "ngoProfile"})
+@ToString(callSuper = true, exclude = {"recyclingStation", "event", "ngoProfile"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
