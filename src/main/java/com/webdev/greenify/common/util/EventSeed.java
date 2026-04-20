@@ -8,14 +8,20 @@ import com.webdev.greenify.greenaction.enumeration.GreenEventType;
 import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.station.entity.AddressEntity;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.enumeration.ImageStatus;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @RequiredArgsConstructor

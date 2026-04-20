@@ -1,10 +1,13 @@
 package com.webdev.greenify.common.util;
 
+import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.garden.entity.SeedEntity;
 import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
+import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
+import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
@@ -33,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -55,6 +59,17 @@ public class SeedData implements CommandLineRunner {
         private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
         private final NGOProfileRepository ngoProfileRepository;
+        private final UserSeed userSeed;
+        private final PostSeed postSeed;
+        private final GardenSeed gardenSeed;
+        private final PointWalletSeed pointWalletSeed;
+        private final StreakSeed streakSeed;
+        private final TrashSpotSeed trashSpotSeed;
+        private final LeaderboardSeed leaderboardSeed;
+        private final EventSeed eventSeed;
+        private final UnsplashImageService unsplashImageService;
+        private final GreenActionPostRepository greenActionPostRepository;
+        private final EventRepository eventRepository;
     private final NGOSeed ngoSeed;
     private final EventSeed eventSeed;
     private final RegistrationSeed registrationSeed;
@@ -65,6 +80,11 @@ public class SeedData implements CommandLineRunner {
 
                 // Backfill legacy null soft-delete flags before any entity mapping occurs.
                 normalizeSoftDeleteFlags();
+
+                if (unsplashImageService.isEnabled()) {
+                        unsplashImageService.logConnectionDiagnostics();
+                        unsplashImageService.warmupCache();
+                }
 
         // Ensure roleEntities exist
         RoleEntity adminRoleEntity = roleRepository.findByName("ADMIN")
@@ -141,6 +161,60 @@ public class SeedData implements CommandLineRunner {
         seedGardenSeeds(rewardVoucherByCycle);
 
         // Seed NGO Profile for tester
+        seedNGOProfiles();
+
+        // Additional demo seeds with dependency-aware order
+        userSeed.seed();
+        postSeed.seed();
+                eventSeed.seed();
+        gardenSeed.seed();
+        pointWalletSeed.seed();
+        streakSeed.seed();
+        trashSpotSeed.seed();
+        leaderboardSeed.seed();
+
+                logSeededSampleImageUrls();
+    }
+
+        private void logSeededSampleImageUrls() {
+                String samplePostImageUrl = greenActionPostRepository.findAll().stream()
+                                .map(post -> post.getPostImage() != null ? post.getPostImage().getImageUrl() : null)
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
+
+                String sampleEventThumbnailUrl = eventRepository.findAll().stream()
+                                .flatMap(event -> event.getImages().stream())
+                                .filter(image -> image.getImageType() == EventImageType.THUMBNAIL)
+                                .map(image -> image.getImageUrl())
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
+
+                if (samplePostImageUrl != null) {
+                        log.info("Sample seeded post image URL: {}", samplePostImageUrl);
+                }
+                if (sampleEventThumbnailUrl != null) {
+                        log.info("Sample seeded event thumbnail URL: {}", sampleEventThumbnailUrl);
+                }
+        }
+
+    private void seedNGOProfiles() {
+        UserEntity ngoUser = userRepository.findByIdentifier("ngo@example.com").orElse(null);
+        if (ngoUser != null && ngoProfileRepository.findByUserId(ngoUser.getId()).isEmpty()) {
+            NGOProfileEntity profile = NGOProfileEntity.builder()
+                    .orgName("Hành Tinh Xanh Foundation")
+                    .representativeName("Nguyễn Văn A")
+                    .hotline("0912345678")
+                    .contactEmail("contact@hanhtinhxanh.org")
+                    .description("Tổ chức phi lợi nhuận vì môi trường xanh.")
+                    .status(NGOProfileStatus.VERIFIED)
+                    .user(ngoUser)
+                    .rejectedCount(0)
+                    .build();
+            ngoProfileRepository.save(profile);
+            log.info("Seeded NGO profile for user: {}", ngoUser.getEmail());
+        }
         ngoSeed.seed();
 
         // Seed Events
@@ -201,208 +275,208 @@ public class SeedData implements CommandLineRunner {
             List<GreenActionTypeEntity> actionTypes = new ArrayList<>();
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Waste Sorting")
-                    .actionName("Sorting waste at home")
+                    .groupName("Phân loại rác")
+                    .actionName("Phân loại rác tại nhà")
                     .suggestedPoints(new BigDecimal("5"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Waste Sorting")
-                    .actionName("Sorting waste at work/school")
+                    .groupName("Phân loại rác")
+                    .actionName("Phân loại rác tại nơi làm việc/trường học")
                     .suggestedPoints(new BigDecimal("6"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Recycling")
-                    .actionName("Collect paper/plastic/cans for recycling")
+                    .groupName("Tái chế")
+                    .actionName("Thu gom giấy/nhựa/lon để tái chế")
                     .suggestedPoints(new BigDecimal("5"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Recycling")
-                    .actionName("Bring recyclables to collection points")
+                    .groupName("Tái chế")
+                    .actionName("Mang rác tái chế đến điểm thu gom")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Plastic Reduction")
-                    .actionName("Use personal water bottles")
+                    .groupName("Giảm nhựa dùng một lần")
+                    .actionName("Sử dụng bình nước cá nhân")
                     .suggestedPoints(new BigDecimal("2"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Plastic Reduction")
-                    .actionName("Use personal containers/cups when buying food")
+                    .groupName("Giảm nhựa dùng một lần")
+                    .actionName("Mang hộp/cốc cá nhân khi mua đồ ăn, thức uống")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Plastic Reduction")
-                    .actionName("Refuse plastic bags/straws")
+                    .groupName("Giảm nhựa dùng một lần")
+                    .actionName("Từ chối túi nilon/ống hút nhựa")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Resource Conservation")
-                    .actionName("Turn off electricity when not in use")
+                    .groupName("Tiết kiệm tài nguyên")
+                    .actionName("Tắt điện khi không sử dụng")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Resource Conservation")
-                    .actionName("Conserve water in daily activities")
+                    .groupName("Tiết kiệm tài nguyên")
+                    .actionName("Tiết kiệm nước trong sinh hoạt hằng ngày")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Green Transportation")
-                    .actionName("Walk/Bike for short distances")
+                    .groupName("Di chuyển xanh")
+                    .actionName("Đi bộ/đạp xe cho quãng đường ngắn")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Green Transportation")
-                    .actionName("Use public transportation")
+                    .groupName("Di chuyển xanh")
+                    .actionName("Sử dụng phương tiện công cộng")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Environmental Cleanup")
-                    .actionName("Pick up trash in public areas")
+                    .groupName("Dọn dẹp môi trường")
+                    .actionName("Nhặt rác tại khu vực công cộng")
                     .suggestedPoints(new BigDecimal("8"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Environmental Cleanup")
-                    .actionName("Clean up local living neighborhood")
+                    .groupName("Dọn dẹp môi trường")
+                    .actionName("Dọn dẹp khu dân cư nơi sinh sống")
                     .suggestedPoints(new BigDecimal("6"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Greenery")
-                    .actionName("Plant trees/flowers")
+                    .groupName("Mảng xanh")
+                    .actionName("Trồng cây/trồng hoa")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Greenery")
-                    .actionName("Regularly care for plants")
+                    .groupName("Mảng xanh")
+                    .actionName("Chăm sóc cây xanh thường xuyên")
                     .suggestedPoints(new BigDecimal("2"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Reuse")
-                    .actionName("Reuse items instead of throwing them away")
+                    .groupName("Tái sử dụng")
+                    .actionName("Tái sử dụng vật dụng thay vì vứt bỏ")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Green Consumption")
-                    .actionName("Buy eco-friendly products")
+                    .groupName("Tiêu dùng xanh")
+                    .actionName("Mua sản phẩm thân thiện môi trường")
                     .suggestedPoints(new BigDecimal("3"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Community Participation")
-                    .actionName("Join environmental events organized by App/NGO")
+                    .groupName("Tham gia cộng đồng")
+                    .actionName("Tham gia sự kiện môi trường do ứng dụng/NGO tổ chức")
                     .suggestedPoints(new BigDecimal("10"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Green Awareness")
-                    .actionName("Share environmental messages with practical actions")
+                    .groupName("Lan tỏa nhận thức xanh")
+                    .actionName("Lan tỏa thông điệp môi trường gắn với hành động thực tế")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Green Initiative")
-                    .actionName("Organize or initiate small green activities")
+                    .groupName("Sáng kiến xanh")
+                    .actionName("Tổ chức/khởi xướng các hoạt động xanh quy mô nhỏ")
                     .suggestedPoints(new BigDecimal("9"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Environmental Reporting")
-                    .actionName("Report illegal dumping/polluted spots")
+                    .groupName("Phản ánh môi trường")
+                    .actionName("Báo cáo điểm đổ rác trái phép/điểm ô nhiễm")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Environmental Reporting")
-                    .actionName("Báo cáo môi trường")
+                    .groupName("Phản ánh môi trường")
+                    .actionName("Gửi phản ánh môi trường kèm hình ảnh")
                     .suggestedPoints(new BigDecimal("4"))
                     .locationRequired(true)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Creative Recycling")
-                    .actionName("DIY products from recycled materials")
+                    .groupName("Tái chế sáng tạo")
+                    .actionName("Tự làm sản phẩm từ vật liệu tái chế")
                     .suggestedPoints(new BigDecimal("7"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Organic at Home")
-                    .actionName("Compost organic wastes at home")
+                    .groupName("Sống xanh tại nhà")
+                    .actionName("Ủ rác hữu cơ tại nhà")
                     .suggestedPoints(new BigDecimal("8"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Community Contribution")
-                    .actionName("Review posts as a Contributor")
+                    .groupName("Đóng góp cộng đồng")
+                    .actionName("Kiểm duyệt bài đăng với vai trò CTV")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
                     .build());
 
             actionTypes.add(GreenActionTypeEntity.builder()
-                    .groupName("Community Contribution")
-                    .actionName("Duyệt bài hợp lệ với tư cách CTV")
+                    .groupName("Đóng góp cộng đồng")
+                    .actionName("Duyệt bài hợp lệ với vai trò CTV")
                     .suggestedPoints(new BigDecimal("1"))
                     .locationRequired(false)
                     .isActive(true)
@@ -418,33 +492,33 @@ public class SeedData implements CommandLineRunner {
             List<WasteTypeEntity> wasteTypes = new ArrayList<>();
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Plastic")
-                    .description("Plastic bottles, containers, bags, and household plastic items.")
+                    .name("Nhựa")
+                    .description("Chai nhựa, hộp đựng, túi nilon và các vật dụng nhựa sinh hoạt.")
                     .build());
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Paper")
-                    .description("Newspapers, books, cardboard, and office paper.")
+                    .name("Giấy")
+                    .description("Báo giấy, sách, bìa carton và giấy văn phòng.")
                     .build());
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Metal")
-                    .description("Aluminum cans, scrap iron, aluminum, and copper.")
+                    .name("Kim loại")
+                    .description("Lon nhôm, sắt vụn, nhôm và đồng.")
                     .build());
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Glass")
-                    .description("Glass bottles, jars, and broken glassware.")
+                    .name("Thủy tinh")
+                    .description("Chai, lọ thủy tinh và đồ thủy tinh vỡ.")
                     .build());
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Organic")
-                    .description("Food scraps, fruit peels, vegetables, and garden waste.")
+                    .name("Hữu cơ")
+                    .description("Thức ăn thừa, vỏ trái cây, rau củ và rác vườn.")
                     .build());
 
             wasteTypes.add(WasteTypeEntity.builder()
-                    .name("Hazardous")
-                    .description("Old batteries, fluorescent bulbs, and chemical containers.")
+                    .name("Nguy hại")
+                    .description("Pin cũ, bóng đèn huỳnh quang và vỏ hộp hóa chất.")
                     .build());
 
             wasteTypeRepository.saveAll(wasteTypes);
@@ -465,34 +539,40 @@ public class SeedData implements CommandLineRunner {
                 PlantCycleType.EASY,
                 upsertRewardVoucherTemplate(
                         existingByName,
-                        "Garden Reward - Easy",
-                        "Greenify Rewards",
+                        "Giảm 20% Highlands Coffee",
+                        "Highlands Coffee",
                         new BigDecimal("30"),
                         800,
                         validUntil,
-                        "Reward voucher for easy plants (30-45 days)."));
+                        "Voucher giảm 20% tối đa 30.000đ tại Highlands Coffee cho cây chu kỳ dễ (30-45 ngày).",
+                        "Áp dụng cho hóa đơn từ 80.000đ, không cộng dồn với chương trình khuyến mãi khác.",
+                        "Garden Reward - Easy"));
 
         rewardVoucherByCycle.put(
                 PlantCycleType.MEDIUM,
                 upsertRewardVoucherTemplate(
                         existingByName,
-                        "Garden Reward - Medium",
-                        "Greenify Rewards",
+                        "Giảm 30.000đ The Coffee House",
+                        "The Coffee House",
                         new BigDecimal("50"),
                         600,
                         validUntil,
-                        "Reward voucher for medium plants (50-80 days)."));
+                        "Voucher giảm 30.000đ cho hóa đơn từ 120.000đ tại The Coffee House cho cây chu kỳ trung bình (50-80 ngày).",
+                        "Mỗi tài khoản dùng 1 lần/tháng, áp dụng tại cửa hàng tham gia chương trình.",
+                        "Garden Reward - Medium"));
 
         rewardVoucherByCycle.put(
                 PlantCycleType.HARD,
                 upsertRewardVoucherTemplate(
                         existingByName,
-                        "Garden Reward - Hard",
-                        "Greenify Rewards",
+                        "Giảm 15% Jollibee",
+                        "Jollibee Việt Nam",
                         new BigDecimal("80"),
                         400,
                         validUntil,
-                        "Reward voucher for hard plants (90-150 days)."));
+                        "Voucher giảm 15% tối đa 45.000đ tại Jollibee cho cây chu kỳ khó (90-150 ngày).",
+                        "Áp dụng cho hóa đơn từ 120.000đ, không áp dụng cùng ưu đãi combo khác.",
+                        "Garden Reward - Hard"));
 
         log.info("Seeded/updated {} garden reward voucher templates", rewardVoucherByCycle.size());
         return rewardVoucherByCycle;
@@ -505,26 +585,46 @@ public class SeedData implements CommandLineRunner {
             BigDecimal requiredPoints,
             int totalStock,
             LocalDateTime validUntil,
-            String description) {
+                        String description,
+                        String usageConditions,
+                        String... legacyNames) {
 
         VoucherTemplateEntity template = existingByName.get(name);
+                if (template == null && legacyNames != null) {
+                        for (String legacyName : legacyNames) {
+                                VoucherTemplateEntity legacyTemplate = existingByName.get(legacyName);
+                                if (legacyTemplate != null) {
+                                        template = legacyTemplate;
+                                        break;
+                                }
+                        }
+                }
+
         if (template == null) {
             template = VoucherTemplateEntity.builder()
                     .name(name)
                     .build();
         }
 
+                template.setName(name);
         template.setPartnerName(partnerName);
         template.setDescription(description);
         template.setRequiredPoints(requiredPoints);
         template.setTotalStock(totalStock);
         template.setRemainingStock(totalStock);
-        template.setUsageConditions("Issued automatically when a garden plant matures.");
+                template.setUsageConditions(usageConditions);
         template.setValidUntil(validUntil);
         template.setStatus(VoucherTemplateStatus.ACTIVE);
 
         VoucherTemplateEntity saved = voucherTemplateRepository.save(template);
         existingByName.put(name, saved);
+                if (legacyNames != null) {
+                        for (String legacyName : legacyNames) {
+                                if (!name.equals(legacyName)) {
+                                        existingByName.remove(legacyName);
+                                }
+                        }
+                }
         return saved;
     }
 
