@@ -12,7 +12,9 @@ import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.entity.NGOProfileEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.enumeration.NGOProfileStatus;
 import com.webdev.greenify.user.repository.NGOProfileRepository;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
@@ -50,11 +52,11 @@ public class SeedData implements CommandLineRunner {
         private static final String STAGE_SPROUT_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/nay%20mam.png?updatedAt=1776237615268";
         private static final String STAGE_GROWING_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/leaf-plant.png?updatedAt=1776237615257";
 
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final GreenActionTypeRepository greenActionTypeRepository;
-    private final WasteTypeRepository wasteTypeRepository;
+        private final RoleRepository roleRepository;
+        private final UserRepository userRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final GreenActionTypeRepository greenActionTypeRepository;
+        private final WasteTypeRepository wasteTypeRepository;
         private final SeedRepository seedRepository;
         private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
@@ -67,12 +69,11 @@ public class SeedData implements CommandLineRunner {
         private final TrashSpotSeed trashSpotSeed;
         private final LeaderboardSeed leaderboardSeed;
         private final EventSeed eventSeed;
+                private final NGOSeed ngoSeed;
+                private final RegistrationSeed registrationSeed;
         private final UnsplashImageService unsplashImageService;
         private final GreenActionPostRepository greenActionPostRepository;
         private final EventRepository eventRepository;
-    private final NGOSeed ngoSeed;
-    private final EventSeed eventSeed;
-    private final RegistrationSeed registrationSeed;
 
     @Override
     @Transactional
@@ -166,7 +167,9 @@ public class SeedData implements CommandLineRunner {
         // Additional demo seeds with dependency-aware order
         userSeed.seed();
         postSeed.seed();
-                eventSeed.seed();
+        ngoSeed.seed();
+        eventSeed.seed();
+        registrationSeed.seed();
         gardenSeed.seed();
         pointWalletSeed.seed();
         streakSeed.seed();
@@ -215,13 +218,6 @@ public class SeedData implements CommandLineRunner {
             ngoProfileRepository.save(profile);
             log.info("Seeded NGO profile for user: {}", ngoUser.getEmail());
         }
-        ngoSeed.seed();
-
-        // Seed Events
-        eventSeed.seed();
-
-        // Seed Registrations
-        registrationSeed.seed();
     }
 
 

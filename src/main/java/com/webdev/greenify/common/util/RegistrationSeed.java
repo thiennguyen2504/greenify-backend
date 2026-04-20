@@ -78,11 +78,11 @@ public class RegistrationSeed {
             for (int j = 0; j < count; j++) {
                 UserEntity participant = participants.get((i + j) % participants.size());
 
-                if (registrationRepository.findByEventIdAndUserId(event.getId(), participant.getId()).isEmpty()) {
+                if (registrationRepository.findByEventIdAndUserIdAndIsDeletedFalse(event.getId(), participant.getId()).isEmpty()) {
                     EventRegistrationEntity registration = EventRegistrationEntity.builder()
                             .event(event)
                             .user(participant)
-                            .status(RegistrationStatus.REGISTERED)
+                            .registrationStatus(RegistrationStatus.REGISTERED)
                             .registrationCode("REG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                             .build();
 
