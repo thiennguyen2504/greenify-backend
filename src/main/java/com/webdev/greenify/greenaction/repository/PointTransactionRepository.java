@@ -74,4 +74,15 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
             )
             """)
     List<PointTransactionEntity> findExpiredPointsNotProcessed(@Param("currentTime") LocalDateTime currentTime);
+
+    @Query("""
+            SELECT COALESCE(SUM(pt.points), 0)
+            FROM PointTransactionEntity pt
+            WHERE pt.createdAt BETWEEN :start AND :end
+            AND pt.points > 0
+            AND pt.isDeleted = false
+            """)
+    BigDecimal sumPointsByCreatedAtBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

@@ -1,5 +1,6 @@
 package com.webdev.greenify.config;
 
+import org.springframework.cache.annotation.EnableCaching;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.TimeZone;
 
 @Configuration
+@EnableCaching
 public class ApplicationConfig {
 
     @Bean
