@@ -7,6 +7,7 @@ import com.webdev.greenify.user.dto.PagedResponse;
 import com.webdev.greenify.user.dto.SuspendUserRequestDTO;
 import com.webdev.greenify.user.dto.UserAdminSummaryResponseDTO;
 import com.webdev.greenify.user.dto.UserDetailResponseDTO;
+import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.enumeration.RoleName;
 import com.webdev.greenify.user.service.UserService;
 import jakarta.validation.Valid;
@@ -32,10 +33,11 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PagedResponse<UserAdminSummaryResponseDTO>> getAllUsers(
             @RequestParam(required = false) RoleName role,
+            @RequestParam(required = false) AccountStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(userService.findAllUsersForAdmin(role, search, page, size));
+        return ResponseEntity.ok(userService.findAllUsersForAdmin(role, status, search, page, size));
     }
 
     @GetMapping("/me")

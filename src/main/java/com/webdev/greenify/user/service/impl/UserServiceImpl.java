@@ -73,13 +73,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<UserAdminSummaryResponseDTO> findAllUsersForAdmin(RoleName role, String search, int page, int size) {
+    public PagedResponse<UserAdminSummaryResponseDTO> findAllUsersForAdmin(RoleName role, AccountStatus status, String search, int page, int size) {
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 clampPageSize(size),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Specification<UserEntity> specification = UserSpecification.buildSpecification(role, search);
+        Specification<UserEntity> specification = UserSpecification.buildSpecification(role, status, search);
         Page<UserEntity> usersPage = userRepository.findAll(specification, pageable);
 
         if (usersPage.isEmpty()) {

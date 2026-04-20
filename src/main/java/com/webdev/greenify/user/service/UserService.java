@@ -7,10 +7,11 @@ import com.webdev.greenify.user.dto.PagedResponse;
 import com.webdev.greenify.user.dto.SuspendUserRequestDTO;
 import com.webdev.greenify.user.dto.UserAdminSummaryResponseDTO;
 import com.webdev.greenify.user.dto.UserDetailResponseDTO;
+import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.enumeration.RoleName;
 
 public interface UserService {
-    PagedResponse<UserAdminSummaryResponseDTO> findAllUsersForAdmin(RoleName role, String search, int page, int size);
+    PagedResponse<UserAdminSummaryResponseDTO> findAllUsersForAdmin(RoleName role, AccountStatus status, String search, int page, int size);
 
     UserAdminSummaryResponseDTO findUserByIdForAdmin(String id);
 

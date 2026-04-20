@@ -1,6 +1,7 @@
 package com.webdev.greenify.user.specification;
 
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.enumeration.AccountStatus;
 import com.webdev.greenify.user.enumeration.RoleName;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -48,9 +49,19 @@ public class UserSpecification {
         return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
     }
 
-    public static Specification<UserEntity> buildSpecification(RoleName role, String search) {
+    public static Specification<UserEntity> hasStatus(AccountStatus status) {
+        return (root, query, cb) -> {
+            if (status == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("status"), status);
+        };
+    }
+
+    public static Specification<UserEntity> buildSpecification(RoleName role, AccountStatus status, String search) {
         return Specification.where(isNotDeleted())
                 .and(hasRole(role))
+                .and(hasStatus(status))
                 .and(searchByNameOrEmail(search));
     }
 }
