@@ -32,10 +32,16 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             "FROM EventEntity e " +
             "WHERE e.eventType = :eventType " +
             "AND e.address.province = :province " +
+            "AND (" +
+            "  HOUR(e.startTime) BETWEEN :startHour - 2 AND :startHour + 2 " +
+            "  OR HOUR(e.endTime) BETWEEN :endHour - 2 AND :endHour + 2" +
+            ") " +
             "AND e.status = 'COMPLETED'")
     Double getAverageParticipantsByCriteria(
             @Param("eventType") GreenEventType eventType,
-            @Param("province") String province);
+            @Param("province") String province,
+            @Param("startHour") int startHour,
+            @Param("endHour") int endHour);
 
     @Query("""
             SELECT COUNT(e)
