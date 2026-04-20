@@ -1,5 +1,12 @@
 package com.webdev.greenify.common.util;
 
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.webdev.greenify.config.JwtProperties;
 import com.webdev.greenify.greenaction.entity.EventEntity;
 import com.webdev.greenify.greenaction.entity.EventRegistrationEntity;
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
@@ -15,7 +22,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,11 +40,9 @@ public class RegistrationSeed {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtProperties jwtProperties;
 
     public void seed() {
-        if (registrationRepository.count() > 10) {
-            return;
-        }
 
         RoleEntity userRole = roleRepository.findByName("USER").orElseThrow();
 
@@ -78,12 +85,16 @@ public class RegistrationSeed {
             for (int j = 0; j < count; j++) {
                 UserEntity participant = participants.get((i + j) % participants.size());
 
-                if (registrationRepository.findByEventIdAndUserIdAndIsDeletedFalse(event.getId(), participant.getId()).isEmpty()) {
+                var existingOpt = registrationRepository.findByEventIdAndUserIdAndIsDeletedFalse(event.getId(), participant.getId());
+                String rawCode = event.getId() + "-" + participant.getId() + "-" + System.currentTimeMillis();
+                String jwtCode = signRegistrationCode(rawCode);
+
+                if (existingOpt.isEmpty()) {
                     EventRegistrationEntity registration = EventRegistrationEntity.builder()
                             .event(event)
                             .user(participant)
                             .registrationStatus(RegistrationStatus.REGISTERED)
-                            .registrationCode("REG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                            .registrationCode(jwtCode)
                             .build();
 
                     registrationRepository.save(registration);
@@ -92,9 +103,35 @@ public class RegistrationSeed {
                     Long currentCount = event.getParticipantCount() != null ? event.getParticipantCount() : 0L;
                     event.setParticipantCount(currentCount + 1);
                     eventRepository.save(event);
+                } else {
+                    EventRegistrationEntity existing = existingOpt.get();
+                    if (existing.getRegistrationCode() == null || !existing.getRegistrationCode().startsWith("ey")) {
+                        existing.setRegistrationCode(jwtCode);
+                        registrationRepository.save(existing);
+                        log.info("Updated old registration code to JWT for event: {} user: {}", event.getTitle(), participant.getEmail());
+                    }
                 }
             }
         }
         log.info("Seeded registrations for events.");
+    }
+
+    private String signRegistrationCode(String registrationCode) {
+        try {
+            JWSSigner signer = new MACSigner(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
+
+            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                    .subject(registrationCode)
+                    .issueTime(new Date())
+                    .build();
+
+            SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+            signedJWT.sign(signer);
+
+            return signedJWT.serialize();
+        } catch (Exception e) {
+            log.error("Error signing registration code for seeding", e);
+            return "ERROR-SIGNING-" + UUID.randomUUID();
+        }
     }
 }
