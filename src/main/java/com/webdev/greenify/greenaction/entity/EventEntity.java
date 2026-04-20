@@ -24,6 +24,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 
@@ -33,7 +34,8 @@ import java.util.List;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"address", "organizer", "images", "registrations"})
+@ToString(callSuper = true, exclude = {"address", "organizer", "images", "registrations"})
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
