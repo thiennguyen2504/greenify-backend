@@ -21,18 +21,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UpdateVoucherTemplateRequest {
 
-    @Size(max = 200, message = "Voucher name must not exceed 200 characters")
+    @Size(max = 200, message = "Tên voucher không được vượt quá 200 ký tự")
     private String name;
 
-    @Size(max = 200, message = "Partner name must not exceed 200 characters")
+    @Size(max = 200, message = "Tên đối tác không được vượt quá 200 ký tự")
     private String partnerName;
 
     private String description;
 
-    @DecimalMin(value = "0.01", message = "Required points must be greater than 0")
+    @DecimalMin(value = "0.01", message = "Điểm yêu cầu phải lớn hơn 0")
     private BigDecimal requiredPoints;
 
-    @Min(value = 1, message = "Additional stock must be greater than 0")
+    @Min(value = 1, message = "Số lượng bổ sung phải lớn hơn 0")
     private Integer additionalStock;
 
     private String usageConditions;

@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class VerifyOtpRequest {
-    @NotBlank(message = "Identifier is required")
+    @NotBlank(message = "Định danh là bắt buộc")
     private String identifier;
 
-    @NotBlank(message = "OTP is required")
+    @NotBlank(message = "OTP là bắt buộc")
     private String otp;
 }

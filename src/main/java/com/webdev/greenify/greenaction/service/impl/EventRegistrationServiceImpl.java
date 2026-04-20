@@ -56,34 +56,34 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         String currentUserId = getCurrentUserId();
         
         EventEntity event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
 
         if (event.getStatus() != GreenEventStatus.PUBLISHED) {
-            throw new AppException("Event is not open for registration", HttpStatus.BAD_REQUEST);
+            throw new AppException("Sự kiện hiện không mở đăng ký", HttpStatus.BAD_REQUEST);
         }
 
         if (event.getSignUpDeadlineHoursBefore() != null) {
             LocalDateTime deadline = event.getStartTime().minusHours(event.getSignUpDeadlineHoursBefore());
             if (LocalDateTime.now().isAfter(deadline)) {
-                throw new AppException("Registration deadline has passed", HttpStatus.BAD_REQUEST);
+                throw new AppException("Đã quá hạn đăng ký", HttpStatus.BAD_REQUEST);
             }
         }
 
-        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndStatusNot(
+        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndRegistrationStatusNot(
                 event.getId(), currentUserId, RegistrationStatus.CANCELLED);
         if (alreadyRegistered) {
-            throw new AppException("You are already registered or waitlisted for this event", HttpStatus.CONFLICT);
+            throw new AppException("Bạn đã đăng ký hoặc đang trong danh sách chờ của sự kiện này", HttpStatus.CONFLICT);
         }
 
         UserEntity user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         RegistrationStatus targetStatus = RegistrationStatus.REGISTERED;
         long currentParticipants = 0;
         if (event.getMaxParticipants() != null) {
-            currentParticipants = registrationRepository.countByEventIdAndStatus(event.getId(), RegistrationStatus.REGISTERED);
+            currentParticipants = registrationRepository.countByEventIdAndRegistrationStatus(event.getId(), RegistrationStatus.REGISTERED);
             if (currentParticipants >= event.getMaxParticipants()) {
-                throw new AppException("Maximum number of participants reached", HttpStatus.BAD_REQUEST);
+                throw new AppException("Đã đạt số lượng người tham gia tối đa", HttpStatus.BAD_REQUEST);
             }
         }
 
@@ -93,7 +93,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         EventRegistrationEntity registration = EventRegistrationEntity.builder()
                 .event(event)
                 .user(user)
-                .status(targetStatus)
+            .registrationStatus(targetStatus)
                 .note(request.getNote())
                 .registrationCode(signedRegistrationCode)
                 .build();
@@ -111,25 +111,25 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         String currentUserId = getCurrentUserId();
         
         EventEntity event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
 
         if (event.getStatus() != GreenEventStatus.PUBLISHED) {
-            throw new AppException("Event is not open for registration", HttpStatus.BAD_REQUEST);
+            throw new AppException("Sự kiện hiện không mở đăng ký", HttpStatus.BAD_REQUEST);
         }
 
-        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndStatusNot(
+        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndRegistrationStatusNot(
                 event.getId(), currentUserId, RegistrationStatus.CANCELLED);
         if (alreadyRegistered) {
-            throw new AppException("You are already registered or waitlisted for this event", HttpStatus.CONFLICT);
+            throw new AppException("Bạn đã đăng ký hoặc đang trong danh sách chờ của sự kiện này", HttpStatus.CONFLICT);
         }
 
         UserEntity user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         EventRegistrationEntity registration = EventRegistrationEntity.builder()
                 .event(event)
                 .user(user)
-                .status(RegistrationStatus.WAITLISTED)
+            .registrationStatus(RegistrationStatus.WAITLISTED)
                 .note(request.getNote())
                 .build();
 
@@ -143,19 +143,19 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Transactional
     public void checkIn(String registrationCode) {
         decodeRegistrationCode(registrationCode); // Verify token
-        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký với mã này"));
 
         if (!isEventHappen(registration.getEvent())) {
-            throw new AppException("Can only check in during the event time", HttpStatus.BAD_REQUEST);
+            throw new AppException("Chỉ có thể check-in trong thời gian diễn ra sự kiện", HttpStatus.BAD_REQUEST);
         }
 
-        if (registration.getStatus() != RegistrationStatus.REGISTERED) {
-            throw new AppException("Only registered participants can check in", HttpStatus.BAD_REQUEST);
+        if (registration.getRegistrationStatus() != RegistrationStatus.REGISTERED) {
+            throw new AppException("Chỉ người đã đăng ký mới có thể check-in", HttpStatus.BAD_REQUEST);
         }
 
         if (registration.getCheckInTime() != null) {
-            throw new AppException("Already checked in", HttpStatus.BAD_REQUEST);
+            throw new AppException("Bạn đã check-in trước đó", HttpStatus.BAD_REQUEST);
         }
 
         registration.setCheckInTime(LocalDateTime.now());
@@ -167,15 +167,15 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Transactional
     public void checkOut(String registrationCode) {
         decodeRegistrationCode(registrationCode); // Verify token
-        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký với mã này"));
 
         if (registration.getCheckInTime() == null) {
-            throw new AppException("Must check in before checking out", HttpStatus.BAD_REQUEST);
+            throw new AppException("Bạn phải check-in trước khi check-out", HttpStatus.BAD_REQUEST);
         }
 
         if (registration.getCheckOutTime() != null) {
-            throw new AppException("Already checked out", HttpStatus.BAD_REQUEST);
+            throw new AppException("Bạn đã check-out trước đó", HttpStatus.BAD_REQUEST);
         }
 
         registration.setCheckOutTime(LocalDateTime.now());
@@ -199,11 +199,11 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     public void cancel(String id) {
         String currentUserId = getCurrentUserId();
         
-        EventRegistrationEntity registration = registrationRepository.findByIdAndUserId(id, currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Registration not found or access denied"));
+        EventRegistrationEntity registration = registrationRepository.findByIdAndUserIdAndIsDeletedFalse(id, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký hoặc bạn không có quyền truy cập"));
 
-        if (registration.getStatus() == RegistrationStatus.CANCELLED) {
-            throw new AppException("Registration is already cancelled", HttpStatus.BAD_REQUEST);
+        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
+            throw new AppException("Đăng ký này đã bị hủy", HttpStatus.BAD_REQUEST);
         }
 
         EventEntity event = registration.getEvent();
@@ -211,12 +211,12 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         if (event.getCancelDeadlineHoursBefore() != null) {
             LocalDateTime deadline = event.getStartTime().minusHours(event.getCancelDeadlineHoursBefore());
             if (LocalDateTime.now().isAfter(deadline)) {
-                throw new AppException("Cancellation deadline has passed (required: " + event.getCancelDeadlineHoursBefore() + "h before)", HttpStatus.BAD_REQUEST);
+                throw new AppException("Đã quá hạn hủy đăng ký (yêu cầu: " + event.getCancelDeadlineHoursBefore() + " giờ trước)", HttpStatus.BAD_REQUEST);
             }
         }
 
-        RegistrationStatus oldStatus = registration.getStatus();
-        registration.setStatus(RegistrationStatus.CANCELLED);
+        RegistrationStatus oldStatus = registration.getRegistrationStatus();
+        registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
         registrationRepository.save(registration);
         event.setParticipantCount(event.getParticipantCount() - 1);
         log.info("User {} cancelled registration for event {}", currentUserId, event.getId());
@@ -230,7 +230,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         List<EventRegistrationEntity> waitlist = registrationRepository.findTopWaitlistedByEventId(event.getId());
         if (!waitlist.isEmpty()) {
             EventRegistrationEntity firstOnWaitlist = waitlist.getFirst();
-            firstOnWaitlist.setStatus(RegistrationStatus.REGISTERED);
+            firstOnWaitlist.setRegistrationStatus(RegistrationStatus.REGISTERED);
             
             // Generate registration code for the promoted user
             String code = event.getId() + "-" + firstOnWaitlist.getUser().getId() + "-" + System.currentTimeMillis();
@@ -245,8 +245,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Override
     @Transactional(readOnly = true)
     public String getRegistrationCode(String eventId, String userId) {
-        EventRegistrationEntity registration = registrationRepository.findByEventIdAndUserId(eventId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Registration not found"));
+        EventRegistrationEntity registration = registrationRepository.findByEventIdAndUserIdAndIsDeletedFalse(eventId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký"));
         return registration.getRegistrationCode();
     }
 
@@ -268,7 +268,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
             return signedJWT.serialize();
         } catch (JOSEException e) {
-            throw new TokenException("Error signing registration code", e);
+            throw new TokenException("Lỗi ký mã đăng ký", e);
         }
     }
 
@@ -277,11 +277,11 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             SignedJWT signedJWT = SignedJWT.parse(token);
             JWSVerifier verifier = new MACVerifier(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
             if (!signedJWT.verify(verifier)) {
-                throw new AppException("Invalid registration code signature", HttpStatus.BAD_REQUEST);
+                throw new AppException("Chữ ký mã đăng ký không hợp lệ", HttpStatus.BAD_REQUEST);
             }
             return signedJWT.getJWTClaimsSet().getSubject();
         } catch (Exception e) {
-            throw new AppException("Invalid registration code", HttpStatus.BAD_REQUEST);
+            throw new AppException("Mã đăng ký không hợp lệ", HttpStatus.BAD_REQUEST);
         }
     }
 }

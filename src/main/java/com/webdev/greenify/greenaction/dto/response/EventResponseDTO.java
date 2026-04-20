@@ -2,6 +2,7 @@ package com.webdev.greenify.greenaction.dto.response;
 
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.GreenEventType;
+import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import com.webdev.greenify.station.dto.AddressResponseDTO;
 import com.webdev.greenify.user.dto.NGOPreviewDTO;
 import lombok.AllArgsConstructor;
@@ -32,6 +33,7 @@ public class EventResponseDTO {
     private Long thankYouHoursAfter;
     private Double rewardPoints;
     private GreenEventStatus status;
+    private RegistrationStatus registrationStatus;
     private String rejectReason;
     private Integer rejectedCount;
     private AddressResponseDTO address;

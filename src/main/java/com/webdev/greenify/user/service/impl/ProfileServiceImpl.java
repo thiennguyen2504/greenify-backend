@@ -5,6 +5,7 @@ import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.file.entity.ProfileImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.file.repository.ProfileImageRepository;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.user.dto.UserProfileCreateRequestDTO;
 import com.webdev.greenify.user.dto.UserProfileResponseDTO;
 import com.webdev.greenify.user.dto.UserProfileUpdateRequestDTO;
@@ -33,13 +34,14 @@ public class ProfileServiceImpl implements ProfileService {
     private final UserProfileMapper userProfileMapper;
     private final ProfileImageRepository profileImageRepository;
     private final ImageMapper imageMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     @Override
     @Transactional
     public UserProfileResponseDTO getCurrentUserProfile() {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserProfileEntity profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ người dùng"));
         return userProfileMapper.toDto(profile);
     }
 
@@ -48,14 +50,15 @@ public class ProfileServiceImpl implements ProfileService {
     public UserProfileResponseDTO createCurrentUserProfile(UserProfileCreateRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         userProfileRepository.findByUserId(userId).ifPresent(p -> {
-            throw new AppException("User profile already exists", HttpStatus.BAD_REQUEST);
+            throw new AppException("Hồ sơ người dùng đã tồn tại", HttpStatus.BAD_REQUEST);
         });
 
         UserProfileEntity profile = userProfileMapper.toEntity(request);
         profile.setUser(user);
+        profile.setProvince(provinceNormalizationService.normalizeProvinceName(profile.getProvince()));
         profile.setStatus(isProfileComplete(profile) ? UserProfileStatus.COMPLETE : UserProfileStatus.IN_COMPLETE);
 
         if (request.getAvatar() != null) {
@@ -81,8 +84,11 @@ public class ProfileServiceImpl implements ProfileService {
     public UserProfileResponseDTO updateCurrentUserProfile(UserProfileUpdateRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserProfileEntity profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ người dùng"));
         userProfileMapper.updateProfileFromDto(request, profile);
+        if (request.getProvince() != null) {
+            profile.setProvince(provinceNormalizationService.normalizeProvinceName(request.getProvince()));
+        }
         if (request.getAvatar() != null) {
             if (profile.getAvatar() != null)
                 imageMapper.updateProfileImage(request.getAvatar(), profile.getAvatar());

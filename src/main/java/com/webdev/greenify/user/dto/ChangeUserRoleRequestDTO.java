@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChangeUserRoleRequestDTO {
 
-    @NotBlank(message = "Role name is required")
+    @NotBlank(message = "Tên vai trò là bắt buộc")
     private String roleName;
 }

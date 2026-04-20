@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RegisterRequest {
-    @NotBlank(message = "Verification token is required")
+    @NotBlank(message = "Verification token là bắt buộc")
     private String verificationToken;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "Mật khẩu là bắt buộc")
     private String password;
 
-    @NotBlank(message = "Confirm is required")
+    @NotBlank(message = "Mật khẩu xác nhận là bắt buộc")
     private String confirmPassword;
 }

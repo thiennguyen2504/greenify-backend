@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface PlantProgressRepository extends JpaRepository<PlantProgressEntity, String> {
 
+    boolean existsByUserId(String userId);
+
     @EntityGraph(attributePaths = {"seed"})
     Optional<PlantProgressEntity> findByUserIdAndStatus(String userId, PlantStatus status);
 }

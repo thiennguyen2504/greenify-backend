@@ -20,26 +20,26 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CreateVoucherTemplateRequest {
 
-    @NotBlank(message = "Voucher name is required")
+    @NotBlank(message = "Tên voucher là bắt buộc")
     private String name;
 
-    @NotBlank(message = "Partner name is required")
+    @NotBlank(message = "Tên đối tác là bắt buộc")
     private String partnerName;
 
     private String description;
 
-    @NotNull(message = "Required points is required")
-    @DecimalMin(value = "0.01", message = "Required points must be greater than 0")
+    @NotNull(message = "Điểm yêu cầu là bắt buộc")
+    @DecimalMin(value = "0.01", message = "Điểm yêu cầu phải lớn hơn 0")
     private BigDecimal requiredPoints;
 
-    @NotNull(message = "Total stock is required")
-    @Min(value = 1, message = "Total stock must be greater than 0")
+    @NotNull(message = "Tổng số lượng là bắt buộc")
+    @Min(value = 1, message = "Tổng số lượng phải lớn hơn 0")
     private Integer totalStock;
 
     private String usageConditions;
 
-    @NotNull(message = "Valid until is required")
-    @Future(message = "Valid until must be in the future")
+    @NotNull(message = "Thời hạn hiệu lực là bắt buộc")
+    @Future(message = "Thời hạn hiệu lực phải ở tương lai")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime validUntil;
 

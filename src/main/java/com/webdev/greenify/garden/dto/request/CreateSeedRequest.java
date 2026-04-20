@@ -15,38 +15,38 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateSeedRequest {
 
-    @NotBlank(message = "Seed name is required")
+    @NotBlank(message = "Tên hạt giống là bắt buộc")
     private String name;
 
-    @NotBlank(message = "Stage 1 image URL is required")
+    @NotBlank(message = "URL ảnh giai đoạn 1 là bắt buộc")
     private String stage1ImageUrl;
 
-    @NotBlank(message = "Stage 2 image URL is required")
+    @NotBlank(message = "URL ảnh giai đoạn 2 là bắt buộc")
     private String stage2ImageUrl;
 
-    @NotBlank(message = "Stage 3 image URL is required")
+    @NotBlank(message = "URL ảnh giai đoạn 3 là bắt buộc")
     private String stage3ImageUrl;
 
-    @NotBlank(message = "Stage 4 image URL is required")
+    @NotBlank(message = "URL ảnh giai đoạn 4 là bắt buộc")
     private String stage4ImageUrl;
 
-    @NotNull(message = "Days to mature is required")
-    @Positive(message = "Days to mature must be greater than 0")
+    @NotNull(message = "Số ngày trưởng thành là bắt buộc")
+    @Positive(message = "Số ngày trưởng thành phải lớn hơn 0")
     private Integer daysToMature;
 
-    @NotNull(message = "Stage 2 from day is required")
-    @Positive(message = "Stage 2 from day must be greater than 0")
+    @NotNull(message = "Ngày bắt đầu giai đoạn 2 là bắt buộc")
+    @Positive(message = "Ngày bắt đầu giai đoạn 2 phải lớn hơn 0")
     private Integer stage2FromDay;
 
-    @NotNull(message = "Stage 3 from day is required")
-    @Positive(message = "Stage 3 from day must be greater than 0")
+    @NotNull(message = "Ngày bắt đầu giai đoạn 3 là bắt buộc")
+    @Positive(message = "Ngày bắt đầu giai đoạn 3 phải lớn hơn 0")
     private Integer stage3FromDay;
 
-    @NotNull(message = "Stage 4 from day is required")
-    @Positive(message = "Stage 4 from day must be greater than 0")
+    @NotNull(message = "Ngày bắt đầu giai đoạn 4 là bắt buộc")
+    @Positive(message = "Ngày bắt đầu giai đoạn 4 phải lớn hơn 0")
     private Integer stage4FromDay;
 
-    @NotNull(message = "Plant cycle type is required")
+    @NotNull(message = "Loại chu kỳ cây là bắt buộc")
     private PlantCycleType cycleType;
 
     private String rewardVoucherTemplateId;

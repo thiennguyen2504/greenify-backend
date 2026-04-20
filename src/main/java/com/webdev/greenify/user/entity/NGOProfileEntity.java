@@ -62,7 +62,8 @@ public class NGOProfileEntity extends BaseEntity {
     private String rejectedReason;
 
     @Column
-    private Integer rejectedCount;
+    @Builder.Default
+    private Integer rejectedCount = 0;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
@@ -76,5 +77,6 @@ public class NGOProfileEntity extends BaseEntity {
     private AddressEntity address;
 
     @OneToMany(mappedBy = "ngoProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<NGODocsImageEntity> verificationDocs = new ArrayList<>();
 }

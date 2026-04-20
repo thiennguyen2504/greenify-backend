@@ -17,13 +17,13 @@ public class FileServiceImpl implements FileService {
     @Override
     public ImageRequestDTO uploadImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new AppException("File is required", HttpStatus.BAD_REQUEST);
+            throw new AppException("Tệp là bắt buộc", HttpStatus.BAD_REQUEST);
         }
 
         // MOCK UPLOAD TO S3
         String filename = file.getOriginalFilename();
         if (filename == null || filename.isBlank()) {
-            throw new AppException("Invalid file name", HttpStatus.BAD_REQUEST);
+            throw new AppException("Tên tệp không hợp lệ", HttpStatus.BAD_REQUEST);
         }
 
         String objectKey = UUID.randomUUID().toString() + "_" + filename;

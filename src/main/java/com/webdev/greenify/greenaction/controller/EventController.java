@@ -4,6 +4,7 @@ import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
 import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
+import com.webdev.greenify.greenaction.dto.response.EventParticipationSummaryResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -70,6 +71,30 @@ public class EventController {
         return ResponseEntity.ok(eventService.getEventsForPublic(eventType, title, from, to, page, size));
     }
 
+    @GetMapping("/me/participation-summary")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<EventParticipationSummaryResponseDTO> getMyParticipationSummary() {
+        return ResponseEntity.ok(eventService.getMyParticipationSummary());
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getMyParticipatedEvents(
+            @RequestParam(required = false) String title,
+            @RequestParam(name = "registrationStatus", required = false) RegistrationStatus registrationStatus,
+            @RequestParam(name = "status", required = false) RegistrationStatus legacyStatus,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        RegistrationStatus resolvedRegistrationStatus = registrationStatus != null
+                ? registrationStatus
+                : legacyStatus;
+        return ResponseEntity.ok(eventService.getMyParticipatedEvents(
+                title,
+                resolvedRegistrationStatus,
+                page,
+                size));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<EventResponseDTO> getEventDetail(@PathVariable String id) {
         return ResponseEntity.ok(eventService.getEventDetail(id));
@@ -113,12 +138,17 @@ public class EventController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/my-events")
+    @GetMapping("/ngo/my-events")
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<PagedResponse<EventResponseDTO>> getMyEvents(
+            @RequestParam(required = false) GreenEventStatus status,
+            @RequestParam(required = false) GreenEventType eventType,
+            @RequestParam(required = false, name = "title") String title,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(eventService.getMyEvents(page, size));
+        return ResponseEntity.ok(eventService.getMyEvents(status, eventType, title, from, to, page, size));
     }
 
     @GetMapping("/ngo/{ngoId}")
@@ -140,11 +170,21 @@ public class EventController {
     public ResponseEntity<PagedResponse<EventResponseDTO>> getParticipatedEvents(
             @PathVariable String userId,
             @RequestParam(required = false) String title,
-            @RequestParam(required = false) RegistrationStatus status,
+            @RequestParam(name = "registrationStatus", required = false) RegistrationStatus registrationStatus,
+            @RequestParam(name = "status", required = false) RegistrationStatus legacyStatus,
             @RequestParam(required = false) String address,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(eventService.getParticipatedEvents(userId, title, status, address, page, size));
+        RegistrationStatus resolvedRegistrationStatus = registrationStatus != null
+            ? registrationStatus
+            : legacyStatus;
+        return ResponseEntity.ok(eventService.getParticipatedEvents(
+            userId,
+            title,
+            resolvedRegistrationStatus,
+            address,
+            page,
+            size));
     }
 
     @PostMapping("/predict")

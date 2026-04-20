@@ -106,11 +106,11 @@ public class GardenServiceImpl implements GardenService {
     @Transactional(readOnly = true)
     public VoucherTemplateResponse getRewardVoucherTemplateBySeedId(String seedId) {
         SeedEntity seed = seedRepository.findByIdAndIsActiveTrue(seedId)
-                .orElseThrow(() -> new ResourceNotFoundException("Seed not found or inactive"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hạt giống hoặc hạt giống đã ngừng hoạt động"));
 
         VoucherTemplateEntity rewardVoucherTemplate = seed.getRewardVoucherTemplate();
         if (rewardVoucherTemplate == null) {
-            throw new ResourceNotFoundException("Reward voucher template not configured for this seed");
+            throw new ResourceNotFoundException("Chưa cấu hình voucher thưởng cho hạt giống này");
         }
 
         return voucherMapper.toVoucherTemplateResponse(rewardVoucherTemplate);
@@ -122,14 +122,14 @@ public class GardenServiceImpl implements GardenService {
         String userId = getCurrentUserId();
 
         SeedEntity seed = seedRepository.findByIdAndIsActiveTrue(request.getSeedId())
-                .orElseThrow(() -> new ResourceNotFoundException("Seed not found or inactive"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hạt giống hoặc hạt giống đã ngừng hoạt động"));
 
         if (plantProgressRepository.findByUserIdAndStatus(userId, PlantStatus.GROWING).isPresent()) {
             throw new AppException("Bạn đang có cây đang phát triển", HttpStatus.CONFLICT);
         }
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         PlantProgressEntity plantProgress = PlantProgressEntity.builder()
                 .user(user)
@@ -156,7 +156,7 @@ public class GardenServiceImpl implements GardenService {
         String userId = getCurrentUserId();
 
         PlantProgressEntity progress = plantProgressRepository.findByUserIdAndStatus(userId, PlantStatus.GROWING)
-                .orElseThrow(() -> new ResourceNotFoundException("No active plant progress found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cây đang phát triển"));
 
         return plantProgressMapper.toPlantProgressResponse(progress);
     }
@@ -295,7 +295,7 @@ public class GardenServiceImpl implements GardenService {
         VoucherTemplateEntity rewardVoucherTemplate = null;
         if (request.getRewardVoucherTemplateId() != null && !request.getRewardVoucherTemplateId().isBlank()) {
             rewardVoucherTemplate = voucherTemplateRepository.findById(request.getRewardVoucherTemplateId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Reward voucher template not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher thưởng"));
         }
 
         SeedEntity seed = SeedEntity.builder()
@@ -329,7 +329,7 @@ public class GardenServiceImpl implements GardenService {
         String adminId = getCurrentUserId();
 
         SeedEntity seed = seedRepository.findById(seedId)
-                .orElseThrow(() -> new ResourceNotFoundException("Seed not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hạt giống"));
 
         validateSeedThresholdsForUpdate(request, seed);
 
@@ -342,7 +342,7 @@ public class GardenServiceImpl implements GardenService {
                 seed.setRewardVoucherTemplate(null);
             } else {
                 VoucherTemplateEntity rewardVoucherTemplate = voucherTemplateRepository.findById(rewardVoucherTemplateId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Reward voucher template not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher thưởng"));
                 seed.setRewardVoucherTemplate(rewardVoucherTemplate);
             }
         }
@@ -476,7 +476,7 @@ public class GardenServiceImpl implements GardenService {
 
     private void validateSeedThresholds(int daysToMature, int stage2, int stage3, int stage4) {
         if (!(stage2 < stage3 && stage3 < stage4 && stage4 < daysToMature)) {
-            throw new AppException("Stage thresholds must satisfy stage2 < stage3 < stage4 < daysToMature",
+            throw new AppException("Mốc giai đoạn phải thỏa stage2 < stage3 < stage4 < daysToMature",
                     HttpStatus.BAD_REQUEST);
         }
     }

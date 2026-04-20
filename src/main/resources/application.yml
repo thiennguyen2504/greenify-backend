@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 200MB
   application:
     name: greenify
 
@@ -24,6 +28,8 @@ spring:
       hibernate:
         default_schema: ${DB_SCHEMA:public}
         format_sql: false
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
 
   sql:
     init:
@@ -94,3 +100,18 @@ storage:
   access-key: ${AWS_ACCESS_KEY:placeholder}
   secret-key: ${AWS_SECRET_KEY:placeholder}
   bucket-name: ${AWS_BUCKET:greenify-images-942004241415-ap-southeast-1-an}
+
+unsplash:
+  enabled: ${UNSPLASH_ENABLED:true}
+  access-key: ${UNSPLASH_ACCESS_KEY:}
+  secret-key: ${UNSPLASH_SECRET_KEY:}
+  base-url: ${UNSPLASH_BASE_URL:https://api.unsplash.com}
+  timeout-millis: ${UNSPLASH_TIMEOUT_MILLIS:3000}
+  cache-size: ${UNSPLASH_CACHE_SIZE:20}
+  search-per-page: ${UNSPLASH_SEARCH_PER_PAGE:30}
+  orientation: ${UNSPLASH_ORIENTATION:landscape}
+  content-filter: ${UNSPLASH_CONTENT_FILTER:high}
+  min-width: ${UNSPLASH_MIN_WIDTH:1000}
+  min-height: ${UNSPLASH_MIN_HEIGHT:700}
+  min-likes: ${UNSPLASH_MIN_LIKES:10}
+  rate-limit-cooldown-millis: ${UNSPLASH_RATE_LIMIT_COOLDOWN_MILLIS:600000}

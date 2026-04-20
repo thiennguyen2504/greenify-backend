@@ -54,7 +54,7 @@ public class AppealServiceImpl implements AppealService {
         String userId = getCurrentUserId();
 
         GreenActionPostEntity post = postRepository.findByIdWithUserAndActionType(request.getPostId())
-                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài viết"));
 
         if (!post.getUser().getId().equals(userId)) {
             throw new AppException("Bạn chỉ có thể khiếu nại bài viết của chính mình", HttpStatus.FORBIDDEN);
@@ -77,7 +77,7 @@ public class AppealServiceImpl implements AppealService {
         }
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         PostAppealEntity appeal = PostAppealEntity.builder()
                 .post(post)
@@ -196,7 +196,7 @@ public class AppealServiceImpl implements AppealService {
 
     private PostAppealEntity findAppealOrThrow(String appealId) {
         return postAppealRepository.findByIdWithPostAndUser(appealId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appeal not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khiếu nại"));
     }
 
     private AppealResponse toResponse(PostAppealEntity appeal) {

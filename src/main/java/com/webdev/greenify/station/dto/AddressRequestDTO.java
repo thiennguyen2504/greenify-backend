@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class AddressRequestDTO {
-    @NotBlank(message = "Province is required")
+    @NotBlank(message = "Tỉnh/Thành là bắt buộc")
     private String province;
     private String district;
     private String ward;

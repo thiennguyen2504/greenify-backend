@@ -12,8 +12,18 @@ public class EventRegistrationSpecification {
         return (root, query, cb) -> userId == null ? cb.conjunction() : cb.equal(root.get("user").get("id"), userId);
     }
 
-    public static Specification<EventRegistrationEntity> hasStatus(RegistrationStatus status) {
-        return (root, query, cb) -> status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
+    public static Specification<EventRegistrationEntity> isNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    }
+
+    public static Specification<EventRegistrationEntity> eventIsNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("event").get("isDeleted"));
+    }
+
+    public static Specification<EventRegistrationEntity> hasRegistrationStatus(RegistrationStatus registrationStatus) {
+        return (root, query, cb) -> registrationStatus == null
+                ? cb.conjunction()
+                : cb.equal(root.get("registrationStatus"), registrationStatus);
     }
 
     public static Specification<EventRegistrationEntity> eventTitleContains(String title) {
@@ -39,9 +49,15 @@ public class EventRegistrationSpecification {
         return (root, query, cb) -> eventId == null ? cb.conjunction() : cb.equal(root.get("event").get("id"), eventId);
     }
 
-    public static Specification<EventRegistrationEntity> buildSpecification(String userId, String title, RegistrationStatus status, String address) {
+    public static Specification<EventRegistrationEntity> buildSpecification(
+            String userId,
+            String title,
+            RegistrationStatus registrationStatus,
+            String address) {
         return Specification.where(hasUserId(userId))
-                .and(hasStatus(status))
+                .and(isNotDeleted())
+                .and(eventIsNotDeleted())
+                .and(hasRegistrationStatus(registrationStatus))
                 .and(eventTitleContains(title))
                 .and(eventAddressContains(address));
     }

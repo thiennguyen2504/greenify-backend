@@ -12,15 +12,15 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CreatePrizeConfigRequest {
 
-    @NotBlank(message = "weekStartDate is required")
+    @NotBlank(message = "weekStartDate là bắt buộc")
     private String weekStartDate;
 
-    @NotBlank(message = "lockAt is required")
+    @NotBlank(message = "lockAt là bắt buộc")
     private String lockAt;
 
-    @NotBlank(message = "nationalVoucherTemplateId is required")
+    @NotBlank(message = "nationalVoucherTemplateId là bắt buộc")
     private String nationalVoucherTemplateId;
 
-    @NotBlank(message = "provincialVoucherTemplateId is required")
+    @NotBlank(message = "provincialVoucherTemplateId là bắt buộc")
     private String provincialVoucherTemplateId;
 }

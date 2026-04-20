@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SelectSeedRequest {
 
-    @NotBlank(message = "Seed ID is required")
+    @NotBlank(message = "Seed ID là bắt buộc")
     private String seedId;
 }

@@ -21,17 +21,17 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NGOProfileRequestDTO {
-    @NotBlank(message = "Organization name is required")
+    @NotBlank(message = "Tên tổ chức là bắt buộc")
     String orgName;
 
-    @NotBlank(message = "Representative name is required")
+    @NotBlank(message = "Tên người đại diện là bắt buộc")
     String representativeName;
 
-    @NotBlank(message = "Hotline is required")
+    @NotBlank(message = "Hotline là bắt buộc")
     String hotline;
 
-    @NotBlank(message = "Contact email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email liên hệ là bắt buộc")
+    @Email(message = "Định dạng email không hợp lệ")
     String contactEmail;
 
     String description;
@@ -42,7 +42,7 @@ public class NGOProfileRequestDTO {
     @Valid
     ImageRequestDTO avatar;
 
-    @NotEmpty(message = "At least one verification document is required")
+    @NotEmpty(message = "Cần ít nhất một tài liệu xác minh")
     @Valid
     List<ImageRequestDTO> verificationDocs;
 }

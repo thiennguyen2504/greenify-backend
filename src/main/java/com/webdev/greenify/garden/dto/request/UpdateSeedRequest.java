@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateSeedRequest {
 
-    @Size(max = 100, message = "Seed name must not exceed 100 characters")
+    @Size(max = 100, message = "Tên hạt giống không được vượt quá 100 ký tự")
     private String name;
 
     @Valid
@@ -31,16 +31,16 @@ public class UpdateSeedRequest {
     @Valid
     private ImageRequestDTO stage4Image;
 
-    @Positive(message = "Days to mature must be greater than 0")
+    @Positive(message = "Số ngày trưởng thành phải lớn hơn 0")
     private Integer daysToMature;
 
-    @Positive(message = "Stage 2 from day must be greater than 0")
+    @Positive(message = "Ngày bắt đầu giai đoạn 2 phải lớn hơn 0")
     private Integer stage2FromDay;
 
-    @Positive(message = "Stage 3 from day must be greater than 0")
+    @Positive(message = "Ngày bắt đầu giai đoạn 3 phải lớn hơn 0")
     private Integer stage3FromDay;
 
-    @Positive(message = "Stage 4 from day must be greater than 0")
+    @Positive(message = "Ngày bắt đầu giai đoạn 4 phải lớn hơn 0")
     private Integer stage4FromDay;
 
     private PlantCycleType cycleType;

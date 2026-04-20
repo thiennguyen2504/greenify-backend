@@ -33,7 +33,7 @@ public abstract class BaseImageEntity extends BaseEntity {
     @Column(nullable = false)
     private String objectKey;
 
-    @Column
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @Column

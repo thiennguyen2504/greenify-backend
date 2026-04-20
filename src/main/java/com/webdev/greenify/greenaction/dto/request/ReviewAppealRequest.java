@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReviewAppealRequest {
 
-    @NotNull(message = "Review status is required")
+    @NotNull(message = "Trạng thái duyệt là bắt buộc")
     private AppealStatus status;
 
     private String adminNote;

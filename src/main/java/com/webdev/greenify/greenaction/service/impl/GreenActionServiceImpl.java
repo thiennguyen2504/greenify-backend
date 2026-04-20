@@ -37,6 +37,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +77,7 @@ public class GreenActionServiceImpl implements GreenActionService {
         
         // Validate action type exists and is active
         GreenActionTypeEntity actionType = actionTypeRepository.findByIdAndIsActiveTrue(request.getActionTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Action type not found or inactive"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy loại hành động hoặc loại hành động đã ngừng hoạt động"));
 
         // Validate location if required
         if (Boolean.TRUE.equals(actionType.getLocationRequired())) {
@@ -86,7 +88,7 @@ public class GreenActionServiceImpl implements GreenActionService {
 
         // Get current user
         UserEntity user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         // Use current date if actionDate is not provided
         LocalDate effectiveActionDate = request.getActionDate() != null 
@@ -128,14 +130,14 @@ public class GreenActionServiceImpl implements GreenActionService {
         String adminId = getCurrentUserId();
 
         if (request.getSuggestedPoints() == null || request.getSuggestedPoints().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new AppException("Suggested points must be greater than 0", HttpStatus.BAD_REQUEST);
+            throw new AppException("Điểm gợi ý phải lớn hơn 0", HttpStatus.BAD_REQUEST);
         }
 
         String normalizedActionName = normalizeRequiredText(request.getActionName(), "Action name");
 
         actionTypeRepository.findFirstByActionNameIgnoreCaseAndIsActiveTrue(normalizedActionName)
                 .ifPresent(existing -> {
-                    throw new AppException("Action type with this name already exists", HttpStatus.CONFLICT);
+                    throw new AppException("Loại hành động với tên này đã tồn tại", HttpStatus.CONFLICT);
                 });
 
         GreenActionTypeEntity actionType = GreenActionTypeEntity.builder()
@@ -168,7 +170,7 @@ public class GreenActionServiceImpl implements GreenActionService {
         String adminId = getCurrentUserId();
 
         GreenActionTypeEntity actionType = actionTypeRepository.findById(actionTypeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Action type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy loại hành động"));
 
         String oldActionName = actionType.getActionName();
         List<String> changedFields = new ArrayList<>();
@@ -185,7 +187,7 @@ public class GreenActionServiceImpl implements GreenActionService {
 
         if (request.getSuggestedPoints() != null) {
             if (request.getSuggestedPoints().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new AppException("Suggested points must be greater than 0", HttpStatus.BAD_REQUEST);
+                throw new AppException("Điểm gợi ý phải lớn hơn 0", HttpStatus.BAD_REQUEST);
             }
             actionType.setSuggestedPoints(request.getSuggestedPoints());
             changedFields.add("suggestedPoints");
@@ -207,7 +209,7 @@ public class GreenActionServiceImpl implements GreenActionService {
             actionTypeRepository.findFirstByActionNameIgnoreCaseAndIsActiveTrue(actionType.getActionName())
                     .filter(existing -> !existing.getId().equals(currentActionTypeId))
                     .ifPresent(existing -> {
-                        throw new AppException("Action type with this name already exists", HttpStatus.CONFLICT);
+                        throw new AppException("Loại hành động với tên này đã tồn tại", HttpStatus.CONFLICT);
                     });
         }
 
@@ -262,23 +264,26 @@ public class GreenActionServiceImpl implements GreenActionService {
             PostStatus status,
             String actionTypeId,
             String groupName,
+            String search,
             LocalDate fromDate,
             LocalDate toDate,
+            String sortDirection,
             int page,
             int size) {
         
-        // Validate and clamp page/size
         int effectivePage = Math.max(page, 0);
         int effectiveSize = clampPageSize(size);
+        Sort.Direction createdAtDirection = resolveCreatedAtDirection(sortDirection);
         
-        Pageable pageable = PageRequest.of(effectivePage, effectiveSize, 
-                Sort.by(Sort.Direction.DESC, "approveCount")
-                        .and(Sort.by(Sort.Direction.DESC, "createdAt")));
+        Pageable pageable = PageRequest.of(effectivePage, effectiveSize,
+            Sort.by(createdAtDirection, "createdAt"));
 
-        PostStatus effectiveStatus = status != null ? status : PostStatus.VERIFIED;
-
-        Specification<GreenActionPostEntity> spec = GreenActionPostSpecification.buildSpecification(
-            effectiveStatus, actionTypeId, groupName, fromDate, toDate);
+        Specification<GreenActionPostEntity> spec = resolveStatusSpecification(status)
+            .and(GreenActionPostSpecification.hasActionTypeId(actionTypeId))
+            .and(GreenActionPostSpecification.hasGroupNameLike(groupName))
+            .and(GreenActionPostSpecification.hasAuthorEmailOrDisplayNameLike(search))
+            .and(GreenActionPostSpecification.actionDateFrom(fromDate))
+            .and(GreenActionPostSpecification.actionDateTo(toDate));
 
         Page<GreenActionPostEntity> postsPage = postRepository.findAll(spec, pageable);
 
@@ -349,13 +354,12 @@ public class GreenActionServiceImpl implements GreenActionService {
         String currentUserId = getCurrentUserId();
         
         GreenActionPostEntity post = postRepository.findByIdWithUserAndActionType(postId)
-                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài viết"));
 
-        // Check if user is the owner
         boolean isOwner = post.getUser().getId().equals(currentUserId);
+        boolean canViewAllPosts = hasCurrentRole("ROLE_CTV") || hasCurrentRole("ROLE_ADMIN");
 
-        // If not owner, check if post is VERIFIED
-        if (!isOwner && post.getStatus() != PostStatus.VERIFIED) {
+        if (!isOwner && !canViewAllPosts && post.getStatus() != PostStatus.VERIFIED) {
             throw new AppException("Bài viết không khả dụng", HttpStatus.FORBIDDEN);
         }
 
@@ -379,6 +383,56 @@ public class GreenActionServiceImpl implements GreenActionService {
 
     private int clampPageSize(int size) {
         return Math.min(Math.max(size, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
+    }
+
+    private Specification<GreenActionPostEntity> resolveStatusSpecification(PostStatus requestedStatus) {
+        if (requestedStatus != null) {
+            if (isPublicFeedRestrictedRole() && requestedStatus != PostStatus.VERIFIED) {
+                throw new AppException("Bạn không có quyền xem trạng thái bài viết này", HttpStatus.FORBIDDEN);
+            }
+            return GreenActionPostSpecification.hasStatus(requestedStatus);
+        }
+
+        if (hasCurrentRole("ROLE_ADMIN")) {
+            return (root, query, cb) -> cb.conjunction();
+        }
+
+        if (hasCurrentRole("ROLE_CTV")) {
+            return GreenActionPostSpecification.hasStatuses(List.of(PostStatus.VERIFIED, PostStatus.PENDING_REVIEW));
+        }
+
+        return GreenActionPostSpecification.hasStatus(PostStatus.VERIFIED);
+    }
+
+    private Sort.Direction resolveCreatedAtDirection(String sortDirection) {
+        if (sortDirection == null || sortDirection.isBlank()) {
+            return Sort.Direction.DESC;
+        }
+
+        String normalized = sortDirection.trim();
+        if ("asc".equalsIgnoreCase(normalized)) {
+            return Sort.Direction.ASC;
+        }
+        if ("desc".equalsIgnoreCase(normalized)) {
+            return Sort.Direction.DESC;
+        }
+
+        throw new AppException("sortDirection phải là asc hoặc desc", HttpStatus.BAD_REQUEST);
+    }
+
+    private boolean isPublicFeedRestrictedRole() {
+        return !hasCurrentRole("ROLE_CTV") && !hasCurrentRole("ROLE_ADMIN");
+    }
+
+    private boolean hasCurrentRole(String roleAuthority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(roleAuthority::equals);
     }
 
     private boolean requiresActionTypeCacheInvalidation(String previousActionName, String currentActionName) {

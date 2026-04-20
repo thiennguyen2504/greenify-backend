@@ -53,9 +53,19 @@ public class TrashSpotController {
     public ResponseEntity<List<TrashSpotSummaryResponse>> getTrashSpots(
             @RequestParam(required = false) String province,
             @RequestParam(required = false) TrashSpotStatus status,
-            @RequestParam(required = false) SeverityTier severity,
-            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
-        return ResponseEntity.ok(trashSpotService.getTrashSpots(province, status, severity, wasteTypeId));
+            @RequestParam(name = "severityTier", required = false) SeverityTier severityTier,
+            @RequestParam(name = "severity", required = false) SeverityTier legacySeverity,
+            @RequestParam(name = "wasteTypeId", required = false) String wasteTypeId,
+            @RequestParam(name = "wasteTypeID", required = false) String legacyWasteTypeId) {
+        String normalizedProvince = normalizeOptionalTextParam(province);
+        SeverityTier resolvedSeverity = resolveSeverity(severityTier, legacySeverity);
+        String resolvedWasteTypeId = resolveOptionalTextParam(wasteTypeId, legacyWasteTypeId);
+
+        return ResponseEntity.ok(trashSpotService.getTrashSpots(
+                normalizedProvince,
+                status,
+                resolvedSeverity,
+                resolvedWasteTypeId));
     }
 
     @GetMapping("/trash-spots/{id}")
@@ -86,9 +96,18 @@ public class TrashSpotController {
     @PreAuthorize("hasRole('NGO')")
     public ResponseEntity<List<TrashSpotSummaryResponse>> getNgoTrashSpots(
             @RequestParam(required = false) String province,
-            @RequestParam(required = false) SeverityTier severity,
-            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
-        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(province, severity, wasteTypeId));
+            @RequestParam(name = "severityTier", required = false) SeverityTier severityTier,
+            @RequestParam(name = "severity", required = false) SeverityTier legacySeverity,
+            @RequestParam(name = "wasteTypeId", required = false) String wasteTypeId,
+            @RequestParam(name = "wasteTypeID", required = false) String legacyWasteTypeId) {
+        String normalizedProvince = normalizeOptionalTextParam(province);
+        SeverityTier resolvedSeverity = resolveSeverity(severityTier, legacySeverity);
+        String resolvedWasteTypeId = resolveOptionalTextParam(wasteTypeId, legacyWasteTypeId);
+
+        return ResponseEntity.ok(trashSpotService.getNgoTrashSpots(
+                normalizedProvince,
+                resolvedSeverity,
+                resolvedWasteTypeId));
     }
 
     @PatchMapping("/ngo/trash-spots/{id}/claim")
@@ -111,9 +130,19 @@ public class TrashSpotController {
     public ResponseEntity<List<TrashSpotSummaryResponse>> getAdminTrashSpots(
             @RequestParam(required = false) TrashSpotStatus status,
             @RequestParam(required = false) String province,
-            @RequestParam(required = false) SeverityTier severity,
-            @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
-        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(status, province, severity, wasteTypeId));
+            @RequestParam(name = "severityTier", required = false) SeverityTier severityTier,
+            @RequestParam(name = "severity", required = false) SeverityTier legacySeverity,
+            @RequestParam(name = "wasteTypeId", required = false) String wasteTypeId,
+            @RequestParam(name = "wasteTypeID", required = false) String legacyWasteTypeId) {
+        String normalizedProvince = normalizeOptionalTextParam(province);
+        SeverityTier resolvedSeverity = resolveSeverity(severityTier, legacySeverity);
+        String resolvedWasteTypeId = resolveOptionalTextParam(wasteTypeId, legacyWasteTypeId);
+
+        return ResponseEntity.ok(trashSpotService.getAdminTrashSpots(
+                status,
+                normalizedProvince,
+                resolvedSeverity,
+                resolvedWasteTypeId));
     }
 
     @DeleteMapping("/admin/trash-spots/{id}")
@@ -158,5 +187,32 @@ public class TrashSpotController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TrashSpotDetailResponse> reopenResolvedSpot(@PathVariable String id) {
         return ResponseEntity.ok(trashSpotService.reopenResolvedSpot(id));
+    }
+
+    private SeverityTier resolveSeverity(SeverityTier severityTier, SeverityTier legacySeverity) {
+        return severityTier != null ? severityTier : legacySeverity;
+    }
+
+    private String resolveOptionalTextParam(String preferredValue, String fallbackValue) {
+        String normalizedPreferred = normalizeOptionalTextParam(preferredValue);
+        return normalizedPreferred != null ? normalizedPreferred : normalizeOptionalTextParam(fallbackValue);
+    }
+
+    private String normalizeOptionalTextParam(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        String lowered = normalized.toLowerCase();
+        if ("undefined".equals(lowered) || "null".equals(lowered)) {
+            return null;
+        }
+
+        return normalized;
     }
 }

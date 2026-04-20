@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class UserProfileUpdateRequestDTO {
     private String firstName;
     private String lastName;
-    @NotBlank(message = "Display name is required")
+    @NotBlank(message = "Tên hiển thị là bắt buộc")
     private String displayName;
     private String province;
     private String district;

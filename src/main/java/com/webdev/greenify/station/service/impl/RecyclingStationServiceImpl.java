@@ -10,6 +10,7 @@ import com.webdev.greenify.station.enumeration.StationStatus;
 import com.webdev.greenify.station.mapper.RecyclingStationMapper;
 import com.webdev.greenify.station.repository.RecyclingStationRepository;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.station.service.RecyclingStationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,16 +25,18 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
     private final RecyclingStationRepository recyclingStationRepository;
     private final WasteTypeRepository wasteTypeRepository;
     private final RecyclingStationMapper recyclingStationMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     @Override
     @Transactional
     public RecyclingStationResponseDTO createStation(RecyclingStationRequestDTO request) {
         RecyclingStationEntity stationEntity = recyclingStationMapper.toEntity(request);
+        normalizeAddressProvince(stationEntity);
 
         if (request.getWasteTypeIds() != null && !request.getWasteTypeIds().isEmpty()) {
             List<WasteTypeEntity> wasteTypes = wasteTypeRepository.findAllById(request.getWasteTypeIds());
             if (wasteTypes.size() != request.getWasteTypeIds().size()) {
-                throw new ResourceNotFoundException("Some waste types were not found.");
+                throw new ResourceNotFoundException("Một số loại rác không tồn tại.");
             }
             stationEntity.setWasteTypes(wasteTypes);
         }
@@ -56,21 +59,22 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
     public RecyclingStationResponseDTO getStationById(String id) {
         return recyclingStationRepository.findByIdAndIsDeletedFalse(id)
                 .map(recyclingStationMapper::toRecyclingStationResponseDTO)
-                .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm tái chế với id: " + id));
     }
 
     @Override
     @Transactional
     public RecyclingStationResponseDTO updateStation(String id, RecyclingStationRequestDTO request) {
         RecyclingStationEntity stationEntity = recyclingStationRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm tái chế với id: " + id));
 
         recyclingStationMapper.updateEntity(stationEntity, request);
+        normalizeAddressProvince(stationEntity);
 
         if (request.getWasteTypeIds() != null) {
             List<WasteTypeEntity> newWasteTypes = wasteTypeRepository.findAllById(request.getWasteTypeIds());
             if (newWasteTypes.size() != request.getWasteTypeIds().size()) {
-                throw new ResourceNotFoundException("Some waste types were not found.");
+                throw new ResourceNotFoundException("Một số loại rác không tồn tại.");
             }
             List<WasteTypeEntity> currentWasteTypes = stationEntity.getWasteTypes();
             currentWasteTypes.removeIf(wt -> !request.getWasteTypeIds().contains(wt.getId()));
@@ -91,7 +95,7 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
     @Transactional
     public RecyclingStationResponseDTO updateStationStatus(String id, UpdateStationStatusRequestDTO request) {
         RecyclingStationEntity stationEntity = recyclingStationRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm tái chế với id: " + id));
 
         stationEntity.setStatus(request.getStatus());
         RecyclingStationEntity savedStation = recyclingStationRepository.save(stationEntity);
@@ -102,8 +106,17 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
     @Transactional
     public void deleteStation(String id) {
         RecyclingStationEntity stationEntity = recyclingStationRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm tái chế với id: " + id));
         stationEntity.setDeleted(true);
         recyclingStationRepository.save(stationEntity);
+    }
+
+    private void normalizeAddressProvince(RecyclingStationEntity stationEntity) {
+        if (stationEntity == null || stationEntity.getAddress() == null) {
+            return;
+        }
+
+        stationEntity.getAddress().setProvince(
+                provinceNormalizationService.normalizeProvinceName(stationEntity.getAddress().getProvince()));
     }
 }

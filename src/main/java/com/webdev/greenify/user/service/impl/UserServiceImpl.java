@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserAdminSummaryResponseDTO findUserByIdForAdmin(String id) {
         UserEntity user = userRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         PointWalletEntity wallet = pointWalletRepository.findByUserId(id).orElse(null);
         return toAdminDetail(user, wallet);
     }
@@ -124,7 +124,7 @@ public class UserServiceImpl implements UserService {
         String userId = getCurrentUserId();
         return userRepository.findByIdWithDetails(userId)
                 .map(userMapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
     }
 
     @Override
@@ -189,7 +189,7 @@ public class UserServiceImpl implements UserService {
     public UserAdminSummaryResponseDTO demoteCtvToUser(String userId, DemoteCtvRequestDTO request) {
         UserEntity user = getUserOrThrow(userId);
         if (!hasRole(user, ROLE_CTV)) {
-            throw new AppException("User is not a CTV account", HttpStatus.BAD_REQUEST);
+            throw new AppException("Người dùng không phải tài khoản CTV", HttpStatus.BAD_REQUEST);
         }
 
         RoleEntity userRole = getRoleOrThrow(ROLE_USER);
@@ -332,7 +332,7 @@ public class UserServiceImpl implements UserService {
 
     private UserEntity getUserOrThrow(String userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
     }
 
     private void saveManagementAction(UserEntity user, UserManagementActionType actionType, String reason) {

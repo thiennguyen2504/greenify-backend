@@ -35,9 +35,17 @@ public interface VoucherService {
          * Get current user's voucher wallet with optional status/source filtering and pagination.
      * Expired AVAILABLE vouchers are auto-marked as EXPIRED before query.
      */
-        PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(
+    PagedResponse<UserVoucherResponse> getCurrentUserVoucherWallet(
             UserVoucherStatus status,
             VoucherSource source,
+            int page,
+            int size);
+
+    /**
+     * Admin listing endpoint for voucher templates with optional status filter.
+     */
+    PagedResponse<VoucherTemplateResponse> getVoucherTemplatesForAdmin(
+            VoucherTemplateStatus status,
             int page,
             int size);
 

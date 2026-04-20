@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DemoteCtvRequestDTO {
 
-    @NotBlank(message = "Demotion reason is required")
+    @NotBlank(message = "Lý do hạ cấp là bắt buộc")
     private String reason;
 }

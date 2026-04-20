@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LogoutRequest {
-    @NotBlank(message = "Refresh token must not be blank")
+    @NotBlank(message = "Refresh token không được để trống")
     private String refreshToken;
 }

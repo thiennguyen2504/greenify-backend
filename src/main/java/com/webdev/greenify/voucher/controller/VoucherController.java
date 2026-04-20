@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
@@ -66,6 +65,15 @@ public class VoucherController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(voucherService.getCurrentUserVoucherWallet(status, source, page, size));
+    }
+
+    @GetMapping("/admin/vouchers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PagedResponse<VoucherTemplateResponse>> getVoucherTemplatesForAdmin(
+            @RequestParam(required = false) VoucherTemplateStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(voucherService.getVoucherTemplatesForAdmin(status, page, size));
     }
 
     @PostMapping("/admin/vouchers")

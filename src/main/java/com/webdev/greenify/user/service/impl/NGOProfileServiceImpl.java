@@ -7,6 +7,7 @@ import com.webdev.greenify.file.entity.NGOProfileImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.station.entity.AddressEntity;
 import com.webdev.greenify.station.mapper.AddressMapper;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.user.dto.NGOProfileFilterRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRejectRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRequestDTO;
@@ -48,16 +49,17 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     private final NGOProfileMapper ngoProfileMapper;
     private final ImageMapper imageMapper;
     private final AddressMapper addressMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     @Override
     @Transactional
     public NGOProfileResponseDTO createNGOProfile(NGOProfileRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         ngoProfileRepository.findByUserId(userId).ifPresent(p -> {
-            throw new AppException("NGO profile already exists", HttpStatus.BAD_REQUEST);
+            throw new AppException("Hồ sơ NGO đã tồn tại", HttpStatus.BAD_REQUEST);
         });
 
         NGOProfileEntity entity = ngoProfileMapper.toEntity(request);
@@ -67,6 +69,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
 
         if (request.getAddress() != null) {
             AddressEntity address = addressMapper.toAddressEntity(request.getAddress());
+            normalizeAddressProvince(address);
             entity.setAddress(address);
         }
 
@@ -97,10 +100,10 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     public NGOProfileResponseDTO updateNGOProfile(NGOProfileRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         NGOProfileEntity entity = ngoProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ NGO"));
 
         if (entity.getStatus() == NGOProfileStatus.VERIFIED) {
-            throw new AppException("Cannot update verified NGO profile", HttpStatus.BAD_REQUEST);
+            throw new AppException("Không thể cập nhật hồ sơ NGO đã được xác minh", HttpStatus.BAD_REQUEST);
         }
 
         ngoProfileMapper.updateEntityFromDto(request, entity);
@@ -109,8 +112,11 @@ public class NGOProfileServiceImpl implements NGOProfileService {
         if (request.getAddress() != null) {
             if (entity.getAddress() != null) {
                 addressMapper.updateAddress(entity.getAddress(), request.getAddress());
+                normalizeAddressProvince(entity.getAddress());
             } else {
-                entity.setAddress(addressMapper.toAddressEntity(request.getAddress()));
+                AddressEntity address = addressMapper.toAddressEntity(request.getAddress());
+                normalizeAddressProvince(address);
+                entity.setAddress(address);
             }
         }
 
@@ -145,14 +151,14 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     @Transactional
     public NGOProfileResponseDTO approveNGOProfile(String id) {
         NGOProfileEntity entity = ngoProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ NGO"));
 
         entity.setStatus(NGOProfileStatus.VERIFIED);
         entity.setRejectedReason(null);
 
         UserEntity user = entity.getUser();
         RoleEntity ngoRole = roleRepository.findByName("NGO")
-                .orElseThrow(() -> new ResourceNotFoundException("NGO role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò NGO"));
         user.getRoles().add(ngoRole);
         userRepository.save(user);
 
@@ -163,7 +169,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     @Transactional
     public NGOProfileResponseDTO rejectNGOProfile(String id, NGOProfileRejectRequestDTO request) {
         NGOProfileEntity entity = ngoProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ NGO"));
 
         entity.setStatus(NGOProfileStatus.REJECTED);
         entity.setRejectedReason(request.getReason());
@@ -177,7 +183,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     public NGOProfileResponseDTO getCurrentNGOProfile() {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         NGOProfileEntity entity = ngoProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ NGO"));
         return ngoProfileMapper.toDto(entity);
     }
 
@@ -215,12 +221,19 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     @Transactional(readOnly = true)
     public NGOProfileResponseDTO getNGOProfileById(String id) {
         NGOProfileEntity entity = ngoProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("NGO profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ NGO"));
 
         if (entity.getStatus() != NGOProfileStatus.VERIFIED) {
-            throw new ResourceNotFoundException("NGO profile not found");
+            throw new ResourceNotFoundException("Không tìm thấy hồ sơ NGO");
         }
 
         return ngoProfileMapper.toDto(entity);
+    }
+
+    private void normalizeAddressProvince(AddressEntity address) {
+        if (address == null) {
+            return;
+        }
+        address.setProvince(provinceNormalizationService.normalizeProvinceName(address.getProvince()));
     }
 }

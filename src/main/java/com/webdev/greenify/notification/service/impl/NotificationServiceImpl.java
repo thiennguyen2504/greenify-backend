@@ -55,10 +55,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAsRead(String id) {
         NotificationEntity notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông báo"));
         
         if (!notification.getUser().getId().equals(getCurrentUserId())) {
-            throw new ResourceNotFoundException("Notification not found");
+            throw new ResourceNotFoundException("Không tìm thấy thông báo");
         }
 
         notification.setRead(true);

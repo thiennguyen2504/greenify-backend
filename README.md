@@ -33,6 +33,12 @@ Edit `.env` and fill in your values:
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - from Google Cloud Console
 - `GOONG_API_KEY` - Goong key for reverse geocoding location snapshot
 - `MAIL_USERNAME` / `MAIL_PASSWORD` - Gmail app password
+- `UNSPLASH_ACCESS_KEY` / `UNSPLASH_SECRET_KEY` - Unsplash API credentials
+
+Optional Unsplash tuning:
+- `UNSPLASH_CONTENT_FILTER` - `high` or `low`
+- `UNSPLASH_ORIENTATION` - `landscape`, `portrait`, or `squarish`
+- `UNSPLASH_MIN_WIDTH`, `UNSPLASH_MIN_HEIGHT`, `UNSPLASH_MIN_LIKES` - quality filter thresholds
 
 ### 3. Start all services
 

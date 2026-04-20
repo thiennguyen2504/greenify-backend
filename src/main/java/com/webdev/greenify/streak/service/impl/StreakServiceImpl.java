@@ -113,17 +113,17 @@ public class StreakServiceImpl implements StreakService {
         applyLazyBreakDetection(streak);
 
         if (streak.getStatus() != StreakStatus.BROKEN) {
-            throw new AppException("Streak is not broken", HttpStatus.BAD_REQUEST);
+            throw new AppException("Chuỗi streak chưa bị ngắt", HttpStatus.BAD_REQUEST);
         }
 
         resetRestoreQuotaIfMonthChanged(streak);
 
         if (safeInt(streak.getRestoreUsedThisMonth()) >= MAX_RESTORE_PER_MONTH) {
-            throw new AppException("Monthly restore quota exceeded", HttpStatus.BAD_REQUEST);
+            throw new AppException("Đã vượt quá số lần khôi phục trong tháng", HttpStatus.BAD_REQUEST);
         }
 
         if (!isWithinRestoreWindow(streak.getLastBreakDate())) {
-            throw new AppException("Restore window has expired", HttpStatus.BAD_REQUEST);
+            throw new AppException("Đã hết thời gian cho phép khôi phục", HttpStatus.BAD_REQUEST);
         }
 
         streak.setRestoreUsedThisMonth(safeInt(streak.getRestoreUsedThisMonth()) + 1);
@@ -207,7 +207,7 @@ public class StreakServiceImpl implements StreakService {
         return streakRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     UserEntity user = userRepository.findById(userId)
-                            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
                     StreakEntity newStreak = StreakEntity.builder()
                             .user(user)

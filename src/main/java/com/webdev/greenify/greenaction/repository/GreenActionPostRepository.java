@@ -23,14 +23,14 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
 
     /**
      * Fetch top posts with JOIN FETCH to prevent N+1 queries.
-     * Only returns VERIFIED posts, ordered by approveCount DESC, then createdAt DESC.
+     * Only returns VERIFIED posts, ordered by createdAt DESC.
      */
     @Query("""
             SELECT p FROM GreenActionPostEntity p
             JOIN FETCH p.user u
             JOIN FETCH p.actionType at
             WHERE p.status = :status
-            ORDER BY p.approveCount DESC, p.createdAt DESC
+            ORDER BY p.createdAt DESC
             """)
     List<GreenActionPostEntity> findTopPostsWithUserAndActionType(
             @Param("status") PostStatus status,

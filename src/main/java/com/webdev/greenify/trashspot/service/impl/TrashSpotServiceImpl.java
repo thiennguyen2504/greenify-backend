@@ -12,6 +12,7 @@ import com.webdev.greenify.greenaction.service.PointService;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.trashspot.dto.request.CreateResolveRequestRequest;
 import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotRequest;
 import com.webdev.greenify.trashspot.dto.request.CreateTrashSpotReportRequest;
@@ -84,6 +85,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private final UserRepository userRepository;
     private final TrashSpotMapper trashSpotMapper;
     private final LocationSnapshotService locationSnapshotService;
+    private final ProvinceNormalizationService provinceNormalizationService;
     private final PointService pointService;
     private final GreenActionTypeRepository greenActionTypeRepository;
 
@@ -96,9 +98,13 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         UserEntity reporter = getCurrentUser();
         Set<WasteTypeEntity> wasteTypes = resolveWasteTypes(request.getWasteTypeIds());
         String normalizedSpotName = normalizeSpotName(request.getName());
-        String resolvedLocation = locationSnapshotService.resolveLocationSnapshot(
+        String normalizedProvince = provinceNormalizationService.normalizeProvinceName(request.getProvince());
+        String resolvedLocation = locationSnapshotService.resolveLocationSnapshotStrict(
                 request.getLatitude(),
                 request.getLongitude());
+        if (resolvedLocation == null || resolvedLocation.isBlank()) {
+            throw new AppException("Không thể xác định địa chỉ cụ thể từ tọa độ", HttpStatus.BAD_GATEWAY);
+        }
 
         OptionalNearbySpots nearbySpots = findNearbySpots(request.getLatitude(), request.getLongitude());
 
@@ -106,6 +112,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
             TrashSpotEntity mergedSpot = getTrashSpotForWrite(nearbySpots.nonResolvedSpotId());
             updateSpotName(mergedSpot, normalizedSpotName);
             mergedSpot.setLocation(resolvedLocation);
+            mergedSpot.setProvince(normalizedProvince);
             appendDescription(mergedSpot, request.getDescription());
             mergedSpot.getWasteTypes().addAll(wasteTypes);
             addSpotImages(mergedSpot, request.getImages(), reporter);
@@ -128,6 +135,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 resolvedSpot.setVerificationCount(0);
                 updateSpotName(resolvedSpot, normalizedSpotName);
                 resolvedSpot.setLocation(resolvedLocation);
+                resolvedSpot.setProvince(normalizedProvince);
 
                 trashSpotVerificationRepository.deleteByTrashSpotId(resolvedSpot.getId());
 
@@ -151,7 +159,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .location(resolvedLocation)
-                .province(request.getProvince())
+                .province(normalizedProvince)
                 .status(TrashSpotStatus.PENDING_VERIFY)
                 .verificationCount(0)
                 .build();
@@ -304,7 +312,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public TrashSpotDetailResponse claimSpot(String id) {
         UserEntity ngo = getCurrentUser();
         TrashSpotEntity spot = trashSpotRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
 
         if (spot.getStatus() == TrashSpotStatus.IN_PROGRESS || spot.getStatus() == TrashSpotStatus.RESOLVED) {
             throw new AppException("Điểm rác đã được nhận hoặc đã xử lý", HttpStatus.CONFLICT);
@@ -429,7 +437,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         UserEntity admin = getCurrentUser();
 
         TrashSpotResolveRequestEntity resolveRequest = trashSpotResolveRequestRepository.findByIdAndIsDeletedFalse(resolveRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resolve request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu xử lý"));
 
         if (resolveRequest.getStatus() != ResolveRequestStatus.PENDING_ADMIN_REVIEW) {
             throw new AppException("Yêu cầu đã được xử lý trước đó", HttpStatus.BAD_REQUEST);
@@ -460,7 +468,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         UserEntity admin = getCurrentUser();
 
         TrashSpotResolveRequestEntity resolveRequest = trashSpotResolveRequestRepository.findByIdAndIsDeletedFalse(resolveRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resolve request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu xử lý"));
 
         if (resolveRequest.getStatus() != ResolveRequestStatus.PENDING_ADMIN_REVIEW) {
             throw new AppException("Yêu cầu đã được xử lý trước đó", HttpStatus.BAD_REQUEST);
@@ -792,13 +800,13 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     private TrashSpotEntity getTrashSpotOrThrow(String id) {
         return trashSpotRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
     }
 
     private TrashSpotEntity getTrashSpotForWrite(String id) {
         return trashSpotRepository.findByIdForUpdate(id)
                 .filter(spot -> !spot.isDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
     }
 
     private List<TrashSpotSummaryResponse> toEnrichedSummaryList(List<TrashSpotEntity> spots) {
@@ -828,7 +836,10 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         if (province == null || province.isBlank()) {
             return null;
         }
-        String normalizedProvince = province.trim().toLowerCase();
+        String normalizedProvince = provinceNormalizationService
+                .normalizeProvinceName(province)
+                .trim()
+                .toLowerCase();
         return (root, query, cb) -> cb.equal(cb.lower(root.get("province")), normalizedProvince);
     }
 
@@ -875,7 +886,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private UserEntity getCurrentUser() {
         String currentUserId = getCurrentUserId();
         return userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
     }
 
     private String getCurrentUserId() {

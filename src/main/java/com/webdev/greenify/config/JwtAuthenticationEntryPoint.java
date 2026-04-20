@@ -21,7 +21,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.getWriter().write("""
                     {
                       "error": "UNAUTHORIZED",
-                      "message": "Invalid or blacklisted token"
+                      "message": "Token không hợp lệ hoặc đã bị thu hồi"
                     }
                 """);
     }

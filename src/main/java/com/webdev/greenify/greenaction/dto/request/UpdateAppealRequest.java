@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class UpdateAppealRequest {
 
-    @NotBlank(message = "Appeal reason is required")
+    @NotBlank(message = "Lý do khiếu nại là bắt buộc")
     private String appealReason;
 
     private List<String> evidenceUrls;

@@ -12,9 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthenticationRequest {
 
-    @NotBlank(message = "Credential is required")
+    @NotBlank(message = "Tài khoản đăng nhập là bắt buộc")
     private String identifier;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "Mật khẩu là bắt buộc")
     private String password;
 }

@@ -55,7 +55,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             }
 
             if (userEntity.getStatus() != AccountStatus.ACTIVE) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Account is not active");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản chưa được kích hoạt");
                 return;
             }
 
@@ -71,10 +71,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 response.setContentType("application/json");
                 new ObjectMapper().writeValue(response.getWriter(), authResponse);
             } catch (Exception e) {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error generating token");
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi tạo token");
             }
         } else {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "UserEntity not found in database");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Không tìm thấy người dùng trong hệ thống");
         }
     }
 
