@@ -19,7 +19,7 @@ public class EventRegistrationResponseDTO {
     private String eventTitle;
     private String userId;
     private String username;
-    private RegistrationStatus status;
+    private RegistrationStatus registrationStatus;
     private LocalDateTime createdAt;
     private String note;
     private String registrationCode;

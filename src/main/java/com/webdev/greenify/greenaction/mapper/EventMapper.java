@@ -26,6 +26,7 @@ public interface EventMapper {
     @Mapping(target = "organizer", source = "organizer.ngoProfile")
     @Mapping(target = "thumbnail", source = "images", qualifiedByName = "mapThumbnailField")
     @Mapping(target = "images", source = "images", qualifiedByName = "mapDetailImages")
+    @Mapping(target = "registrationStatus", ignore = true)
     EventResponseDTO toResponse(EventEntity entity);
 
     @Mapping(target = "organizer", ignore = true)

@@ -10,6 +10,7 @@ import com.webdev.greenify.station.enumeration.StationStatus;
 import com.webdev.greenify.station.mapper.RecyclingStationMapper;
 import com.webdev.greenify.station.repository.RecyclingStationRepository;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.station.service.RecyclingStationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,11 +25,13 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
     private final RecyclingStationRepository recyclingStationRepository;
     private final WasteTypeRepository wasteTypeRepository;
     private final RecyclingStationMapper recyclingStationMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     @Override
     @Transactional
     public RecyclingStationResponseDTO createStation(RecyclingStationRequestDTO request) {
         RecyclingStationEntity stationEntity = recyclingStationMapper.toEntity(request);
+        normalizeAddressProvince(stationEntity);
 
         if (request.getWasteTypeIds() != null && !request.getWasteTypeIds().isEmpty()) {
             List<WasteTypeEntity> wasteTypes = wasteTypeRepository.findAllById(request.getWasteTypeIds());
@@ -66,6 +69,7 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
 
         recyclingStationMapper.updateEntity(stationEntity, request);
+        normalizeAddressProvince(stationEntity);
 
         if (request.getWasteTypeIds() != null) {
             List<WasteTypeEntity> newWasteTypes = wasteTypeRepository.findAllById(request.getWasteTypeIds());
@@ -105,5 +109,14 @@ public class RecyclingStationServiceImpl implements RecyclingStationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Recycling station not found with id: " + id));
         stationEntity.setDeleted(true);
         recyclingStationRepository.save(stationEntity);
+    }
+
+    private void normalizeAddressProvince(RecyclingStationEntity stationEntity) {
+        if (stationEntity == null || stationEntity.getAddress() == null) {
+            return;
+        }
+
+        stationEntity.getAddress().setProvince(
+                provinceNormalizationService.normalizeProvinceName(stationEntity.getAddress().getProvince()));
     }
 }

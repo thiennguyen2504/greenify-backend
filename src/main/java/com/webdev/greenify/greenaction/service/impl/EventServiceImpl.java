@@ -28,6 +28,7 @@ import com.webdev.greenify.greenaction.specification.EventRegistrationSpecificat
 import com.webdev.greenify.greenaction.specification.EventSpecification;
 import com.webdev.greenify.notification.enumeration.NotificationType;
 import com.webdev.greenify.notification.event.NotificationEvent;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 @Service
 @RequiredArgsConstructor
@@ -62,6 +65,7 @@ public class EventServiceImpl implements EventService {
     private final EventRegistrationRepository eventRegistrationRepository;
     private final EventRegistrationMapper eventRegistrationMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     private static final Set<GreenEventStatus> PUBLIC_STATUSES = EnumSet.of(
             GreenEventStatus.PUBLISHED,
@@ -111,7 +115,7 @@ public class EventServiceImpl implements EventService {
             ));
         }
 
-        return eventMapper.toResponse(event);
+        return enrichEventResponseWithRegistrationStatus(eventMapper.toResponse(event), event.getId(), currentUserId);
     }
 
     @Override
@@ -159,8 +163,11 @@ public class EventServiceImpl implements EventService {
         if (isPublicUser() && SENSITIVE_STATUSES.contains(event.getStatus())) {
             throw new ResourceNotFoundException("Event not found");
         }
-        
-        return eventMapper.toResponse(event);
+
+        return enrichEventResponseWithRegistrationStatus(
+            eventMapper.toResponse(event),
+            event.getId(),
+            tryGetCurrentUserId());
     }
 
     @Override
@@ -190,7 +197,10 @@ public class EventServiceImpl implements EventService {
         event = eventRepository.save(event);
         log.info("Event updated with ID: {}", event.getId());
 
-        return eventMapper.toResponse(event);
+        return enrichEventResponseWithRegistrationStatus(
+            eventMapper.toResponse(event),
+            event.getId(),
+            tryGetCurrentUserId());
     }
 
     @Override
@@ -299,9 +309,7 @@ public class EventServiceImpl implements EventService {
     }
 
     private PagedResponse<EventResponseDTO> toPagedResponse(Page<EventEntity> eventPage) {
-        List<EventResponseDTO> content = eventPage.getContent().stream()
-                .map(eventMapper::toResponse)
-                .toList();
+        List<EventResponseDTO> content = mapEventResponsesWithRegistrationStatus(eventPage.getContent());
 
         return PagedResponse.of(
                 content,
@@ -324,6 +332,8 @@ public class EventServiceImpl implements EventService {
     private void prepareEventRelationships(EventEntity event, EventRequestDTO request) {
         if (event.getAddress() != null) {
             event.getAddress().setEvent(event);
+            event.getAddress().setProvince(
+                    provinceNormalizationService.normalizeProvinceName(event.getAddress().getProvince()));
         }
 
         List<EventImageEntity> eventImages = event.getImages();
@@ -377,18 +387,23 @@ public class EventServiceImpl implements EventService {
     public PagedResponse<EventResponseDTO> getParticipatedEvents(
             String userId,
             String title,
-            RegistrationStatus status,
+            RegistrationStatus registrationStatus,
             String address,
             int page,
             int size) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Specification<EventRegistrationEntity> spec = EventRegistrationSpecification.buildSpecification(userId, title, status, address);
+        Specification<EventRegistrationEntity> spec = EventRegistrationSpecification
+                .buildSpecification(userId, title, registrationStatus, address);
         
         Page<EventRegistrationEntity> registrationPage = eventRegistrationRepository.findAll(spec, pageable);
         
         List<EventResponseDTO> content = registrationPage.getContent().stream()
-                .map(registration -> eventMapper.toResponse(registration.getEvent()))
+                .map(registration -> {
+                    EventResponseDTO response = eventMapper.toResponse(registration.getEvent());
+                    response.setRegistrationStatus(registration.getRegistrationStatus());
+                    return response;
+                })
                 .toList();
 
         return PagedResponse.of(
@@ -404,9 +419,10 @@ public class EventServiceImpl implements EventService {
     public EventPredictionResponseDTO predictEventFeasibility(EventPredictionRequestDTO request) {
         int startHour = request.getStartTime().getHour();
         int endHour = request.getEndTime().getHour();
+        String normalizedProvince = provinceNormalizationService.normalizeProvinceName(request.getProvince());
         Double averageParticipants = eventRepository.getAverageParticipantsByCriteria(
                 request.getEventType(),
-                request.getProvince(),
+            normalizedProvince,
                 startHour,
                 endHour);
 
@@ -448,5 +464,74 @@ public class EventServiceImpl implements EventService {
 
     private String getCurrentUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    private List<EventResponseDTO> mapEventResponsesWithRegistrationStatus(List<EventEntity> events) {
+        List<EventResponseDTO> responses = events.stream()
+                .map(eventMapper::toResponse)
+                .toList();
+
+        String currentUserId = tryGetCurrentUserId();
+        if (currentUserId == null || responses.isEmpty()) {
+            return responses;
+        }
+
+        List<String> eventIds = responses.stream()
+                .map(EventResponseDTO::getId)
+                .toList();
+        Map<String, RegistrationStatus> registrationStatusByEventId =
+                getRegistrationStatusMap(currentUserId, eventIds);
+
+        responses.forEach(response ->
+                response.setRegistrationStatus(registrationStatusByEventId.get(response.getId())));
+        return responses;
+    }
+
+    private Map<String, RegistrationStatus> getRegistrationStatusMap(String userId, Collection<String> eventIds) {
+        if (userId == null || eventIds == null || eventIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, RegistrationStatus> registrationStatusByEventId = new HashMap<>();
+        for (EventRegistrationEntity registration : eventRegistrationRepository.findByUserIdAndEventIdIn(userId, eventIds)) {
+            if (registration.getEvent() == null || registration.getEvent().getId() == null) {
+                continue;
+            }
+            registrationStatusByEventId.putIfAbsent(
+                    registration.getEvent().getId(),
+                    registration.getRegistrationStatus());
+        }
+
+        return registrationStatusByEventId;
+    }
+
+    private EventResponseDTO enrichEventResponseWithRegistrationStatus(
+            EventResponseDTO response,
+            String eventId,
+            String userId) {
+        if (response == null || eventId == null || userId == null) {
+            return response;
+        }
+
+        RegistrationStatus registrationStatus = eventRegistrationRepository
+                .findByEventIdAndUserIdAndIsDeletedFalse(eventId, userId)
+                .map(EventRegistrationEntity::getRegistrationStatus)
+                .orElse(null);
+        response.setRegistrationStatus(registrationStatus);
+        return response;
+    }
+
+    private String tryGetCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        String principalName = authentication.getName();
+        if (principalName == null || principalName.isBlank() || "anonymousUser".equals(principalName)) {
+            return null;
+        }
+
+        return principalName;
     }
 }

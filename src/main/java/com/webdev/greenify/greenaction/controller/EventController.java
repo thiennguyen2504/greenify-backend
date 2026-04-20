@@ -145,11 +145,21 @@ public class EventController {
     public ResponseEntity<PagedResponse<EventResponseDTO>> getParticipatedEvents(
             @PathVariable String userId,
             @RequestParam(required = false) String title,
-            @RequestParam(required = false) RegistrationStatus status,
+            @RequestParam(name = "registrationStatus", required = false) RegistrationStatus registrationStatus,
+            @RequestParam(name = "status", required = false) RegistrationStatus legacyStatus,
             @RequestParam(required = false) String address,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(eventService.getParticipatedEvents(userId, title, status, address, page, size));
+        RegistrationStatus resolvedRegistrationStatus = registrationStatus != null
+            ? registrationStatus
+            : legacyStatus;
+        return ResponseEntity.ok(eventService.getParticipatedEvents(
+            userId,
+            title,
+            resolvedRegistrationStatus,
+            address,
+            page,
+            size));
     }
 
     @PostMapping("/predict")

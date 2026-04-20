@@ -40,8 +40,15 @@ public interface UserRepository extends JpaRepository<UserEntity, String>, JpaSp
     Optional<UserEntity> findByIdWithDetails(@Param("id") String id);
 
     @Query("""
-        SELECT u
+        SELECT DISTINCT u
         FROM UserEntity u
+        LEFT JOIN FETCH u.roles r
+        LEFT JOIN FETCH u.userProfile up
+        LEFT JOIN FETCH up.avatar
+        LEFT JOIN FETCH u.ngoProfile np
+        LEFT JOIN FETCH np.address
+        LEFT JOIN FETCH np.avatar
+        LEFT JOIN FETCH np.verificationDocs
         WHERE u.username = :identifier OR u.email = :identifier OR u.phoneNumber = :identifier
         """)
     Optional<UserEntity> findByIdentifier(@Param("identifier") String identifier);

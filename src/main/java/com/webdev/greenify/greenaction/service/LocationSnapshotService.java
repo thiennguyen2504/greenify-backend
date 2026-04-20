@@ -34,11 +34,19 @@ public class LocationSnapshotService {
     }
 
     public String resolveLocationSnapshot(BigDecimal latitude, BigDecimal longitude) {
+        return resolveLocationSnapshot(latitude, longitude, true);
+    }
+
+    public String resolveLocationSnapshotStrict(BigDecimal latitude, BigDecimal longitude) {
+        return resolveLocationSnapshot(latitude, longitude, false);
+    }
+
+    private String resolveLocationSnapshot(BigDecimal latitude, BigDecimal longitude, boolean allowCoordinateFallback) {
         if (latitude == null || longitude == null) {
             return null;
         }
 
-        String fallbackLocation = formatCoordinates(latitude, longitude);
+        String fallbackLocation = allowCoordinateFallback ? formatCoordinates(latitude, longitude) : null;
         if (goongProperties.getApiKey() == null || goongProperties.getApiKey().isBlank()) {
             log.warn("GOONG_API_KEY is missing. Use fallback coordinates for location snapshot.");
             return fallbackLocation;

@@ -42,7 +42,12 @@ public interface GreenActionMapper {
         if (entity.getUser() == null) {
             return null;
         }
-        // Prefer username, fallback to email
+        // Prefer displayName from user profile, fallback to username, then email
+        if (entity.getUser().getUserProfile() != null 
+            && entity.getUser().getUserProfile().getDisplayName() != null 
+            && !entity.getUser().getUserProfile().getDisplayName().isBlank()) {
+            return entity.getUser().getUserProfile().getDisplayName();
+        }
         String username = entity.getUser().getUsername();
         if (username != null && !username.isBlank()) {
             return username;

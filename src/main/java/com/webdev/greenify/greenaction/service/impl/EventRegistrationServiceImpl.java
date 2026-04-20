@@ -69,7 +69,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             }
         }
 
-        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndStatusNot(
+        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndRegistrationStatusNot(
                 event.getId(), currentUserId, RegistrationStatus.CANCELLED);
         if (alreadyRegistered) {
             throw new AppException("You are already registered or waitlisted for this event", HttpStatus.CONFLICT);
@@ -81,7 +81,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         RegistrationStatus targetStatus = RegistrationStatus.REGISTERED;
         long currentParticipants = 0;
         if (event.getMaxParticipants() != null) {
-            currentParticipants = registrationRepository.countByEventIdAndStatus(event.getId(), RegistrationStatus.REGISTERED);
+            currentParticipants = registrationRepository.countByEventIdAndRegistrationStatus(event.getId(), RegistrationStatus.REGISTERED);
             if (currentParticipants >= event.getMaxParticipants()) {
                 throw new AppException("Maximum number of participants reached", HttpStatus.BAD_REQUEST);
             }
@@ -93,7 +93,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         EventRegistrationEntity registration = EventRegistrationEntity.builder()
                 .event(event)
                 .user(user)
-                .status(targetStatus)
+            .registrationStatus(targetStatus)
                 .note(request.getNote())
                 .registrationCode(signedRegistrationCode)
                 .build();
@@ -117,7 +117,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             throw new AppException("Event is not open for registration", HttpStatus.BAD_REQUEST);
         }
 
-        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndStatusNot(
+        boolean alreadyRegistered = registrationRepository.existsByEventIdAndUserIdAndRegistrationStatusNot(
                 event.getId(), currentUserId, RegistrationStatus.CANCELLED);
         if (alreadyRegistered) {
             throw new AppException("You are already registered or waitlisted for this event", HttpStatus.CONFLICT);
@@ -129,7 +129,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         EventRegistrationEntity registration = EventRegistrationEntity.builder()
                 .event(event)
                 .user(user)
-                .status(RegistrationStatus.WAITLISTED)
+            .registrationStatus(RegistrationStatus.WAITLISTED)
                 .note(request.getNote())
                 .build();
 
@@ -143,14 +143,14 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Transactional
     public void checkIn(String registrationCode) {
         decodeRegistrationCode(registrationCode); // Verify token
-        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
 
         if (!isEventHappen(registration.getEvent())) {
             throw new AppException("Can only check in during the event time", HttpStatus.BAD_REQUEST);
         }
 
-        if (registration.getStatus() != RegistrationStatus.REGISTERED) {
+        if (registration.getRegistrationStatus() != RegistrationStatus.REGISTERED) {
             throw new AppException("Only registered participants can check in", HttpStatus.BAD_REQUEST);
         }
 
@@ -167,7 +167,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Transactional
     public void checkOut(String registrationCode) {
         decodeRegistrationCode(registrationCode); // Verify token
-        EventRegistrationEntity registration = registrationRepository.findByRegistrationCode(registrationCode)
+        EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found with this code"));
 
         if (registration.getCheckInTime() == null) {
@@ -199,10 +199,10 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     public void cancel(String id) {
         String currentUserId = getCurrentUserId();
         
-        EventRegistrationEntity registration = registrationRepository.findByIdAndUserId(id, currentUserId)
+        EventRegistrationEntity registration = registrationRepository.findByIdAndUserIdAndIsDeletedFalse(id, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found or access denied"));
 
-        if (registration.getStatus() == RegistrationStatus.CANCELLED) {
+        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
             throw new AppException("Registration is already cancelled", HttpStatus.BAD_REQUEST);
         }
 
@@ -215,8 +215,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             }
         }
 
-        RegistrationStatus oldStatus = registration.getStatus();
-        registration.setStatus(RegistrationStatus.CANCELLED);
+        RegistrationStatus oldStatus = registration.getRegistrationStatus();
+        registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
         registrationRepository.save(registration);
         event.setParticipantCount(event.getParticipantCount() - 1);
         log.info("User {} cancelled registration for event {}", currentUserId, event.getId());
@@ -230,7 +230,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         List<EventRegistrationEntity> waitlist = registrationRepository.findTopWaitlistedByEventId(event.getId());
         if (!waitlist.isEmpty()) {
             EventRegistrationEntity firstOnWaitlist = waitlist.getFirst();
-            firstOnWaitlist.setStatus(RegistrationStatus.REGISTERED);
+            firstOnWaitlist.setRegistrationStatus(RegistrationStatus.REGISTERED);
             
             // Generate registration code for the promoted user
             String code = event.getId() + "-" + firstOnWaitlist.getUser().getId() + "-" + System.currentTimeMillis();
@@ -245,7 +245,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
     @Override
     @Transactional(readOnly = true)
     public String getRegistrationCode(String eventId, String userId) {
-        EventRegistrationEntity registration = registrationRepository.findByEventIdAndUserId(eventId, userId)
+        EventRegistrationEntity registration = registrationRepository.findByEventIdAndUserIdAndIsDeletedFalse(eventId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found"));
         return registration.getRegistrationCode();
     }
