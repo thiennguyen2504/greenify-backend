@@ -146,9 +146,9 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký với mã này"));
 
-        if (!isEventHappen(registration.getEvent())) {
-            throw new AppException("Chỉ có thể check-in trong thời gian diễn ra sự kiện", HttpStatus.BAD_REQUEST);
-        }
+//        if (!isEventHappen(registration.getEvent())) {
+//            throw new AppException("Chỉ có thể check-in trong thời gian diễn ra sự kiện", HttpStatus.BAD_REQUEST);
+//        }
 
         if (registration.getRegistrationStatus() != RegistrationStatus.REGISTERED) {
             throw new AppException("Chỉ người đã đăng ký mới có thể check-in", HttpStatus.BAD_REQUEST);
