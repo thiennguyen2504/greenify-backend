@@ -44,6 +44,14 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
     @Query("""
             SELECT COUNT(e)
             FROM EventEntity e
+            WHERE e.status = 'COMPLETED'
+            AND e.isDeleted = false
+            """)
+    long countCompletedEvents();
+
+    @Query("""
+            SELECT COUNT(e)
+            FROM EventEntity e
             WHERE e.organizer.id = :organizerId
             AND e.createdAt BETWEEN :start AND :end
             AND e.isDeleted = false
