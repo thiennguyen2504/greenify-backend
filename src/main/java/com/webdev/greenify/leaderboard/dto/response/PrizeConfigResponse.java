@@ -2,6 +2,7 @@ package com.webdev.greenify.leaderboard.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.webdev.greenify.leaderboard.enumeration.PrizeConfigStatus;
+import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,8 +22,8 @@ public class PrizeConfigResponse {
     private LocalDate weekStartDate;
     private LocalDateTime lockAt;
     private PrizeConfigStatus status;
-    private String nationalVoucherTemplateId;
-    private String provincialVoucherTemplateId;
+    private VoucherTemplateResponse nationalVoucher;
+    private VoucherTemplateResponse provincialVoucher;
     private Integer nationalReservedCount;
     private Integer provincialReservedCount;
     private LocalDateTime distributedAt;
