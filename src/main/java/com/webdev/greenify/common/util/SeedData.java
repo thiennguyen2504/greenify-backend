@@ -2,6 +2,7 @@ package com.webdev.greenify.common.util;
 
 import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.garden.entity.SeedEntity;
+import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
 import com.webdev.greenify.greenaction.repository.EventRepository;
@@ -10,14 +11,11 @@ import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
-import com.webdev.greenify.garden.enumeration.PlantCycleType;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.enumeration.AccountStatus;
+import com.webdev.greenify.user.repository.NGOProfileRepository;
 import com.webdev.greenify.user.repository.RoleRepository;
 import com.webdev.greenify.user.repository.UserRepository;
-import com.webdev.greenify.user.repository.NGOProfileRepository;
-import com.webdev.greenify.user.entity.NGOProfileEntity;
-import com.webdev.greenify.user.enumeration.NGOProfileStatus;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
 import com.webdev.greenify.voucher.enumeration.VoucherTemplateStatus;
 import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
@@ -72,6 +70,9 @@ public class SeedData implements CommandLineRunner {
         private final UnsplashImageService unsplashImageService;
         private final GreenActionPostRepository greenActionPostRepository;
         private final EventRepository eventRepository;
+    private final NGOSeed ngoSeed;
+    private final EventSeed eventSeed;
+    private final RegistrationSeed registrationSeed;
 
     @Override
     @Transactional
@@ -214,7 +215,15 @@ public class SeedData implements CommandLineRunner {
             ngoProfileRepository.save(profile);
             log.info("Seeded NGO profile for user: {}", ngoUser.getEmail());
         }
+        ngoSeed.seed();
+
+        // Seed Events
+        eventSeed.seed();
+
+        // Seed Registrations
+        registrationSeed.seed();
     }
+
 
         private void normalizeSoftDeleteFlags() {
                 try {

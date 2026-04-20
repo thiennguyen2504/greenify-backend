@@ -89,9 +89,11 @@ public class EventEntity extends BaseEntity {
     private GreenEventStatus status;
 
     @Column
+    @Builder.Default
     private Integer rejectedCount = 0;
-
+    
     @Column
+    @Builder.Default
     private Long participantCount = 0L;
 
     @Column(columnDefinition = "TEXT")
@@ -111,5 +113,6 @@ public class EventEntity extends BaseEntity {
     private AddressEntity address;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
     private List<EventRegistrationEntity> registrations = new ArrayList<>();
 }

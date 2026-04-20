@@ -28,279 +28,112 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class EventSeed {
 
-    private static final long SEED_THRESHOLD = 3;
-
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final UnsplashImageService unsplashImageService;
 
-    private final AtomicInteger poolCursor = new AtomicInteger(0);
+    private static final List<ImageData> IMAGE_POOL = List.of(
+            new ImageData("cdn.greenify.io.vn", "images/1776610243462_96036_trongcay.jpeg", "https://cdn.greenify.io.vn/images/1776610243462_96036_trongcay.jpeg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610244816_272587_vv.jpg", "https://cdn.greenify.io.vn/images/1776610244816_272587_vv.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610245634_599323.jpg", "https://cdn.greenify.io.vn/images/1776610245634_599323.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610246778_environmental-volunteering_orig.jpg", "https://cdn.greenify.io.vn/images/1776610246778_environmental-volunteering_orig.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610247197_GettyImages-1250317616.png", "https://cdn.greenify.io.vn/images/1776610247197_GettyImages-1250317616.png"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610247495_group-cleaning-workers-collecting-trash-outdoors.jpg", "https://cdn.greenify.io.vn/images/1776610247495_group-cleaning-workers-collecting-trash-outdoors.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610269239_images (1).jpeg", "https://cdn.greenify.io.vn/images/1776610269239_images (1).jpeg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610269461_images (2).jpeg", "https://cdn.greenify.io.vn/images/1776610269461_images (2).jpeg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610269678_images.jpeg", "https://cdn.greenify.io.vn/images/1776610269678_images.jpeg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610269897_Leo Man planting.webp", "https://cdn.greenify.io.vn/images/1776610269897_Leo Man planting.webp"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610270202_recycling.jpg", "https://cdn.greenify.io.vn/images/1776610270202_recycling.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610270893_srodowisko-i-radosna-koncepcja-wolontariuszy-768x512.jpg", "https://cdn.greenify.io.vn/images/1776610270893_srodowisko-i-radosna-koncepcja-wolontariuszy-768x512.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610271194_tham_20231215162015.jpg", "https://cdn.greenify.io.vn/images/1776610271194_tham_20231215162015.jpg"),
+            new ImageData("cdn.greenify.io.vn", "images/1776610271900_tin-forest-2.jpg", "https://cdn.greenify.io.vn/images/1776610271900_tin-forest-2.jpg")
+    );
 
-    @Transactional
     public void seed() {
-        if (eventRepository.count() > SEED_THRESHOLD) {
-            log.info("Skip EventSeed because event count is already greater than {}", SEED_THRESHOLD);
+        if (eventRepository.count() > 5) {
             return;
         }
 
-        try {
-            UserEntity organizer = findOrganizerUser();
-            if (organizer == null) {
-                log.warn("Skip EventSeed because no organizer user found");
-                return;
-            }
+        List<UserEntity> ngos = userRepository.findAll().stream()
+                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals("NGO")))
+                .toList();
 
-            List<ImageData> imagePool = fetchImagePool(12);
-            List<EventPlan> plans = buildEventPlans();
-
-            for (EventPlan plan : plans) {
-                try {
-                    EventEntity event = buildEventEntity(plan, organizer, imagePool);
-                    eventRepository.save(event);
-                    log.info("Seeded event: {} ({})", event.getTitle(), event.getId());
-                } catch (Exception ex) {
-                    log.warn("Skip seeding event {} due to error: {}", plan.title(), ex.getMessage());
-                }
-            }
-
-            log.info("EventSeed completed with {} planned events", plans.size());
-        } catch (Exception ex) {
-            log.warn("EventSeed failed: {}", ex.getMessage(), ex);
-        }
-    }
-
-    private EventEntity buildEventEntity(EventPlan plan, UserEntity organizer, List<ImageData> imagePool) {
-        LocalDateTime startTime = LocalDateTime.now().plusDays(plan.startInDays()).withHour(7).withMinute(30).withSecond(0).withNano(0);
-        LocalDateTime endTime = startTime.plusHours(4);
-
-        AddressEntity address = AddressEntity.builder()
-                .province(plan.province())
-                .district(plan.district())
-                .ward(plan.ward())
-                .addressDetail(plan.addressDetail())
-            .latitude(BigDecimal.valueOf(plan.latitude()))
-            .longitude(BigDecimal.valueOf(plan.longitude()))
-                .build();
-
-        EventEntity event = EventEntity.builder()
-                .title(plan.title())
-                .description(plan.description())
-                .eventType(plan.eventType())
-                .startTime(startTime)
-                .endTime(endTime)
-                .maxParticipants(plan.maxParticipants())
-                .minParticipants(plan.minParticipants())
-                .cancelDeadlineHoursBefore(24L)
-                .signUpDeadlineHoursBefore(12L)
-                .reminderHoursBefore(2L)
-                .thankYouHoursAfter(2L)
-                .rewardPoints(plan.rewardPoints())
-                .status(GreenEventStatus.PUBLISHED)
-                .rejectedCount(0)
-                .participantCount(0L)
-                .participationConditions("Mang theo bình nước cá nhân và tuân thủ hướng dẫn an toàn môi trường.")
-                .organizer(organizer)
-                .address(address)
-                .build();
-
-        String keyword = UnsplashKeywordMapper.getEventKeyword(plan.eventType().name());
-        String thumbnailUrl = resolveThumbnailUrl(keyword, imagePool);
-        String detailUrl = resolveDetailUrl(keyword, imagePool);
-
-        EventImageEntity thumbnailImage = EventImageEntity.builder()
-                .event(event)
-                .bucketName("unsplash-cdn")
-                .objectKey("unsplash/event/thumbnail/" + UUID.randomUUID())
-                .imageUrl(thumbnailUrl)
-                .status(ImageStatus.ACTIVE)
-                .imageType(EventImageType.THUMBNAIL)
-                .build();
-
-        EventImageEntity detailImage = EventImageEntity.builder()
-                .event(event)
-                .bucketName("unsplash-cdn")
-                .objectKey("unsplash/event/detail/" + UUID.randomUUID())
-                .imageUrl(detailUrl)
-                .status(ImageStatus.ACTIVE)
-                .imageType(EventImageType.DETAIL)
-                .build();
-
-        event.getImages().add(thumbnailImage);
-        event.getImages().add(detailImage);
-
-        return event;
-    }
-
-    private String resolveThumbnailUrl(String keyword, List<ImageData> imagePool) {
-        if (unsplashImageService.isEnabled()) {
-            return unsplashImageService.getImageUrl(keyword + ",outdoor");
-        }
-        return nextImageFromPool(imagePool).imageUrl();
-    }
-
-    private String resolveDetailUrl(String keyword, List<ImageData> imagePool) {
-        if (unsplashImageService.isEnabled()) {
-            return unsplashImageService.getImageUrl(keyword + ",nature,people");
-        }
-        return nextImageFromPool(imagePool).imageUrl();
-    }
-
-    private ImageData nextImageFromPool(List<ImageData> imagePool) {
-        if (imagePool == null || imagePool.isEmpty()) {
-            return new ImageData(
-                    "seed-fallback",
-                    "fallback/event/" + UUID.randomUUID(),
-                    "https://picsum.photos/seed/event-fallback/1200/800");
+        if (ngos.isEmpty()) {
+            log.warn("No NGOs found to seed events.");
+            return;
         }
 
-        int index = Math.floorMod(poolCursor.getAndIncrement(), imagePool.size());
-        return imagePool.get(index);
-    }
-
-    private List<ImageData> fetchImagePool(int count) {
-        if (unsplashImageService.isEnabled()) {
-            try {
-                List<String> urls = unsplashImageService.getMultipleImageUrls("volunteer,environment,vietnam", count);
-                List<ImageData> dynamicPool = new ArrayList<>();
-                for (String url : urls) {
-                    dynamicPool.add(new ImageData(
-                            "unsplash-cdn",
-                            "unsplash/event/pool/" + UUID.randomUUID(),
-                            url));
-                }
-
-                if (!dynamicPool.isEmpty()) {
-                    return dynamicPool;
-                }
-            } catch (Exception ex) {
-                log.warn("Could not fetch dynamic event image pool: {}", ex.getMessage());
-            }
-        }
-
-        return fallbackImagePool();
-    }
-
-    private List<ImageData> fallbackImagePool() {
-        return List.of(
-                new ImageData("seed-fallback", "fallback/event/1", "https://picsum.photos/seed/event-cleanup/1200/800"),
-                new ImageData("seed-fallback", "fallback/event/2", "https://picsum.photos/seed/event-tree/1200/800"),
-                new ImageData("seed-fallback", "fallback/event/3", "https://picsum.photos/seed/event-recycle/1200/800"),
-                new ImageData("seed-fallback", "fallback/event/4", "https://picsum.photos/seed/event-education/1200/800"),
-                new ImageData("seed-fallback", "fallback/event/5", "https://picsum.photos/seed/event-community/1200/800")
+        List<EventData> eventTemplates = List.of(
+                new EventData("Dọn dẹp bãi biển Vũng Tàu", "Chung tay làm sạch bờ biển, thu gom rác thải nhựa và bảo vệ hệ sinh thái biển.", GreenEventType.CLEANUP, "Bà Rịa - Vũng Tàu", "TP. Vũng Tàu", "Phường 1", "Bãi Trước", 10.346, 107.072),
+                new EventData("Trồng cây gây rừng tại Cần Giờ", "Hoạt động trồng rừng ngập mặn nhằm ứng phó với biến đổi khí hậu.", GreenEventType.PLANTING, "TP. Hồ Chí Minh", "Huyện Cần Giờ", "Xã Thạnh An", "Rừng ngập mặn Cần Giờ", 10.413, 106.953),
+                new EventData("Ngày hội tái chế tại Hà Nội", "Học cách phân loại rác và đổi rác lấy quà tặng xanh.", GreenEventType.RECYCLING, "Hà Nội", "Quận Hoàn Kiếm", "Phường Hàng Đào", "Công viên Thống Nhất", 21.012, 105.847),
+                new EventData("Giáo dục môi trường cho trẻ em", "Buổi nói chuyện về tầm quan trọng của việc bảo vệ thiên nhiên.", GreenEventType.EDUCATION, "Đà Nẵng", "Quận Hải Châu", "Phường Hòa Cường Bắc", "Cung thiếu nhi Đà Nẵng", 16.038, 108.222),
+                new EventData("Làm sạch kênh rạch Sài Gòn", "Thu gom rác nổi trên các tuyến kênh của thành phố.", GreenEventType.CLEANUP, "TP. Hồ Chí Minh", "Quận 1", "Phường Đa Kao", "Kênh Nhiêu Lộc - Thị Nghè", 10.793, 106.697),
+                new EventData("Trồng vườn rau cộng đồng", "Xây dựng vườn rau xanh cho các hộ gia đình có hoàn cảnh khó khăn.", GreenEventType.PLANTING, "Lâm Đồng", "TP. Đà Lạt", "Phường 10", "Dốc số 7", 11.946, 108.458),
+                new EventData("Chiến dịch Greenify Your Home", "Hướng dẫn mọi người trang trí nhà bằng các vật liệu tái chế.", GreenEventType.RECYCLING, "Hải Phòng", "Quận Ngô Quyền", "Phường Máy Chai", "Nhà văn hóa thanh niên", 20.865, 106.683),
+                new EventData("Workshop phân loại rác tại nguồn", "Kỹ năng phân loại rác hữu cơ và vô cơ.", GreenEventType.EDUCATION, "Cần Thơ", "Quận Ninh Kiều", "Phường Xuân Khánh", "Đại học Cần Thơ", 10.029, 105.768),
+                new EventData("Làm sạch Thác Pongour", "Hoạt động tình nguyện dọn rác tại một trong những thác đẹp nhất Lâm Đồng.", GreenEventType.CLEANUP, "Lâm Đồng", "Huyện Đức Trọng", "Xã Tân Thành", "Thác Pongour", 11.691, 108.271),
+                new EventData("Ngày hội xanh cùng sinh viên", "Chuỗi hoạt động bảo vệ môi trường dành cho giới trẻ.", GreenEventType.OTHER, "TP. Hồ Chí Minh", "TP. Thủ Đức", "Phường Linh Trung", "Làng Đại học", 10.871, 106.792)
         );
-    }
 
-    private List<EventPlan> buildEventPlans() {
-        return List.of(
-                new EventPlan(
-                        "Dọn rác bãi biển Vũng Tàu",
-                        "Chiến dịch thu gom rác nhựa tại bãi biển với sự tham gia của cộng đồng địa phương.",
-                        GreenEventType.CLEANUP,
-                        "Bà Rịa - Vũng Tàu",
-                        "Vũng Tàu",
-                        "Phường 2",
-                        "Bãi Sau, đường Thùy Vân",
-                        5,
-                        30L,
-                        150L,
-                        10.35,
-                        107.08,
-                        120.0),
-                new EventPlan(
-                        "Trồng cây phủ xanh công viên Gia Định",
-                        "Hoạt động trồng cây xanh và chăm sóc mảng xanh đô thị cùng nhóm tình nguyện.",
-                        GreenEventType.PLANTING,
-                        "Thành phố Hồ Chí Minh",
-                        "Phú Nhuận",
-                        "Phường 9",
-                        "Công viên Gia Định",
-                        7,
-                        40L,
-                        200L,
-                        10.811,
-                        106.678,
-                        140.0),
-                new EventPlan(
-                        "Ngày hội tái chế cộng đồng",
-                        "Đổi rác lấy quà và hướng dẫn phân loại rác đúng cách tại khu dân cư.",
-                        GreenEventType.RECYCLING,
-                        "Hà Nội",
-                        "Đống Đa",
-                        "Láng Hạ",
-                        "Nhà văn hóa Láng Hạ",
-                        9,
-                        25L,
-                        120L,
-                        21.023,
-                        105.814,
-                        90.0),
-                new EventPlan(
-                        "Workshop sống xanh cho học sinh",
-                        "Chia sẻ các thói quen xanh dễ áp dụng và thực hành tái chế thủ công.",
-                        GreenEventType.EDUCATION,
-                        "Đà Nẵng",
-                        "Hải Châu",
-                        "Thạch Thang",
-                        "Trung tâm thanh thiếu niên",
-                        11,
-                        20L,
-                        80L,
-                        16.077,
-                        108.219,
-                        70.0),
-                new EventPlan(
-                        "Chủ nhật xanh tại khu dân cư",
-                        "Tổng vệ sinh, phân loại rác và cải tạo bồn cây trong khu phố.",
-                        GreenEventType.OTHER,
-                        "Cần Thơ",
-                        "Ninh Kiều",
-                        "An Bình",
-                        "Nhà sinh hoạt cộng đồng",
-                        13,
-                        20L,
-                        100L,
-                        10.029,
-                        105.771,
-                        80.0)
-        );
-    }
+        int imgIndex = 0;
+        for (int i = 0; i < eventTemplates.size(); i++) {
+            EventData data = eventTemplates.get(i);
+            UserEntity organizer = ngos.get(i % ngos.size());
 
-    private UserEntity findOrganizerUser() {
-        UserEntity ngoUser = findUserByUsername("ngo_tester");
-        if (ngoUser != null) {
-            return ngoUser;
+            AddressEntity address = AddressEntity.builder()
+                    .province(data.province)
+                    .district(data.district)
+                    .ward(data.ward)
+                    .addressDetail(data.detail)
+                    .latitude(BigDecimal.valueOf(data.lat))
+                    .longitude(BigDecimal.valueOf(data.lng))
+                    .build();
+
+            EventEntity event = EventEntity.builder()
+                    .title(data.title)
+                    .description(data.desc)
+                    .eventType(data.type)
+                    .startTime(LocalDateTime.now().plusDays(i + 2).withHour(8).withMinute(0))
+                    .endTime(LocalDateTime.now().plusDays(i + 2).withHour(17).withMinute(0))
+                    .maxParticipants(50L + (i * 10))
+                    .minParticipants(5L)
+                    .signUpDeadlineHoursBefore(24L)
+                    .cancelDeadlineHoursBefore(48L)
+                    .status(GreenEventStatus.PUBLISHED)
+                    .rewardPoints(100.0)
+                    .organizer(organizer)
+                    .address(address)
+                    .build();
+
+            // Rotate images - Thumbnail
+            ImageData thumbImg = IMAGE_POOL.get(imgIndex % IMAGE_POOL.size());
+            imgIndex++;
+
+            event.getImages().add(EventImageEntity.builder()
+                    .bucketName(thumbImg.bucketName)
+                    .objectKey(thumbImg.objectKey)
+                    .imageUrl(thumbImg.imageUrl)
+                    .imageType(EventImageType.THUMBNAIL)
+                    .event(event)
+                    .build());
+
+            // Rotate images - Detail
+            ImageData detailImg = IMAGE_POOL.get(imgIndex % IMAGE_POOL.size());
+            imgIndex++;
+
+            event.getImages().add(EventImageEntity.builder()
+                    .bucketName(detailImg.bucketName)
+                    .objectKey(detailImg.objectKey)
+                    .imageUrl(detailImg.imageUrl)
+                    .imageType(EventImageType.DETAIL)
+                    .event(event)
+                    .build());
+
+            eventRepository.save(event);
+            log.info("Seeded Event: {} with Thumbnail and Detail images", data.title);
         }
-
-        UserEntity admin = findUserByUsername("admin");
-        if (admin != null) {
-            return admin;
-        }
-
-        return findUserByUsername("user1");
     }
 
-    private UserEntity findUserByUsername(String username) {
-        return userRepository.findByIdentifier(username)
-                .or(() -> userRepository.findByIdentifier(username + "@greenify.vn"))
-                .orElse(null);
-    }
-
-    private record ImageData(String bucketName, String objectKey, String imageUrl) {
-    }
-
-    private record EventPlan(
-            String title,
-            String description,
-            GreenEventType eventType,
-            String province,
-            String district,
-            String ward,
-            String addressDetail,
-            int startInDays,
-            Long minParticipants,
-            Long maxParticipants,
-            Double latitude,
-            Double longitude,
-            Double rewardPoints) {
-    }
+    private record EventData(String title, String desc, GreenEventType type, String province, String district, String ward, String detail, double lat, double lng) {}
+    private record ImageData(String bucketName, String objectKey, String imageUrl) {}
 }

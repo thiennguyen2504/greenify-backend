@@ -18,4 +18,5 @@ public class UserDetailResponseDTO {
     private String username;
     private Set<String> roles;
     private UserProfileResponseDTO userProfile;
+    private NGOProfileResponseDTO ngoProfile;
 }
