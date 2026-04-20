@@ -5,27 +5,37 @@ import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface EventRegistrationRepository extends JpaRepository<EventRegistrationEntity, String>, JpaSpecificationExecutor<EventRegistrationEntity> {
-    
-    boolean existsByEventIdAndUserIdAndStatusNot(String eventId, String userId, RegistrationStatus status);
 
-    @Query("SELECT r FROM EventRegistrationEntity r WHERE r.event.id = :eventId")
+    boolean existsByEventIdAndUserIdAndRegistrationStatusNot(String eventId, String userId, RegistrationStatus registrationStatus);
+
+    @Query("SELECT r FROM EventRegistrationEntity r WHERE r.event.id = :eventId AND r.isDeleted = false")
     List<EventRegistrationEntity> findAllByEventId(String eventId);
-    
-    Optional<EventRegistrationEntity> findByEventIdAndUserId(String eventId, String userId);
 
-    long countByEventIdAndStatus(String eventId, RegistrationStatus status);
+    Optional<EventRegistrationEntity> findByEventIdAndUserIdAndIsDeletedFalse(String eventId, String userId);
 
-    @Query("SELECT r FROM EventRegistrationEntity r WHERE r.event.id = :eventId AND r.status = 'WAITLISTED' ORDER BY r.createdAt ASC")
+    @Query("SELECT r FROM EventRegistrationEntity r " +
+        "WHERE r.user.id = :userId AND r.event.id IN :eventIds AND r.isDeleted = false")
+    List<EventRegistrationEntity> findByUserIdAndEventIdIn(
+        @Param("userId") String userId,
+        @Param("eventIds") Collection<String> eventIds);
+
+    long countByEventIdAndRegistrationStatus(String eventId, RegistrationStatus registrationStatus);
+
+    @Query("SELECT r FROM EventRegistrationEntity r " +
+        "WHERE r.event.id = :eventId AND r.registrationStatus = 'WAITLISTED' AND r.isDeleted = false " +
+        "ORDER BY r.createdAt ASC")
     List<EventRegistrationEntity> findTopWaitlistedByEventId(String eventId);
 
-    Optional<EventRegistrationEntity> findByIdAndUserId(String id, String userId);
-    
-    Optional<EventRegistrationEntity> findByRegistrationCode(String registrationCode);
+    Optional<EventRegistrationEntity> findByIdAndUserIdAndIsDeletedFalse(String id, String userId);
+
+    Optional<EventRegistrationEntity> findByRegistrationCodeAndIsDeletedFalse(String registrationCode);
 }

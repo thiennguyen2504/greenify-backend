@@ -18,6 +18,7 @@ import com.webdev.greenify.leaderboard.repository.LeaderboardSnapshotRepository;
 import com.webdev.greenify.leaderboard.service.LeaderboardService;
 import com.webdev.greenify.point.entity.PointWalletEntity;
 import com.webdev.greenify.point.repository.PointWalletRepository;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.user.entity.UserEntity;
 import com.webdev.greenify.user.entity.UserProfileEntity;
 import com.webdev.greenify.user.repository.UserProfileRepository;
@@ -92,6 +93,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     private final VoucherService voucherService;
     private final VoucherMapper voucherMapper;
     private final LeaderboardMapper leaderboardMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
     private final StringRedisTemplate stringRedisTemplate;
     private final PlatformTransactionManager transactionManager;
 
@@ -728,11 +730,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     }
 
     private String normalizeProvince(String province) {
-        if (province == null) {
-            return null;
-        }
-        String trimmed = province.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return provinceNormalizationService.normalizeProvinceName(province);
     }
 
     private String resolveDisplayName(UserEntity user) {

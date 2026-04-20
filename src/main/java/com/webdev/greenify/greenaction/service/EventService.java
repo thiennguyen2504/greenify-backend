@@ -59,7 +59,7 @@ public interface EventService {
     PagedResponse<EventResponseDTO> getParticipatedEvents(
             String userId,
             String title,
-            RegistrationStatus status,
+            RegistrationStatus registrationStatus,
             String address,
             int page,
             int size);

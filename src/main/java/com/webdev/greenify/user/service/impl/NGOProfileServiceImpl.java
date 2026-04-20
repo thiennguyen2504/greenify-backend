@@ -7,6 +7,7 @@ import com.webdev.greenify.file.entity.NGOProfileImageEntity;
 import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.station.entity.AddressEntity;
 import com.webdev.greenify.station.mapper.AddressMapper;
+import com.webdev.greenify.station.service.ProvinceNormalizationService;
 import com.webdev.greenify.user.dto.NGOProfileFilterRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRejectRequestDTO;
 import com.webdev.greenify.user.dto.NGOProfileRequestDTO;
@@ -48,6 +49,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
     private final NGOProfileMapper ngoProfileMapper;
     private final ImageMapper imageMapper;
     private final AddressMapper addressMapper;
+    private final ProvinceNormalizationService provinceNormalizationService;
 
     @Override
     @Transactional
@@ -67,6 +69,7 @@ public class NGOProfileServiceImpl implements NGOProfileService {
 
         if (request.getAddress() != null) {
             AddressEntity address = addressMapper.toAddressEntity(request.getAddress());
+            normalizeAddressProvince(address);
             entity.setAddress(address);
         }
 
@@ -109,8 +112,11 @@ public class NGOProfileServiceImpl implements NGOProfileService {
         if (request.getAddress() != null) {
             if (entity.getAddress() != null) {
                 addressMapper.updateAddress(entity.getAddress(), request.getAddress());
+                normalizeAddressProvince(entity.getAddress());
             } else {
-                entity.setAddress(addressMapper.toAddressEntity(request.getAddress()));
+                AddressEntity address = addressMapper.toAddressEntity(request.getAddress());
+                normalizeAddressProvince(address);
+                entity.setAddress(address);
             }
         }
 
@@ -222,5 +228,12 @@ public class NGOProfileServiceImpl implements NGOProfileService {
         }
 
         return ngoProfileMapper.toDto(entity);
+    }
+
+    private void normalizeAddressProvince(AddressEntity address) {
+        if (address == null) {
+            return;
+        }
+        address.setProvince(provinceNormalizationService.normalizeProvinceName(address.getProvince()));
     }
 }

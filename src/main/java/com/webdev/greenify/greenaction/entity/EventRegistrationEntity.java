@@ -39,8 +39,8 @@ public class EventRegistrationEntity extends BaseEntity {
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RegistrationStatus status;
+    @Column(name = "status", nullable = false)
+    private RegistrationStatus registrationStatus;
 
     @Column
     private LocalDateTime checkInTime;
