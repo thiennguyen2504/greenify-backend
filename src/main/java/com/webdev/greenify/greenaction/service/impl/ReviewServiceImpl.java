@@ -108,10 +108,12 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AppException("Bạn đã duyệt bài này rồi", HttpStatus.CONFLICT);
         }
 
+        String rejectReason = request.resolveRejectReason();
+
         // 5. Reject reason required for REJECT or REPORT_SUSPICIOUS
         if ((request.getDecision() == ReviewDecision.REJECT || 
              request.getDecision() == ReviewDecision.REPORT_SUSPICIOUS) &&
-            (request.getRejectReason() == null || request.getRejectReason().isBlank())) {
+            (rejectReason == null || rejectReason.isBlank())) {
             throw new AppException("Lý do từ chối là bắt buộc", HttpStatus.BAD_REQUEST);
         }
 
@@ -124,7 +126,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .post(post)
                 .reviewer(reviewer)
                 .decision(request.getDecision())
-                .rejectReason(request.getRejectReason())
+            .rejectReason(rejectReason)
                 .isValid(true)
                 .build();
 
