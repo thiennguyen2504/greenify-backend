@@ -67,6 +67,7 @@ public class SeedData implements CommandLineRunner {
         private final JdbcTemplate jdbcTemplate;
         private final NGOProfileRepository ngoProfileRepository;
         private final UserSeed userSeed;
+        private final NotificationSeed notificationSeed;
         private final PostSeed postSeed;
         private final GardenSeed gardenSeed;
         private final PointWalletSeed pointWalletSeed;
@@ -76,6 +77,7 @@ public class SeedData implements CommandLineRunner {
         private final EventSeed eventSeed;
                 private final NGOSeed ngoSeed;
                 private final RegistrationSeed registrationSeed;
+        private final OngoingNgoEventSeed ongoingNgoEventSeed;
         private final EventHistorySeed eventHistorySeed;
         private final LeaderboardCurrentWeekSeed leaderboardCurrentWeekSeed;
         private final RecyclingStationSeed recyclingStationSeed;
@@ -174,10 +176,12 @@ public class SeedData implements CommandLineRunner {
 
         // Additional demo seeds with dependency-aware order
         userSeed.seed();
+        notificationSeed.seed();
         postSeed.seed();
         ngoSeed.seed();
         eventSeed.seed();
         registrationSeed.seed();
+        ongoingNgoEventSeed.seed();
         gardenSeed.seed();
         pointWalletSeed.seed();
         streakSeed.seed();
