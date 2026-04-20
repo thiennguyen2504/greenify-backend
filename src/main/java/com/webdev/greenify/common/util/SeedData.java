@@ -1,9 +1,12 @@
 package com.webdev.greenify.common.util;
 
+import com.webdev.greenify.file.enumeration.EventImageType;
 import com.webdev.greenify.garden.entity.SeedEntity;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.greenaction.entity.GreenActionTypeEntity;
+import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionTypeRepository;
+import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.station.entity.WasteTypeEntity;
 import com.webdev.greenify.station.repository.WasteTypeRepository;
 import com.webdev.greenify.user.entity.RoleEntity;
@@ -35,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -57,6 +61,17 @@ public class SeedData implements CommandLineRunner {
         private final VoucherTemplateRepository voucherTemplateRepository;
         private final JdbcTemplate jdbcTemplate;
         private final NGOProfileRepository ngoProfileRepository;
+        private final UserSeed userSeed;
+        private final PostSeed postSeed;
+        private final GardenSeed gardenSeed;
+        private final PointWalletSeed pointWalletSeed;
+        private final StreakSeed streakSeed;
+        private final TrashSpotSeed trashSpotSeed;
+        private final LeaderboardSeed leaderboardSeed;
+        private final EventSeed eventSeed;
+        private final UnsplashImageService unsplashImageService;
+        private final GreenActionPostRepository greenActionPostRepository;
+        private final EventRepository eventRepository;
 
     @Override
     @Transactional
@@ -64,6 +79,11 @@ public class SeedData implements CommandLineRunner {
 
                 // Backfill legacy null soft-delete flags before any entity mapping occurs.
                 normalizeSoftDeleteFlags();
+
+                if (unsplashImageService.isEnabled()) {
+                        unsplashImageService.logConnectionDiagnostics();
+                        unsplashImageService.warmupCache();
+                }
 
         // Ensure roleEntities exist
         RoleEntity adminRoleEntity = roleRepository.findByName("ADMIN")
@@ -141,7 +161,42 @@ public class SeedData implements CommandLineRunner {
 
         // Seed NGO Profile for tester
         seedNGOProfiles();
+
+        // Additional demo seeds with dependency-aware order
+        userSeed.seed();
+        postSeed.seed();
+                eventSeed.seed();
+        gardenSeed.seed();
+        pointWalletSeed.seed();
+        streakSeed.seed();
+        trashSpotSeed.seed();
+        leaderboardSeed.seed();
+
+                logSeededSampleImageUrls();
     }
+
+        private void logSeededSampleImageUrls() {
+                String samplePostImageUrl = greenActionPostRepository.findAll().stream()
+                                .map(post -> post.getPostImage() != null ? post.getPostImage().getImageUrl() : null)
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
+
+                String sampleEventThumbnailUrl = eventRepository.findAll().stream()
+                                .flatMap(event -> event.getImages().stream())
+                                .filter(image -> image.getImageType() == EventImageType.THUMBNAIL)
+                                .map(image -> image.getImageUrl())
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
+
+                if (samplePostImageUrl != null) {
+                        log.info("Sample seeded post image URL: {}", samplePostImageUrl);
+                }
+                if (sampleEventThumbnailUrl != null) {
+                        log.info("Sample seeded event thumbnail URL: {}", sampleEventThumbnailUrl);
+                }
+        }
 
     private void seedNGOProfiles() {
         UserEntity ngoUser = userRepository.findByIdentifier("ngo@example.com").orElse(null);
