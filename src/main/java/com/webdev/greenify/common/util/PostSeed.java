@@ -46,7 +46,8 @@ public class PostSeed {
     private static final int TOTAL_VERIFIED = 10;
     private static final int TOTAL_PENDING = 8;
     private static final int TOTAL_REJECTED = 5;
-    private static final int TOTAL_REJECTED_WITH_APPEAL = 2;
+    private static final int TOTAL_REJECTED_WITH_APPEAL = 5;
+    private static final long LEGACY_APPEAL_COUNT = 2;
     private static final BigDecimal REVIEWER_BONUS_POINTS = new BigDecimal("1.00");
 
     private final GreenActionPostRepository postRepository;
@@ -63,6 +64,8 @@ public class PostSeed {
 
     @Transactional
     public void seed() {
+        topUpLegacyAppealsIfNeeded();
+
         if (postRepository.count() > SEED_THRESHOLD) {
             log.info("Skip PostSeed because post count is already greater than {}", SEED_THRESHOLD);
             return;
@@ -134,6 +137,56 @@ public class PostSeed {
         } catch (Exception e) {
             log.warn("PostSeed failed: {}", e.getMessage(), e);
         }
+    }
+
+    private void topUpLegacyAppealsIfNeeded() {
+        long currentAppealCount = postAppealRepository.count();
+        if (currentAppealCount != LEGACY_APPEAL_COUNT) {
+            return;
+        }
+
+        int additionalAppealsNeeded = TOTAL_REJECTED_WITH_APPEAL - (int) currentAppealCount;
+        if (additionalAppealsNeeded <= 0) {
+            return;
+        }
+
+        List<GreenActionTypeEntity> actionTypes = actionTypeRepository.findAllByOrderByGroupNameAscActionNameAsc();
+        if (actionTypes.isEmpty()) {
+            log.warn("Skip legacy appeal top-up because no green action types found");
+            return;
+        }
+
+        prefetchPostImages(actionTypes);
+
+        List<UserEntity> reviewers = loadUsersByUsernames(List.of("ctv1", "ctv2", "ctv3"));
+        if (reviewers.size() < 3) {
+            log.warn("Skip legacy appeal top-up because not enough CTV reviewers (need 3, found {})", reviewers.size());
+            return;
+        }
+
+        List<UserEntity> authors = loadUsersByUsernames(List.of(
+                "user1", "user2", "user3", "user4", "user5", "user6", "user7", "ctv1", "ctv2", "ctv3"
+        ));
+        if (authors.isEmpty()) {
+            log.warn("Skip legacy appeal top-up because no authors found");
+            return;
+        }
+
+        int seeded = 0;
+        int imageIndex = 1;
+        int baseIndex = (int) currentAppealCount;
+
+        for (int i = 0; i < additionalAppealsNeeded; i++) {
+            try {
+                imageIndex = seedRejectedPost(baseIndex + i, imageIndex, authors, reviewers, actionTypes, true);
+                seeded++;
+            } catch (Exception ex) {
+                log.warn("Skip legacy appeal top-up index {} due to error: {}", i, ex.getMessage());
+            }
+        }
+
+        log.info("Legacy appeal top-up completed: added {} pending appeals (from {} to target {})",
+                seeded, currentAppealCount, TOTAL_REJECTED_WITH_APPEAL);
     }
 
     private int seedVerifiedPost(
@@ -241,7 +294,7 @@ public class PostSeed {
                     .post(post)
                     .user(author)
                     .appealReason(appealReasonAt(index))
-                    .evidenceUrls(List.of(unsplashImageService.getImageUrl("appeal,evidence,environment")))
+                    .evidenceUrls(buildAppealEvidenceUrls(index))
                     .attemptNumber(1)
                     .status(AppealStatus.APPEAL_SUBMITTED)
                     .build();
@@ -442,19 +495,43 @@ public class PostSeed {
 
     private String rejectReasonAt(int index) {
         List<String> reasons = List.of(
-                "Ảnh minh chứng mờ và không thể xác định được hành động cụ thể.",
-                "Nội dung mô tả không khớp với hình ảnh đính kèm.",
-                "Bài đăng thiếu bằng chứng thực hiện đầy đủ hành động xanh.",
-                "Có dấu hiệu sử dụng ảnh cũ không phản ánh hành động hiện tại."
+            "Ảnh chụp thùng rác tái chế bị ngược sáng và mất nét; không nhìn rõ nhãn phân loại hữu cơ, tái chế, còn lại như mô tả.",
+            "Bài đăng ghi đã đi xe đạp đến công ty lúc 7:30, nhưng ảnh đính kèm là ảnh bãi giữ xe máy trong hầm, không có xe đạp của người đăng.",
+            "Mô tả nói đã thu gom 2kg pin cũ tại điểm tiếp nhận quận 3, tuy nhiên ảnh chỉ có 3 viên pin rời và không thấy cân/biên nhận bàn giao.",
+            "Ảnh check-in dọn rác bờ kênh không có dấu hiệu thời gian hiện tại; metadata ảnh cho thấy tệp được tạo từ tháng trước.",
+            "Nội dung nêu thay túi ni-lon bằng túi vải khi đi chợ, nhưng ảnh là quầy thanh toán với nhiều túi nhựa dùng một lần còn mới.",
+            "Bài đăng mô tả trồng 15 cây con tại sân trường, nhưng ảnh chỉ thể hiện khu vực đất trống chưa có cây hoặc dụng cụ làm vườn."
         );
         return reasons.get(index % reasons.size());
     }
 
     private String appealReasonAt(int index) {
         List<String> reasons = List.of(
-                "Mình đã bổ sung ảnh và thông tin chi tiết, mong được xem xét lại bài đăng.",
-                "Bài đăng là hoạt động thật, mong CTV kiểm tra lại vì có thể hiểu nhầm nội dung."
+            "Mình đã bổ sung 2 ảnh chụp liên tiếp tại điểm thu gom pin ở 152 Nguyen Dinh Chieu, có ảnh cân hiển thị 2.1kg và phiếu xác nhận của nhân viên trực quầy.",
+            "Ảnh trước bị thiếu góc chụp nên gây hiểu nhầm. Mình đã cập nhật ảnh toàn cảnh khu vực dọn rác bờ kênh Tau Hu lúc 06:15, kèm ảnh bao rác sau khi thu gom.",
+            "Bài đi xe đạp có dữ liệu từ app Strava và ảnh chụp xe trước cổng tòa nhà Etown lúc 07:28. Mình gửi lại ảnh rõ biển số xe đạp và vị trí gửi xe.",
+            "Mình đã bổ sung video ngắn cắt khung thành ảnh chứng minh quá trình phân loại rác tại nhà, thể hiện đầy đủ 3 thùng và lượng rác từng loại sau khi phân loại.",
+            "Trong ảnh cũ chưa thấy túi vải do mình để dưới giỏ xe. Mình đã cập nhật thêm ảnh hóa đơn mua hàng và ảnh túi vải chứa thực phẩm sau khi thanh toán.",
+            "Mình có đính kèm ảnh chụp theo mốc thời gian từ 08:00 đến 09:30 khi trồng cây tại sân trường, có giáo viên phụ trách xác nhận hoạt động diễn ra trong ngày."
         );
         return reasons.get(index % reasons.size());
     }
+
+        private List<String> buildAppealEvidenceUrls(int index) {
+        List<String> evidenceKeywords = List.of(
+            "recycling center,receipt,battery collection",
+            "canal cleanup,trash bags,community volunteer",
+            "bicycle commute,office entrance,morning",
+            "waste sorting,kitchen bins,recycling",
+            "market reusable bag,grocery receipt,checkout",
+            "school tree planting,students,community"
+        );
+
+        String primaryKeyword = evidenceKeywords.get(index % evidenceKeywords.size());
+        String secondaryKeyword = evidenceKeywords.get((index + 2) % evidenceKeywords.size());
+
+        return List.of(
+            unsplashImageService.getImageUrl(primaryKeyword),
+            unsplashImageService.getImageUrl(secondaryKeyword));
+        }
 }
