@@ -21,8 +21,8 @@ import java.util.List;
 public class AdministrativeDivisionServiceImpl implements AdministrativeDivisionService {
 
     private static final String PROVINCES_API_BASE_URL = "https://provinces.open-api.vn/api/v2";
-    private static final int CONNECT_TIMEOUT_MILLIS = 3000;
-    private static final int READ_TIMEOUT_MILLIS = 5000;
+    private static final int CONNECT_TIMEOUT_MILLIS = 10000;
+    private static final int READ_TIMEOUT_MILLIS = 15000;
 
     private final RestTemplate restTemplate;
 
