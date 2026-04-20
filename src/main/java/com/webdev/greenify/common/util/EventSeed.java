@@ -49,7 +49,7 @@ public class EventSeed {
     );
 
     public void seed() {
-        if (eventRepository.count() > 5) {
+        if (eventRepository.countByStatus(GreenEventStatus.IN_PROGRESS) > 0) {
             return;
         }
 
@@ -89,17 +89,28 @@ public class EventSeed {
                     .longitude(BigDecimal.valueOf(data.lng))
                     .build();
 
+            LocalDateTime startTime = LocalDateTime.now().plusDays(i + 2).withHour(8).withMinute(0);
+            LocalDateTime endTime = LocalDateTime.now().plusDays(i + 2).withHour(17).withMinute(0);
+            GreenEventStatus status = GreenEventStatus.PUBLISHED;
+
+            // Make first three events IN_PROGRESS
+            if (i < 3) {
+                startTime = LocalDateTime.now().minusDays(1).withHour(8).withMinute(0);
+                endTime = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0);
+                status = GreenEventStatus.IN_PROGRESS;
+            }
+
             EventEntity event = EventEntity.builder()
                     .title(data.title)
                     .description(data.desc)
                     .eventType(data.type)
-                    .startTime(LocalDateTime.now().plusDays(i + 2).withHour(8).withMinute(0))
-                    .endTime(LocalDateTime.now().plusDays(i + 2).withHour(17).withMinute(0))
+                    .startTime(startTime)
+                    .endTime(endTime)
                     .maxParticipants(50L + (i * 10))
                     .minParticipants(5L)
                     .signUpDeadlineHoursBefore(24L)
                     .cancelDeadlineHoursBefore(48L)
-                    .status(GreenEventStatus.PUBLISHED)
+                    .status(status)
                     .rewardPoints(100.0)
                     .organizer(organizer)
                     .address(address)

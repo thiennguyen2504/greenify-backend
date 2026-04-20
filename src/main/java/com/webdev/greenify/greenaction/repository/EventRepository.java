@@ -1,6 +1,7 @@
 package com.webdev.greenify.greenaction.repository;
 
 import com.webdev.greenify.greenaction.entity.EventEntity;
+import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.GreenEventType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ import java.util.List;
 
 @Repository
 public interface EventRepository extends JpaRepository<EventEntity, String>, JpaSpecificationExecutor<EventEntity> {
+    long countByStatus(GreenEventStatus status);
 
     @Override
     @EntityGraph(attributePaths = { "images", "address", "organizer", "organizer.ngoProfile" })
@@ -30,16 +32,10 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             "FROM EventEntity e " +
             "WHERE e.eventType = :eventType " +
             "AND e.address.province = :province " +
-            "AND (" +
-            "  HOUR(e.startTime) BETWEEN :startHour - 2 AND :startHour + 2 " +
-            "  OR HOUR(e.endTime) BETWEEN :endHour - 2 AND :endHour + 2" +
-            ") " +
             "AND e.status = 'COMPLETED'")
     Double getAverageParticipantsByCriteria(
             @Param("eventType") GreenEventType eventType,
-            @Param("province") String province,
-            @Param("startHour") int startHour,
-            @Param("endHour") int endHour);
+            @Param("province") String province);
 
     @Query("""
             SELECT COUNT(e)
