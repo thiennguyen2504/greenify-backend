@@ -76,6 +76,9 @@ public class SeedData implements CommandLineRunner {
         private final EventSeed eventSeed;
                 private final NGOSeed ngoSeed;
                 private final RegistrationSeed registrationSeed;
+        private final EventHistorySeed eventHistorySeed;
+        private final LeaderboardCurrentWeekSeed leaderboardCurrentWeekSeed;
+        private final RecyclingStationSeed recyclingStationSeed;
         private final UnsplashImageService unsplashImageService;
         private final GreenActionPostRepository greenActionPostRepository;
         private final EventRepository eventRepository;
@@ -180,6 +183,9 @@ public class SeedData implements CommandLineRunner {
         streakSeed.seed();
         trashSpotSeed.seed();
         leaderboardSeed.seed();
+        eventHistorySeed.seed();
+        leaderboardCurrentWeekSeed.seed();
+        recyclingStationSeed.seed();
 
                 logSeededSampleImageUrls();
     }
