@@ -2,6 +2,7 @@ package com.webdev.greenify.greenaction.service;
 
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventParticipationSummaryResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -61,6 +62,14 @@ public interface EventService {
             String title,
             RegistrationStatus registrationStatus,
             String address,
+            int page,
+            int size);
+
+    EventParticipationSummaryResponseDTO getMyParticipationSummary();
+
+    PagedResponse<EventResponseDTO> getMyParticipatedEvents(
+            String title,
+            RegistrationStatus registrationStatus,
             int page,
             int size);
 

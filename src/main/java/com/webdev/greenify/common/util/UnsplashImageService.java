@@ -82,7 +82,7 @@ public class UnsplashImageService {
         try {
             List<String> fetchedUrls = fetchUsingKeywordCandidates(keywordCandidates, 1, width, height);
             if (fetchedUrls.isEmpty()) {
-                throw new IllegalStateException("Unsplash API returned empty result set");
+                throw new IllegalStateException("Unsplash API trả về kết quả rỗng");
             }
 
             mirrorCacheAcrossKeywords(keywordCandidates, fetchedUrls);
@@ -343,11 +343,11 @@ public class UnsplashImageService {
                 collected.addAll(fetchedUrls);
             } catch (UnsplashApiException ex) {
                 if (ex.isRateLimited()) {
-                    throw new IllegalStateException("Unsplash API rate limit reached", ex);
+                    throw new IllegalStateException("Unsplash API đã vượt giới hạn tần suất", ex);
                 }
 
                 if (ex.getStatusCode() == 401 || ex.getStatusCode() == 403) {
-                    throw new IllegalStateException("Unsplash API authentication/permission failed", ex);
+                    throw new IllegalStateException("Xác thực/phân quyền Unsplash API thất bại", ex);
                 }
 
                 log.debug(

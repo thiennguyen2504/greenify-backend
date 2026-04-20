@@ -18,12 +18,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class CreateGreenActionPostRequest {
 
-    @NotBlank(message = "Action type ID is required")
+    @NotBlank(message = "Action type ID là bắt buộc")
     private String actionTypeId;
 
     private String caption;
 
-    @NotNull(message = "Media image is required")
+    @NotNull(message = "Ảnh media là bắt buộc")
     @Valid
     private ImageRequestDTO media;
 

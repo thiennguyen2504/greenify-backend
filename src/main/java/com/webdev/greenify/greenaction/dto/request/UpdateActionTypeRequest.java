@@ -15,13 +15,13 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class UpdateActionTypeRequest {
 
-    @Size(max = 100, message = "Group name must not exceed 100 characters")
+    @Size(max = 100, message = "Tên nhóm không được vượt quá 100 ký tự")
     private String groupName;
 
-    @Size(max = 200, message = "Action name must not exceed 200 characters")
+    @Size(max = 200, message = "Tên hành động không được vượt quá 200 ký tự")
     private String actionName;
 
-    @DecimalMin(value = "0.01", message = "Suggested points must be greater than 0")
+    @DecimalMin(value = "0.01", message = "Điểm gợi ý phải lớn hơn 0")
     private BigDecimal suggestedPoints;
 
     private Boolean locationRequired;

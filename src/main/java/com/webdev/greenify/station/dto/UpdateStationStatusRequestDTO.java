@@ -14,6 +14,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UpdateStationStatusRequestDTO {
-    @NotNull(message = "Status cannot be null")
+    @NotNull(message = "Trạng thái không được để trống")
     private StationStatus status;
 }

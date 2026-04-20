@@ -109,7 +109,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 .orElse(null);
 
         if (existingConfig != null && existingConfig.getStatus() == PrizeConfigStatus.DISTRIBUTED) {
-            throw new AppException("Prize config for this week was already distributed", HttpStatus.BAD_REQUEST);
+            throw new AppException("Cấu hình giải thưởng của tuần này đã được phát thưởng", HttpStatus.BAD_REQUEST);
         }
 
         if (existingConfig != null && existingConfig.getStatus() == PrizeConfigStatus.CONFIGURED) {
@@ -190,7 +190,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     @Transactional(readOnly = true)
     public PrizeConfigResponse getPrizeConfigById(String id) {
         LeaderboardPrizeConfigEntity entity = leaderboardPrizeConfigRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard prize config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình giải thưởng bảng xếp hạng"));
         return leaderboardMapper.toPrizeConfigResponse(entity);
     }
 
@@ -198,10 +198,10 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     @Transactional
     public void cancelPrizeConfig(String id) {
         LeaderboardPrizeConfigEntity config = leaderboardPrizeConfigRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard prize config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình giải thưởng bảng xếp hạng"));
 
         if (config.getStatus() != PrizeConfigStatus.CONFIGURED) {
-            throw new AppException("Only CONFIGURED prize config can be cancelled", HttpStatus.BAD_REQUEST);
+            throw new AppException("Chỉ có thể hủy cấu hình giải thưởng ở trạng thái CONFIGURED", HttpStatus.BAD_REQUEST);
         }
 
         releaseReservedStock(config);
@@ -325,7 +325,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
             LeaderboardPrizeConfigEntity config = leaderboardPrizeConfigRepository
                 .findByWeekStartDateAndIsDeletedFalse(resolvedWeekStart)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard prize config not found for requested week"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình giải thưởng bảng xếp hạng for requested week"));
 
             return LeaderboardPrizeResponse.builder()
                 .prizeConfigId(config.getId())
@@ -342,10 +342,10 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private FinalizationContext prepareSnapshots(String prizeConfigId) {
         LeaderboardPrizeConfigEntity config = leaderboardPrizeConfigRepository.findByIdForUpdate(prizeConfigId)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard prize config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình giải thưởng bảng xếp hạng"));
 
         if (config.getStatus() == PrizeConfigStatus.CANCELLED) {
-            throw new AppException("Cannot finalize a cancelled leaderboard prize config", HttpStatus.BAD_REQUEST);
+            throw new AppException("Không thể chốt cấu hình giải thưởng bảng xếp hạng đã bị hủy", HttpStatus.BAD_REQUEST);
         }
 
         if (config.getStatus() == PrizeConfigStatus.DISTRIBUTED) {
@@ -456,7 +456,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private void rewardSnapshot(String snapshotId) {
         LeaderboardSnapshotEntity snapshot = leaderboardSnapshotRepository.findByIdForUpdate(snapshotId)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard snapshot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot bảng xếp hạng"));
 
         if (snapshot.isRewarded()) {
             return;
@@ -480,14 +480,14 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private void completeWeekFinalization(String prizeConfigId) {
         LeaderboardPrizeConfigEntity config = leaderboardPrizeConfigRepository.findByIdForUpdate(prizeConfigId)
-                .orElseThrow(() -> new ResourceNotFoundException("Leaderboard prize config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình giải thưởng bảng xếp hạng"));
 
         if (config.getStatus() == PrizeConfigStatus.DISTRIBUTED) {
             return;
         }
 
         if (config.getStatus() == PrizeConfigStatus.CANCELLED) {
-            throw new AppException("Cannot complete a cancelled leaderboard prize config", HttpStatus.BAD_REQUEST);
+            throw new AppException("Không thể hoàn tất cấu hình giải thưởng bảng xếp hạng đã bị hủy", HttpStatus.BAD_REQUEST);
         }
 
         int resetCount = pointWalletRepository.resetWeeklyPointsForAllUsers();
@@ -536,17 +536,17 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
         if (nationalTemplateId.equals(provincialTemplateId)) {
             VoucherTemplateEntity lockedTemplate = voucherTemplateRepository.findByIdForUpdate(nationalTemplateId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
             lockedTemplate.setRemainingStock(lockedTemplate.getRemainingStock() + nationalReserved + provincialReserved);
             voucherTemplateRepository.save(lockedTemplate);
             return;
         }
 
         VoucherTemplateEntity lockedNationalTemplate = voucherTemplateRepository.findByIdForUpdate(nationalTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         VoucherTemplateEntity lockedProvincialTemplate = voucherTemplateRepository.findByIdForUpdate(provincialTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         lockedNationalTemplate.setRemainingStock(lockedNationalTemplate.getRemainingStock() + nationalReserved);
         lockedProvincialTemplate.setRemainingStock(lockedProvincialTemplate.getRemainingStock() + provincialReserved);
@@ -557,14 +557,14 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private LockedTemplates lockTemplates(String nationalVoucherTemplateId, String provincialVoucherTemplateId) {
         VoucherTemplateEntity nationalTemplate = voucherTemplateRepository.findByIdForUpdate(nationalVoucherTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("National voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher toàn quốc"));
 
         VoucherTemplateEntity provincialTemplate;
         if (Objects.equals(nationalVoucherTemplateId, provincialVoucherTemplateId)) {
             provincialTemplate = nationalTemplate;
         } else {
             provincialTemplate = voucherTemplateRepository.findByIdForUpdate(provincialVoucherTemplateId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Provincial voucher template not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher theo tỉnh/thành"));
         }
 
         return new LockedTemplates(nationalTemplate, provincialTemplate);
@@ -725,7 +725,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private void validateScope(LeaderboardScope scope, String province) {
         if (scope == LeaderboardScope.PROVINCIAL && !hasText(province)) {
-            throw new AppException("province is required when scope=PROVINCIAL", HttpStatus.BAD_REQUEST);
+            throw new AppException("province là bắt buộc khi scope=PROVINCIAL", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -773,7 +773,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         try {
             return LocalDate.parse(value);
         } catch (DateTimeParseException ex) {
-            throw new AppException("weekStartDate must be ISO date (yyyy-MM-dd)", HttpStatus.BAD_REQUEST);
+            throw new AppException("weekStartDate phải đúng định dạng ngày ISO (yyyy-MM-dd)", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -781,7 +781,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         try {
             return LocalDateTime.parse(value);
         } catch (DateTimeParseException ex) {
-            throw new AppException("lockAt must be ISO datetime (yyyy-MM-dd'T'HH:mm:ss)", HttpStatus.BAD_REQUEST);
+            throw new AppException("lockAt phải đúng định dạng thời gian ISO (yyyy-MM-dd'T'HH:mm:ss)", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -789,22 +789,22 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         LocalDate today = LocalDate.now();
 
         if (weekStartDate.getDayOfWeek() != DayOfWeek.MONDAY) {
-            throw new AppException("weekStartDate must be a Monday", HttpStatus.BAD_REQUEST);
+            throw new AppException("weekStartDate phải là thứ Hai", HttpStatus.BAD_REQUEST);
         }
 
         if (!weekStartDate.isAfter(today)) {
-            throw new AppException("weekStartDate must be a future Monday", HttpStatus.BAD_REQUEST);
+            throw new AppException("weekStartDate phải là thứ Hai trong tương lai", HttpStatus.BAD_REQUEST);
         }
 
         LocalDateTime weekStartDateTime = weekStartDate.atStartOfDay();
         LocalDateTime nextMonday = weekStartDate.plusWeeks(1).atStartOfDay();
 
         if (lockAt.isBefore(weekStartDateTime)) {
-            throw new AppException("lockAt must be on or after week start", HttpStatus.BAD_REQUEST);
+            throw new AppException("lockAt phải bằng hoặc sau thời điểm bắt đầu tuần", HttpStatus.BAD_REQUEST);
         }
 
         if (!lockAt.isBefore(nextMonday)) {
-            throw new AppException("lockAt must be before next Monday 00:00", HttpStatus.BAD_REQUEST);
+            throw new AppException("lockAt phải trước 00:00 của thứ Hai tuần kế tiếp", HttpStatus.BAD_REQUEST);
         }
     }
 

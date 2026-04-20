@@ -41,7 +41,7 @@ public class ProfileServiceImpl implements ProfileService {
     public UserProfileResponseDTO getCurrentUserProfile() {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserProfileEntity profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ người dùng"));
         return userProfileMapper.toDto(profile);
     }
 
@@ -50,10 +50,10 @@ public class ProfileServiceImpl implements ProfileService {
     public UserProfileResponseDTO createCurrentUserProfile(UserProfileCreateRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         userProfileRepository.findByUserId(userId).ifPresent(p -> {
-            throw new AppException("User profile already exists", HttpStatus.BAD_REQUEST);
+            throw new AppException("Hồ sơ người dùng đã tồn tại", HttpStatus.BAD_REQUEST);
         });
 
         UserProfileEntity profile = userProfileMapper.toEntity(request);
@@ -84,7 +84,7 @@ public class ProfileServiceImpl implements ProfileService {
     public UserProfileResponseDTO updateCurrentUserProfile(UserProfileUpdateRequestDTO request) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         UserProfileEntity profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ người dùng"));
         userProfileMapper.updateProfileFromDto(request, profile);
         if (request.getProvince() != null) {
             profile.setProvince(provinceNormalizationService.normalizeProvinceName(request.getProvince()));

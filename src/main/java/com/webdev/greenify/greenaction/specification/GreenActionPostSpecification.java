@@ -2,8 +2,11 @@ package com.webdev.greenify.greenaction.specification;
 
 import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.Collection;
 import java.time.LocalDate;
 
 public class GreenActionPostSpecification {
@@ -18,6 +21,15 @@ public class GreenActionPostSpecification {
                 return cb.conjunction();
             }
             return cb.equal(root.get("status"), status);
+        };
+    }
+
+    public static Specification<GreenActionPostEntity> hasStatuses(Collection<PostStatus> statuses) {
+        return (root, query, cb) -> {
+            if (statuses == null || statuses.isEmpty()) {
+                return cb.conjunction();
+            }
+            return root.get("status").in(statuses);
         };
     }
 
@@ -37,6 +49,22 @@ public class GreenActionPostSpecification {
             }
             return cb.like(cb.lower(root.get("actionType").get("groupName")), 
                     "%" + groupName.toLowerCase() + "%");
+        };
+    }
+
+    public static Specification<GreenActionPostEntity> hasAuthorEmailOrDisplayNameLike(String search) {
+        return (root, query, cb) -> {
+            if (search == null || search.isBlank()) {
+                return cb.conjunction();
+            }
+
+            String keyword = "%" + search.trim().toLowerCase() + "%";
+            Join<Object, Object> userJoin = root.join("user", JoinType.INNER);
+            Join<Object, Object> userProfileJoin = userJoin.join("userProfile", JoinType.LEFT);
+
+            return cb.or(
+                    cb.like(cb.lower(userJoin.get("email")), keyword),
+                    cb.like(cb.lower(userProfileJoin.get("displayName")), keyword));
         };
     }
 

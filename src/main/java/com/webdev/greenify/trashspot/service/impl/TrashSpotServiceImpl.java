@@ -312,7 +312,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     public TrashSpotDetailResponse claimSpot(String id) {
         UserEntity ngo = getCurrentUser();
         TrashSpotEntity spot = trashSpotRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
 
         if (spot.getStatus() == TrashSpotStatus.IN_PROGRESS || spot.getStatus() == TrashSpotStatus.RESOLVED) {
             throw new AppException("Điểm rác đã được nhận hoặc đã xử lý", HttpStatus.CONFLICT);
@@ -437,7 +437,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         UserEntity admin = getCurrentUser();
 
         TrashSpotResolveRequestEntity resolveRequest = trashSpotResolveRequestRepository.findByIdAndIsDeletedFalse(resolveRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resolve request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu xử lý"));
 
         if (resolveRequest.getStatus() != ResolveRequestStatus.PENDING_ADMIN_REVIEW) {
             throw new AppException("Yêu cầu đã được xử lý trước đó", HttpStatus.BAD_REQUEST);
@@ -468,7 +468,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
         UserEntity admin = getCurrentUser();
 
         TrashSpotResolveRequestEntity resolveRequest = trashSpotResolveRequestRepository.findByIdAndIsDeletedFalse(resolveRequestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resolve request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu xử lý"));
 
         if (resolveRequest.getStatus() != ResolveRequestStatus.PENDING_ADMIN_REVIEW) {
             throw new AppException("Yêu cầu đã được xử lý trước đó", HttpStatus.BAD_REQUEST);
@@ -800,13 +800,13 @@ public class TrashSpotServiceImpl implements TrashSpotService {
 
     private TrashSpotEntity getTrashSpotOrThrow(String id) {
         return trashSpotRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
     }
 
     private TrashSpotEntity getTrashSpotForWrite(String id) {
         return trashSpotRepository.findByIdForUpdate(id)
                 .filter(spot -> !spot.isDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("Trash spot not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy điểm rác"));
     }
 
     private List<TrashSpotSummaryResponse> toEnrichedSummaryList(List<TrashSpotEntity> spots) {
@@ -886,7 +886,7 @@ public class TrashSpotServiceImpl implements TrashSpotService {
     private UserEntity getCurrentUser() {
         String currentUserId = getCurrentUserId();
         return userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
     }
 
     private String getCurrentUserId() {

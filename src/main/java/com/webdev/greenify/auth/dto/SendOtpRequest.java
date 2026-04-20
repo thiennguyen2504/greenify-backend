@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SendOtpRequest {
-    @NotBlank(message = "Identifier is required")
+    @NotBlank(message = "Định danh là bắt buộc")
     private String identifier;
 }

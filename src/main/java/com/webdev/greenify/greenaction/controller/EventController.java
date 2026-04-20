@@ -4,6 +4,7 @@ import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
 import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
+import com.webdev.greenify.greenaction.dto.response.EventParticipationSummaryResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -68,6 +69,30 @@ public class EventController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(eventService.getEventsForPublic(eventType, title, from, to, page, size));
+    }
+
+    @GetMapping("/me/participation-summary")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<EventParticipationSummaryResponseDTO> getMyParticipationSummary() {
+        return ResponseEntity.ok(eventService.getMyParticipationSummary());
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'ADMIN')")
+    public ResponseEntity<PagedResponse<EventResponseDTO>> getMyParticipatedEvents(
+            @RequestParam(required = false) String title,
+            @RequestParam(name = "registrationStatus", required = false) RegistrationStatus registrationStatus,
+            @RequestParam(name = "status", required = false) RegistrationStatus legacyStatus,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        RegistrationStatus resolvedRegistrationStatus = registrationStatus != null
+                ? registrationStatus
+                : legacyStatus;
+        return ResponseEntity.ok(eventService.getMyParticipatedEvents(
+                title,
+                resolvedRegistrationStatus,
+                page,
+                size));
     }
 
     @GetMapping("/{id}")

@@ -144,33 +144,33 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional
     public UserVoucherResponse exchangeVoucher(ExchangeVoucherRequest request) {
         if (request == null || request.getVoucherTemplateId() == null || request.getVoucherTemplateId().isBlank()) {
-            throw new AppException("Voucher template ID is required", HttpStatus.BAD_REQUEST);
+            throw new AppException("Voucher template ID là bắt buộc", HttpStatus.BAD_REQUEST);
         }
 
         String userId = getCurrentUserId();
         UserEntity currentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         PointWalletEntity wallet = pointWalletRepository.findByUserIdForUpdate(userId)
                 .orElseGet(() -> createDefaultWallet(currentUser));
 
         // Read-before-lock to fail fast on unaffordable requests.
         VoucherTemplateEntity preCheckTemplate = voucherTemplateRepository.findById(request.getVoucherTemplateId())
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         if (wallet.getAvailablePoints().compareTo(preCheckTemplate.getRequiredPoints()) < 0) {
-            throw new InsufficientPointsException("Insufficient points to redeem this voucher");
+            throw new InsufficientPointsException("Không đủ điểm để đổi voucher này");
         }
 
         // Lock only at the stock mutation stage to keep lock scope narrow.
         VoucherTemplateEntity lockedTemplate = voucherTemplateRepository
                 .findByIdForUpdate(request.getVoucherTemplateId())
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         validateVoucherTemplateForExchange(lockedTemplate);
 
         if (wallet.getAvailablePoints().compareTo(lockedTemplate.getRequiredPoints()) < 0) {
-            throw new InsufficientPointsException("Insufficient points to redeem this voucher");
+            throw new InsufficientPointsException("Không đủ điểm để đổi voucher này");
         }
 
         wallet.setAvailablePoints(wallet.getAvailablePoints().subtract(lockedTemplate.getRequiredPoints()));
@@ -253,6 +253,36 @@ public class VoucherServiceImpl implements VoucherService {
                 vouchersPage.getTotalPages());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<VoucherTemplateResponse> getVoucherTemplatesForAdmin(
+            VoucherTemplateStatus status,
+            int page,
+            int size) {
+        int effectivePage = Math.max(page, 0);
+        int effectiveSize = clampPageSize(size);
+
+        Pageable pageable = PageRequest.of(
+                effectivePage,
+                effectiveSize,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<VoucherTemplateEntity> vouchersPage = status != null
+                ? voucherTemplateRepository.findByStatus(status, pageable)
+                : voucherTemplateRepository.findAll(pageable);
+
+        List<VoucherTemplateResponse> content = vouchersPage.getContent().stream()
+                .map(voucherMapper::toVoucherTemplateResponse)
+                .toList();
+
+        return PagedResponse.of(
+                content,
+                vouchersPage.getNumber(),
+                vouchersPage.getSize(),
+                vouchersPage.getTotalElements(),
+                vouchersPage.getTotalPages());
+    }
+
     /**
      * Admin creates draft template using image metadata from pre-uploaded files.
      */
@@ -293,13 +323,13 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional
     public VoucherTemplateResponse updateVoucherTemplateStatus(String voucherTemplateId, VoucherTemplateStatus status) {
         VoucherTemplateEntity template = voucherTemplateRepository.findById(voucherTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         if (status == VoucherTemplateStatus.ACTIVE && template.getValidUntil().isBefore(LocalDateTime.now())) {
-            throw new VoucherExpiredException("Cannot activate an expired voucher template");
+            throw new VoucherExpiredException("Không thể kích hoạt mẫu voucher đã hết hạn");
         }
         if (status == VoucherTemplateStatus.ACTIVE && template.getRemainingStock() <= 0) {
-            throw new VoucherOutOfStockException("Cannot activate voucher template with no remaining stock");
+            throw new VoucherOutOfStockException("Không thể kích hoạt mẫu voucher khi không còn tồn kho");
         }
 
         template.setStatus(status);
@@ -313,7 +343,7 @@ public class VoucherServiceImpl implements VoucherService {
         String adminId = getCurrentUserId();
 
         VoucherTemplateEntity template = voucherTemplateRepository.findById(voucherTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         List<String> changedFields = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
@@ -335,7 +365,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (request.getRequiredPoints() != null) {
             if (request.getRequiredPoints().compareTo(ZERO_POINTS) <= 0) {
-                throw new AppException("Required points must be greater than 0", HttpStatus.BAD_REQUEST);
+                throw new AppException("Điểm yêu cầu phải lớn hơn 0", HttpStatus.BAD_REQUEST);
             }
             template.setRequiredPoints(request.getRequiredPoints());
             changedFields.add("requiredPoints");
@@ -343,7 +373,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (request.getAdditionalStock() != null) {
             if (request.getAdditionalStock() <= 0) {
-                throw new AppException("Additional stock must be greater than 0", HttpStatus.BAD_REQUEST);
+                throw new AppException("Số lượng bổ sung phải lớn hơn 0", HttpStatus.BAD_REQUEST);
             }
 
             int additionalStock = request.getAdditionalStock();
@@ -359,7 +389,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (request.getValidUntil() != null) {
             if (template.getStatus() == VoucherTemplateStatus.ACTIVE && request.getValidUntil().isBefore(now)) {
-                throw new AppException("Cannot set validUntil to a past date for an active template", HttpStatus.BAD_REQUEST);
+                throw new AppException("Không thể đặt validUntil về thời điểm trong quá khứ cho mẫu đang hoạt động", HttpStatus.BAD_REQUEST);
             }
             template.setValidUntil(request.getValidUntil());
             changedFields.add("validUntil");
@@ -408,20 +438,20 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional
     public UserVoucherEntity grantVoucherToUser(String userId, String voucherTemplateId, VoucherSource source) {
         if (userId == null || userId.isBlank()) {
-            throw new AppException("User ID is required", HttpStatus.BAD_REQUEST);
+            throw new AppException("User ID là bắt buộc", HttpStatus.BAD_REQUEST);
         }
         if (voucherTemplateId == null || voucherTemplateId.isBlank()) {
-            throw new AppException("Voucher template ID is required", HttpStatus.BAD_REQUEST);
+            throw new AppException("Voucher template ID là bắt buộc", HttpStatus.BAD_REQUEST);
         }
         if (source == null || source == VoucherSource.REDEEM) {
-            throw new AppException("Reward source is required for programmatic voucher grants", HttpStatus.BAD_REQUEST);
+            throw new AppException("Reward source là bắt buộc khi cấp voucher tự động", HttpStatus.BAD_REQUEST);
         }
 
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         VoucherTemplateEntity template = voucherTemplateRepository.findByIdForUpdate(voucherTemplateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu voucher"));
 
         validateVoucherTemplateForExchange(template);
 
@@ -454,25 +484,25 @@ public class VoucherServiceImpl implements VoucherService {
 
     private void validateVoucherTemplateForExchange(VoucherTemplateEntity template) {
         if (template.getStatus() != VoucherTemplateStatus.ACTIVE) {
-            throw new AppException("Voucher is not available for exchange", HttpStatus.BAD_REQUEST);
+            throw new AppException("Voucher hiện không khả dụng để đổi", HttpStatus.BAD_REQUEST);
         }
         if (template.getValidUntil().isBefore(LocalDateTime.now())) {
-            throw new VoucherExpiredException("Voucher has expired");
+            throw new VoucherExpiredException("Voucher đã hết hạn");
         }
         if (template.getRemainingStock() == null || template.getRemainingStock() <= 0) {
-            throw new VoucherOutOfStockException("Voucher is out of stock");
+            throw new VoucherOutOfStockException("Voucher đã hết hàng");
         }
     }
 
     private void validateCreateRequest(CreateVoucherTemplateRequest request) {
         if (request.getRequiredPoints() == null || request.getRequiredPoints().compareTo(ZERO_POINTS) <= 0) {
-            throw new AppException("Required points must be greater than 0", HttpStatus.BAD_REQUEST);
+            throw new AppException("Điểm yêu cầu phải lớn hơn 0", HttpStatus.BAD_REQUEST);
         }
         if (request.getTotalStock() == null || request.getTotalStock() <= 0) {
-            throw new AppException("Total stock must be greater than 0", HttpStatus.BAD_REQUEST);
+            throw new AppException("Tổng số lượng phải lớn hơn 0", HttpStatus.BAD_REQUEST);
         }
         if (request.getValidUntil() == null || !request.getValidUntil().isAfter(LocalDateTime.now())) {
-            throw new AppException("Valid until must be in the future", HttpStatus.BAD_REQUEST);
+            throw new AppException("Thời hạn hiệu lực phải ở tương lai", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -507,12 +537,12 @@ public class VoucherServiceImpl implements VoucherService {
                 return code;
             }
         }
-        throw new AppException("Failed to generate unique voucher code", HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new AppException("Không thể tạo mã voucher duy nhất", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     private void validatePatchStatus(VoucherTemplateStatus status) {
         if (status == VoucherTemplateStatus.DRAFT) {
-            throw new AppException("Cannot set status to DRAFT via this endpoint", HttpStatus.BAD_REQUEST);
+            throw new AppException("Không thể đặt trạng thái DRAFT qua endpoint này", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -523,10 +553,10 @@ public class VoucherServiceImpl implements VoucherService {
         if (requestedStatus != null) {
             if (requestedStatus == VoucherTemplateStatus.ACTIVE) {
                 if (template.getRemainingStock() == null || template.getRemainingStock() <= 0) {
-                    throw new AppException("Cannot set status ACTIVE when remaining stock is 0", HttpStatus.BAD_REQUEST);
+                    throw new AppException("Không thể đặt trạng thái ACTIVE khi tồn kho còn lại bằng 0", HttpStatus.BAD_REQUEST);
                 }
                 if (template.getValidUntil() == null || template.getValidUntil().isBefore(now)) {
-                    throw new AppException("Cannot set status ACTIVE when validUntil is in the past", HttpStatus.BAD_REQUEST);
+                    throw new AppException("Không thể đặt trạng thái ACTIVE khi validUntil nằm trong quá khứ", HttpStatus.BAD_REQUEST);
                 }
             }
             template.setStatus(requestedStatus);

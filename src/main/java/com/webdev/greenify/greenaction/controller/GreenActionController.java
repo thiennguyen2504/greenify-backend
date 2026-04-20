@@ -51,12 +51,14 @@ public class GreenActionController {
             @RequestParam(required = false) PostStatus status,
             @RequestParam(required = false) String actionTypeId,
             @RequestParam(required = false) String groupName,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "desc") String sortDirection,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(greenActionService.getPostsByFilter(
-                status, actionTypeId, groupName, fromDate, toDate, page, size));
+                status, actionTypeId, groupName, search, fromDate, toDate, sortDirection, page, size));
     }
 
     @GetMapping("/me/history")

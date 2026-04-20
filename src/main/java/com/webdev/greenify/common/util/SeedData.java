@@ -51,6 +51,11 @@ public class SeedData implements CommandLineRunner {
         private static final String STAGE_SEED_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hat%202.png?updatedAt=1776237615245";
         private static final String STAGE_SPROUT_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/nay%20mam.png?updatedAt=1776237615268";
         private static final String STAGE_GROWING_IMAGE_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/leaf-plant.png?updatedAt=1776237615257";
+        private static final String HIGHLANDS_VOUCHER_THUMBNAIL_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/voucher/highlandthumb.jpg";
+        private static final String HIGHLANDS_PARTNER_LOGO_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/voucher/logohighlen.png";
+        private static final String THE_COFFEE_HOUSE_VOUCHER_THUMBNAIL_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/voucher/voucherthecf.png";
+        private static final String THE_COFFEE_HOUSE_PARTNER_LOGO_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/voucher/logo-the-coffee-house.png";
+        private static final String JOLLIBEE_VOUCHER_THUMBNAIL_URL = "https://ik.imagekit.io/ii5tr5cdi/Material/Image/voucher/jolibee.png";
 
         private final RoleRepository roleRepository;
         private final UserRepository userRepository;
@@ -130,9 +135,9 @@ public class SeedData implements CommandLineRunner {
         }
 
         // Create CTV users for review workflows
-        createCtvUserIfMissing("ctv1@example.com", "ctv1", ctvRoleEntity, userRoleEntity);
-        createCtvUserIfMissing("ctv2@example.com", "ctv2", ctvRoleEntity, userRoleEntity);
-        createCtvUserIfMissing("ctv3@example.com", "ctv3", ctvRoleEntity, userRoleEntity);
+        createCtvUserIfMissing("ctv1@greenify.vn", "ctv1", ctvRoleEntity, userRoleEntity);
+        createCtvUserIfMissing("ctv2@greenify.vn", "ctv2", ctvRoleEntity, userRoleEntity);
+        createCtvUserIfMissing("ctv3@greenify.vn", "ctv3", ctvRoleEntity, userRoleEntity);
 
         // Create NGO UserEntity
         if (userRepository.findByIdentifier("ngo@example.com").isEmpty()) {
@@ -247,7 +252,9 @@ public class SeedData implements CommandLineRunner {
                 ctvRoleEntities.add(ctvRoleEntity);
                 ctvRoleEntities.add(userRoleEntity);
 
-                UserEntity existingCtvUser = userRepository.findByIdentifier(email).orElse(null);
+                UserEntity existingCtvUser = userRepository.findByIdentifier(email)
+                                .or(() -> userRepository.findByIdentifier(username))
+                                .orElse(null);
                 if (existingCtvUser == null) {
                         userRepository.save(UserEntity.builder()
                                         .email(email)
@@ -542,6 +549,8 @@ public class SeedData implements CommandLineRunner {
                         validUntil,
                         "Voucher giảm 20% tối đa 30.000đ tại Highlands Coffee cho cây chu kỳ dễ (30-45 ngày).",
                         "Áp dụng cho hóa đơn từ 80.000đ, không cộng dồn với chương trình khuyến mãi khác.",
+                        HIGHLANDS_VOUCHER_THUMBNAIL_URL,
+                        HIGHLANDS_PARTNER_LOGO_URL,
                         "Garden Reward - Easy"));
 
         rewardVoucherByCycle.put(
@@ -555,6 +564,8 @@ public class SeedData implements CommandLineRunner {
                         validUntil,
                         "Voucher giảm 30.000đ cho hóa đơn từ 120.000đ tại The Coffee House cho cây chu kỳ trung bình (50-80 ngày).",
                         "Mỗi tài khoản dùng 1 lần/tháng, áp dụng tại cửa hàng tham gia chương trình.",
+                        THE_COFFEE_HOUSE_VOUCHER_THUMBNAIL_URL,
+                        THE_COFFEE_HOUSE_PARTNER_LOGO_URL,
                         "Garden Reward - Medium"));
 
         rewardVoucherByCycle.put(
@@ -568,6 +579,8 @@ public class SeedData implements CommandLineRunner {
                         validUntil,
                         "Voucher giảm 15% tối đa 45.000đ tại Jollibee cho cây chu kỳ khó (90-150 ngày).",
                         "Áp dụng cho hóa đơn từ 120.000đ, không áp dụng cùng ưu đãi combo khác.",
+                        JOLLIBEE_VOUCHER_THUMBNAIL_URL,
+                        null,
                         "Garden Reward - Hard"));
 
         log.info("Seeded/updated {} garden reward voucher templates", rewardVoucherByCycle.size());
@@ -583,6 +596,8 @@ public class SeedData implements CommandLineRunner {
             LocalDateTime validUntil,
                         String description,
                         String usageConditions,
+                        String thumbnailUrl,
+                        String partnerLogoUrl,
                         String... legacyNames) {
 
         VoucherTemplateEntity template = existingByName.get(name);
@@ -611,6 +626,12 @@ public class SeedData implements CommandLineRunner {
                 template.setUsageConditions(usageConditions);
         template.setValidUntil(validUntil);
         template.setStatus(VoucherTemplateStatus.ACTIVE);
+                if (isBlank(template.getThumbnailUrl()) && !isBlank(thumbnailUrl)) {
+                        template.setThumbnailUrl(thumbnailUrl);
+                }
+                if (isBlank(template.getPartnerLogoUrl()) && !isBlank(partnerLogoUrl)) {
+                        template.setPartnerLogoUrl(partnerLogoUrl);
+                }
 
         VoucherTemplateEntity saved = voucherTemplateRepository.save(template);
         existingByName.put(name, saved);
@@ -623,6 +644,10 @@ public class SeedData implements CommandLineRunner {
                 }
         return saved;
     }
+
+        private boolean isBlank(String value) {
+                return value == null || value.isBlank();
+        }
 
     private void seedGardenSeeds(Map<PlantCycleType, VoucherTemplateEntity> rewardVoucherByCycle) {
         List<SeedEntity> existingSeeds = seedRepository.findAll();

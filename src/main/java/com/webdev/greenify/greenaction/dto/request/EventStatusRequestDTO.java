@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventStatusRequestDTO {
-    @NotBlank(message = "Reject reason is required when rejecting")
+    @NotBlank(message = "Lý do từ chối là bắt buộc khi từ chối")
     private String reason;
 }

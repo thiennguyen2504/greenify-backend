@@ -39,7 +39,7 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new EmailSendingException("Failed to send email", e);
+            throw new EmailSendingException("Gửi email thất bại", e);
         }
     }
 

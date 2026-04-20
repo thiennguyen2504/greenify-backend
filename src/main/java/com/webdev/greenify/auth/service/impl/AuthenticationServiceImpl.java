@@ -68,7 +68,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public void sendOtp(SendOtpRequest request) {
         String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
         if (repository.findByIdentifier(normalizedIdentifier).isPresent()) {
-            throw new DuplicateResourceException("Email or phone number already registered");
+            throw new DuplicateResourceException("Email hoặc số điện thoại đã được đăng ký");
         }
         otpService.processAndSendOtp(normalizedIdentifier);
     }
@@ -83,20 +83,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AuthenticationResponse register(RegisterRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new AppException("Passwords do not match", HttpStatus.BAD_REQUEST);
+            throw new AppException("Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST);
         }
 
         String identifier = otpService.getIdentifierFromVerificationToken(request.getVerificationToken());
         if (identifier == null) {
-            throw new InvalidTokenException("Invalid or expired verification token");
+            throw new InvalidTokenException("Mã xác thực không hợp lệ hoặc đã hết hạn");
         }
 
         if (repository.findByIdentifier(identifier).isPresent()) {
-            throw new DuplicateResourceException("Email or phone number already registered");
+            throw new DuplicateResourceException("Email hoặc số điện thoại đã được đăng ký");
         }
 
         RoleEntity role = roleRepository.findByName("USER")
-                .orElseThrow(() -> new ResourceNotFoundException("Role USER not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò USER"));
 
         String email = null;
         String phone = null;
@@ -130,10 +130,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
 
         UserEntity user = repository.findByIdentifier(normalizedIdentifier)
-                .orElseThrow(() -> new BadCredentialsException("Username or password is incorrect"));
+                .orElseThrow(() -> new BadCredentialsException("Thông tin đăng nhập không chính xác"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Username or password is incorrect");
+            throw new BadCredentialsException("Thông tin đăng nhập không chính xác");
         }
 
         validateAccountStatusForSignIn(user);
@@ -168,13 +168,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             Phonenumber.PhoneNumber number = phoneUtil.parse(phone, "VN");
 
             if (!phoneUtil.isValidNumber(number)) {
-                throw new IllegalArgumentException("Invalid phone number");
+                throw new IllegalArgumentException("Số điện thoại không hợp lệ");
             }
 
             return phoneUtil.format(number, PhoneNumberUtil.PhoneNumberFormat.E164);
 
         } catch (NumberParseException e) {
-            throw new IllegalArgumentException("Invalid phone format", e);
+            throw new IllegalArgumentException("Định dạng số điện thoại không hợp lệ", e);
         }
     }
 
@@ -183,16 +183,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String refreshToken = request.getRefreshToken();
 
         if (tokenBlacklistService.isRefreshTokenBlacklisted(refreshToken)) {
-            throw new InvalidTokenException("Refresh token has been revoked");
+            throw new InvalidTokenException("Refresh token đã bị thu hồi");
         }
 
         String userId = extractUserId(refreshToken);
         if (userId == null) {
-            throw new InvalidTokenException("Invalid refresh token");
+            throw new InvalidTokenException("Refresh token không hợp lệ");
         }
 
         UserEntity user = repository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
         validateAccountStatusForSignIn(user);
 
@@ -207,7 +207,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .refreshToken(newRefreshToken)
                     .build();
         }
-        throw new InvalidTokenException("Invalid refresh token");
+        throw new InvalidTokenException("Refresh token không hợp lệ");
     }
 
     @Override
@@ -239,7 +239,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             signedJWT.sign(signer);
             return signedJWT.serialize();
         } catch (JOSEException e) {
-            throw new TokenException("Error generating JWT", e);
+            throw new TokenException("Lỗi tạo JWT", e);
         }
     }
 
@@ -282,7 +282,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         if (user.getStatus() != AccountStatus.ACTIVE) {
-            throw new AppException("Account is not active", HttpStatus.FORBIDDEN);
+            throw new AppException("Tài khoản chưa được kích hoạt", HttpStatus.FORBIDDEN);
         }
     }
 

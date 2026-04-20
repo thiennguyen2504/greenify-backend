@@ -10,13 +10,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ImageRequestDTO {
-    @NotBlank(message = "Bucket name is required")
+    @NotBlank(message = "Tên bucket là bắt buộc")
     private String bucketName;
 
-    @NotBlank(message = "Object key is required")
+    @NotBlank(message = "Object key là bắt buộc")
     private String objectKey;
 
-    @NotBlank(message = "Image URL is required")
+    @NotBlank(message = "URL ảnh là bắt buộc")
     private String imageUrl;
 }
 

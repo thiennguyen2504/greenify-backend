@@ -18,6 +18,6 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
         response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.getWriter()
-                .write("{\"error\": \"Authentication Failed\", \"message\": \"" + exception.getMessage() + "\"}");
+                .write("{\"error\": \"Xác thực thất bại\", \"message\": \"" + exception.getMessage() + "\"}");
     }
 }

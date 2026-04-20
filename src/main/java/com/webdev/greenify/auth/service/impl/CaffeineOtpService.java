@@ -72,13 +72,13 @@ public class CaffeineOtpService implements OtpService {
         // Rate limiting check
         Integer count = rateLimitCache.getIfPresent(identifier);
         if (count != null && count >= MAX_OTP_PER_DAY) {
-            throw new AppException("Rate limit exceeded for OTP generation on this identifier",
+            throw new AppException("Bạn đã vượt quá giới hạn gửi OTP cho định danh này",
                     HttpStatus.TOO_MANY_REQUESTS);
         }
 
         // Cooldown check
         if (otpCooldownCache.getIfPresent(identifier) != null) {
-            throw new AppException("Please wait " + OTP_COOLDOWN_SECONDS + " seconds before requesting another OTP",
+            throw new AppException("Vui lòng đợi " + OTP_COOLDOWN_SECONDS + " giây trước khi yêu cầu OTP mới",
                     HttpStatus.TOO_MANY_REQUESTS);
         }
 
@@ -116,20 +116,20 @@ public class CaffeineOtpService implements OtpService {
         String hashedOtp = otpHashCache.getIfPresent(identifier);
 
         if (hashedOtp == null) {
-            throw new AppException("OTP has expired or hasn't been requested", HttpStatus.BAD_REQUEST);
+            throw new AppException("OTP đã hết hạn hoặc chưa được yêu cầu", HttpStatus.BAD_REQUEST);
         }
 
         Integer attempts = otpAttemptCache.getIfPresent(identifier);
         if (attempts != null && attempts >= MAX_OTP_ATTEMPTS) {
             otpHashCache.invalidate(identifier);
             otpAttemptCache.invalidate(identifier);
-            throw new AppException("Too many wrong OTP attempts. Please request a new OTP",
+            throw new AppException("Bạn đã nhập sai OTP quá số lần cho phép. Vui lòng yêu cầu OTP mới",
                     HttpStatus.TOO_MANY_REQUESTS);
         }
 
         if (!passwordEncoder.matches(otp, hashedOtp)) {
             otpAttemptCache.put(identifier, (attempts == null ? 0 : attempts) + 1);
-            throw new AppException("Invalid OTP", HttpStatus.BAD_REQUEST);
+            throw new AppException("OTP không hợp lệ", HttpStatus.BAD_REQUEST);
         }
 
         // Verification success -> remove OTP to prevent reuse

@@ -17,19 +17,19 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CreateActionTypeRequest {
 
-    @NotBlank(message = "Group name is required")
-    @Size(max = 100, message = "Group name must not exceed 100 characters")
+    @NotBlank(message = "Tên nhóm là bắt buộc")
+    @Size(max = 100, message = "Tên nhóm không được vượt quá 100 ký tự")
     private String groupName;
 
-    @NotBlank(message = "Action name is required")
-    @Size(max = 200, message = "Action name must not exceed 200 characters")
+    @NotBlank(message = "Tên hành động là bắt buộc")
+    @Size(max = 200, message = "Tên hành động không được vượt quá 200 ký tự")
     private String actionName;
 
-    @NotNull(message = "Suggested points is required")
-    @DecimalMin(value = "0.01", message = "Suggested points must be greater than 0")
+    @NotNull(message = "Điểm gợi ý là bắt buộc")
+    @DecimalMin(value = "0.01", message = "Điểm gợi ý phải lớn hơn 0")
     private BigDecimal suggestedPoints;
 
-    @NotNull(message = "Location required is required")
+    @NotNull(message = "Thuộc tính yêu cầu vị trí là bắt buộc")
     private Boolean locationRequired;
 
     @Builder.Default

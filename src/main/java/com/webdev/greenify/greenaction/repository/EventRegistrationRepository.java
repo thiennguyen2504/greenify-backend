@@ -38,4 +38,27 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
     Optional<EventRegistrationEntity> findByIdAndUserIdAndIsDeletedFalse(String id, String userId);
 
     Optional<EventRegistrationEntity> findByRegistrationCodeAndIsDeletedFalse(String registrationCode);
+
+        @Query("""
+                SELECT COUNT(r) FROM EventRegistrationEntity r
+                WHERE r.user.id = :userId
+                    AND r.registrationStatus = :status
+                    AND r.checkInTime IS NULL
+                    AND r.isDeleted = false
+                    AND r.event.isDeleted = false
+                """)
+        long countByUserIdAndRegistrationStatusAndCheckInTimeIsNull(
+                        @Param("userId") String userId,
+                        @Param("status") RegistrationStatus status);
+
+        @Query("""
+                SELECT COUNT(r) FROM EventRegistrationEntity r
+                WHERE r.user.id = :userId
+                    AND r.registrationStatus = :status
+                    AND r.isDeleted = false
+                    AND r.event.isDeleted = false
+                """)
+        long countByUserIdAndRegistrationStatus(
+                        @Param("userId") String userId,
+                        @Param("status") RegistrationStatus status);
 }

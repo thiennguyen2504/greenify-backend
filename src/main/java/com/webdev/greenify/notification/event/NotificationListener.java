@@ -27,7 +27,7 @@ public class NotificationListener {
         log.info("Handling notification event for user: {}", event.getUserId());
         
         UserEntity user = userRepository.findById(event.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + event.getUserId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + event.getUserId()));
 
         NotificationEntity notification = NotificationEntity.builder()
                 .user(user)

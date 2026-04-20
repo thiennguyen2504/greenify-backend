@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SubmitReviewRequest {
 
-    @NotNull(message = "Decision is required")
+    @NotNull(message = "Quyết định là bắt buộc")
     private ReviewDecision decision;
 
     private String rejectReason;

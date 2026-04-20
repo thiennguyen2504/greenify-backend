@@ -45,7 +45,7 @@ public class GardenSeed {
 
     @Transactional
     public void seed() {
-        if (plantProgressRepository.count() > SEED_THRESHOLD) {
+        if (plantProgressRepository.count() >= SEED_THRESHOLD) {
             log.info("Skip GardenSeed because plant progress count is already greater than {}", SEED_THRESHOLD);
             return;
         }
@@ -72,6 +72,10 @@ public class GardenSeed {
             SeedEntity seed = seedsByName.get("Hoa hồng");
             if (user == null || seed == null) {
                 log.warn("Skip garden scenario user1 because user/seed is missing");
+                return;
+            }
+            if (plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden scenario user1 because plant progress already exists for user {}", user.getUsername());
                 return;
             }
 
@@ -105,6 +109,10 @@ public class GardenSeed {
             SeedEntity seed = seedsByName.get("Hướng dương");
             if (user == null || seed == null) {
                 log.warn("Skip garden scenario user2 because user/seed is missing");
+                return;
+            }
+            if (plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden scenario user2 because plant progress already exists for user {}", user.getUsername());
                 return;
             }
 
@@ -167,6 +175,10 @@ public class GardenSeed {
                 log.warn("Skip garden scenario user3 because user/seed is missing");
                 return;
             }
+            if (plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden scenario user3 because plant progress already exists for user {}", user.getUsername());
+                return;
+            }
 
             LocalDateTime startedAt = LocalDateTime.now().minusDays(50);
             PlantProgressEntity progress = PlantProgressEntity.builder()
@@ -201,6 +213,10 @@ public class GardenSeed {
                 log.warn("Skip garden scenario user4 because user/seed is missing");
                 return;
             }
+            if (plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden scenario user4 because plant progress already exists for user {}", user.getUsername());
+                return;
+            }
 
             LocalDateTime startedAt = LocalDateTime.now().minusDays(3);
             PlantProgressEntity progress = PlantProgressEntity.builder()
@@ -231,6 +247,10 @@ public class GardenSeed {
             SeedEntity seed = seedsByName.get("Sen");
             if (user == null || seed == null) {
                 log.warn("Skip garden scenario user5 because user/seed is missing");
+                return;
+            }
+            if (plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden scenario user5 because plant progress already exists for user {}", user.getUsername());
                 return;
             }
 
@@ -265,6 +285,10 @@ public class GardenSeed {
             PlantStage stage,
             boolean isActiveDay,
             String imageUrl) {
+
+        if (plantDailyLogRepository.existsByUserIdAndLogDate(user.getId(), logDate)) {
+            return;
+        }
 
         PlantDailyLogEntity logEntity = PlantDailyLogEntity.builder()
                 .user(user)

@@ -27,56 +27,56 @@ import java.util.List;
 @AllArgsConstructor
 public class EventRequestDTO {
 
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "Tiêu đề là bắt buộc")
     private String title;
 
     private String description;
 
-    @NotNull(message = "Event type is required")
+    @NotNull(message = "Loại sự kiện là bắt buộc")
     private GreenEventType eventType;
 
-    @NotNull(message = "Start time is required")
-    @Future(message = "Start time must be in the future")
+    @NotNull(message = "Thời gian bắt đầu là bắt buộc")
+    @Future(message = "Thời gian bắt đầu phải ở tương lai")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime startTime;
 
-    @NotNull(message = "End time is required")
-    @Future(message = "End time must be in the future")
+    @NotNull(message = "Thời gian kết thúc là bắt buộc")
+    @Future(message = "Thời gian kết thúc phải ở tương lai")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime endTime;
 
-    @Min(value = 1, message = "Max participants must be at least 1")
+    @Min(value = 1, message = "Số lượng người tham gia tối đa phải ít nhất là 1")
     private Long maxParticipants;
 
-    @Min(value = 1, message = "Max participants must be at least 1")
+    @Min(value = 1, message = "Số lượng người tham gia tối đa phải ít nhất là 1")
     private Long minParticipants;
 
-    @Positive(message = "Cancel deadline hours must be positive")
+    @Positive(message = "Số giờ hạn hủy phải lớn hơn 0")
     private Long cancelDeadlineHoursBefore;
 
-    @Positive(message = "Sign up deadline hours must be positive")
+    @Positive(message = "Số giờ hạn đăng ký phải lớn hơn 0")
     private Long signUpDeadlineHoursBefore;
 
-    @Positive(message = "Reminder hours before must be positive")
+    @Positive(message = "Số giờ nhắc trước phải lớn hơn 0")
     private Long reminderHoursBefore;
 
-    @Positive(message = "Thank you hours after must be positive")
+    @Positive(message = "Số giờ gửi cảm ơn sau sự kiện phải lớn hơn 0")
     private Long thankYouHoursAfter;
 
-    @NotNull(message = "Reward points are required")
-    @Positive(message = "Reward points must be positive")
+    @NotNull(message = "Điểm thưởng là bắt buộc")
+    @Positive(message = "Điểm thưởng phải lớn hơn 0")
     private Double rewardPoints;
 
     private GreenEventStatus status;
 
     @Valid
-    @NotNull(message = "Thumbnail is required")
+    @NotNull(message = "Ảnh đại diện là bắt buộc")
     private ImageRequestDTO thumbnail;
 
     @Valid
     private List<ImageRequestDTO> images;
 
-    @NotNull(message = "Address is required")
+    @NotNull(message = "Địa chỉ là bắt buộc")
     @Valid
     private AddressRequestDTO address;
 

@@ -5,6 +5,6 @@ import lombok.Data;
 
 @Data
 public class NGOProfileRejectRequestDTO {
-    @NotBlank(message = "Rejected reason is required")
+    @NotBlank(message = "Lý do từ chối là bắt buộc")
     private String reason;
 }

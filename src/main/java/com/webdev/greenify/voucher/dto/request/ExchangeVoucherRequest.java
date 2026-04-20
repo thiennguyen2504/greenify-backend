@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ExchangeVoucherRequest {
 
-    @NotBlank(message = "Voucher template ID is required")
+    @NotBlank(message = "Voucher template ID là bắt buộc")
     private String voucherTemplateId;
 }

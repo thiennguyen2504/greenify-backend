@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventRegistrationRequestDTO {
-    @NotBlank(message = "Event ID is required")
+    @NotBlank(message = "Event ID là bắt buộc")
     private String eventId;
     private String note;
 }

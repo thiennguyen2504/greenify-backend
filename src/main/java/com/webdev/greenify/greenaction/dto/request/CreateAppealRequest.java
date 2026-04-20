@@ -14,10 +14,10 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateAppealRequest {
 
-    @NotBlank(message = "Post ID is required")
+    @NotBlank(message = "Post ID là bắt buộc")
     private String postId;
 
-    @NotBlank(message = "Appeal reason is required")
+    @NotBlank(message = "Lý do khiếu nại là bắt buộc")
     private String appealReason;
 
     private List<String> evidenceUrls;

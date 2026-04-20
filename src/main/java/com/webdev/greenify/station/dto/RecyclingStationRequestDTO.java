@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class RecyclingStationRequestDTO {
-    @NotBlank(message = "Recycling station name cannot be blank")
+    @NotBlank(message = "Tên trạm tái chế không được để trống")
     private String name;
     private String description;
     private String phoneNumber;

@@ -12,6 +12,14 @@ public class EventRegistrationSpecification {
         return (root, query, cb) -> userId == null ? cb.conjunction() : cb.equal(root.get("user").get("id"), userId);
     }
 
+    public static Specification<EventRegistrationEntity> isNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    }
+
+    public static Specification<EventRegistrationEntity> eventIsNotDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("event").get("isDeleted"));
+    }
+
     public static Specification<EventRegistrationEntity> hasRegistrationStatus(RegistrationStatus registrationStatus) {
         return (root, query, cb) -> registrationStatus == null
                 ? cb.conjunction()
@@ -47,6 +55,8 @@ public class EventRegistrationSpecification {
             RegistrationStatus registrationStatus,
             String address) {
         return Specification.where(hasUserId(userId))
+                .and(isNotDeleted())
+                .and(eventIsNotDeleted())
                 .and(hasRegistrationStatus(registrationStatus))
                 .and(eventTitleContains(title))
                 .and(eventAddressContains(address));

@@ -58,7 +58,7 @@ public class ReviewServiceImpl implements ReviewService {
         
         // 1. Post must exist
         GreenActionPostEntity post = postRepository.findByIdWithUserAndActionType(postId)
-                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài viết"));
 
         // 2. Post status must be reviewable
         if (!REVIEWABLE_STATUSES.contains(post.getStatus())) {
@@ -90,7 +90,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 1. Post must exist
         GreenActionPostEntity post = postRepository.findByIdWithUserAndActionType(postId)
-                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài viết"));
 
         // 2. Post status must be reviewable
         if (!REVIEWABLE_STATUSES.contains(post.getStatus())) {
@@ -117,7 +117,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Get current user
         UserEntity reviewer = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reviewer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người duyệt"));
 
         // Create review record
         PostReviewEntity review = PostReviewEntity.builder()
@@ -194,7 +194,7 @@ public class ReviewServiceImpl implements ReviewService {
         switch (decision) {
             case APPROVE -> newApproveCount++;
             case REJECT, REPORT_SUSPICIOUS -> newRejectCount++;
-            default -> throw new IllegalArgumentException("Unknown decision type: " + decision);
+            default -> throw new IllegalArgumentException("Loại quyết định không xác định: " + decision);
         }
 
         post.setApproveCount(newApproveCount);

@@ -28,8 +28,10 @@ public interface GreenActionService {
             PostStatus status,
             String actionTypeId,
             String groupName,
+            String search,
             LocalDate fromDate,
             LocalDate toDate,
+            String sortDirection,
             int page,
             int size);
 

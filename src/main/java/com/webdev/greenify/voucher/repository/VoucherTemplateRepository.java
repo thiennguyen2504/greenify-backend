@@ -17,6 +17,8 @@ import java.util.Optional;
 
 public interface VoucherTemplateRepository extends JpaRepository<VoucherTemplateEntity, String> {
 
+        Page<VoucherTemplateEntity> findByStatus(VoucherTemplateStatus status, Pageable pageable);
+
     Page<VoucherTemplateEntity> findByStatusAndRemainingStockGreaterThanAndValidUntilAfter(
             VoucherTemplateStatus status,
             Integer remainingStock,

@@ -9,6 +9,7 @@ import com.webdev.greenify.file.mapper.ImageMapper;
 import com.webdev.greenify.greenaction.dto.request.EventPredictionRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventRequestDTO;
 import com.webdev.greenify.greenaction.dto.request.EventStatusRequestDTO;
+import com.webdev.greenify.greenaction.dto.response.EventParticipationSummaryResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventPredictionResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventRegistrationResponseDTO;
 import com.webdev.greenify.greenaction.dto.response.EventResponseDTO;
@@ -87,7 +88,7 @@ public class EventServiceImpl implements EventService {
 
         String currentUserId = getCurrentUserId();
         UserEntity organizer = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         
         EventEntity event = eventMapper.toEntity(request);
         event.setRejectedCount(0);
@@ -154,14 +155,14 @@ public class EventServiceImpl implements EventService {
     @Transactional(readOnly = true)
     public EventResponseDTO getEventDetail(String id) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
         
         if (event.isDeleted()) {
-            throw new ResourceNotFoundException("Event not found");
+            throw new ResourceNotFoundException("Không tìm thấy sự kiện");
         }
 
         if (isPublicUser() && SENSITIVE_STATUSES.contains(event.getStatus())) {
-            throw new ResourceNotFoundException("Event not found");
+            throw new ResourceNotFoundException("Không tìm thấy sự kiện");
         }
 
         return enrichEventResponseWithRegistrationStatus(
@@ -174,10 +175,10 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public EventResponseDTO updateEvent(String id, EventRequestDTO request) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
 
         if (event.isDeleted()) {
-            throw new ResourceNotFoundException("Event not found");
+            throw new ResourceNotFoundException("Không tìm thấy sự kiện");
         }
 
         EnumSet<GreenEventStatus> allowableStatuses = EnumSet.of(
@@ -186,7 +187,7 @@ public class EventServiceImpl implements EventService {
                 GreenEventStatus.REJECTED);
         
         if (!allowableStatuses.contains(event.getStatus())) {
-            throw new AppException("Cannot update event in current status: " + event.getStatus(), HttpStatus.BAD_REQUEST);
+            throw new AppException("Không thể cập nhật sự kiện ở trạng thái hiện tại: " + event.getStatus(), HttpStatus.BAD_REQUEST);
         }
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
@@ -207,7 +208,7 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public void deleteEvent(String id) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
         
         event.setDeleted(true);
         eventRepository.save(event);
@@ -218,10 +219,10 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public void approveEvent(String id) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
         
         if (event.getStatus() != GreenEventStatus.APPROVAL_WAITING) {
-            throw new AppException("Event is not waiting for approval", HttpStatus.BAD_REQUEST);
+            throw new AppException("Sự kiện không ở trạng thái chờ duyệt", HttpStatus.BAD_REQUEST);
         }
 
         event.setStatus(GreenEventStatus.PUBLISHED);
@@ -244,10 +245,10 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public void rejectEvent(String id, EventStatusRequestDTO request) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
         
         if (event.getStatus() != GreenEventStatus.APPROVAL_WAITING) {
-            throw new AppException("Event is not waiting for approval", HttpStatus.BAD_REQUEST);
+            throw new AppException("Sự kiện không ở trạng thái chờ duyệt", HttpStatus.BAD_REQUEST);
         }
 
         event.setStatus(GreenEventStatus.REJECTED);
@@ -272,10 +273,10 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public void submitEvent(String id) {
         EventEntity event = eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sự kiện"));
         
         if (event.getStatus() != GreenEventStatus.DRAFT && event.getStatus() != GreenEventStatus.REJECTED) {
-            throw new AppException("Only DRAFT or REJECTED events can be submitted", HttpStatus.BAD_REQUEST);
+            throw new AppException("Chỉ sự kiện ở trạng thái DRAFT hoặc REJECTED mới có thể gửi duyệt", HttpStatus.BAD_REQUEST);
         }
 
         event.setStatus(GreenEventStatus.APPROVAL_WAITING);
@@ -366,7 +367,7 @@ public class EventServiceImpl implements EventService {
 
     private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
         if (!TimeUtils.isValidTime(start, end)) {
-            throw new AppException("Start time must be before end time", HttpStatus.BAD_REQUEST);
+            throw new AppException("Thời gian bắt đầu phải trước thời gian kết thúc", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -374,7 +375,7 @@ public class EventServiceImpl implements EventService {
     @Transactional(readOnly = true)
     public List<EventRegistrationResponseDTO> getEventRegistrations(String eventId) {
         if (!eventRepository.existsById(eventId)) {
-            throw new ResourceNotFoundException("Event not found");
+            throw new ResourceNotFoundException("Không tìm thấy sự kiện");
         }
         
         return eventRegistrationRepository.findAllByEventId(eventId).stream()
@@ -413,6 +414,39 @@ public class EventServiceImpl implements EventService {
                 registrationPage.getTotalElements(),
                 registrationPage.getTotalPages());
     }
+
+            @Override
+            @Transactional(readOnly = true)
+            public EventParticipationSummaryResponseDTO getMyParticipationSummary() {
+            String currentUserId = getCurrentUserId();
+
+            long registeredCount = eventRegistrationRepository
+                .countByUserIdAndRegistrationStatusAndCheckInTimeIsNull(currentUserId, RegistrationStatus.REGISTERED);
+            long waitlistedCount = eventRegistrationRepository
+                .countByUserIdAndRegistrationStatus(currentUserId, RegistrationStatus.WAITLISTED);
+            long cancelledCount = eventRegistrationRepository
+                .countByUserIdAndRegistrationStatus(currentUserId, RegistrationStatus.CANCELLED);
+            long attendedCount = eventRegistrationRepository
+                .countByUserIdAndRegistrationStatus(currentUserId, RegistrationStatus.ATTENDED);
+
+            return EventParticipationSummaryResponseDTO.builder()
+                .registeredCount(registeredCount)
+                .waitlistedCount(waitlistedCount)
+                .cancelledCount(cancelledCount)
+                .attendedCount(attendedCount)
+                .build();
+            }
+
+            @Override
+            @Transactional(readOnly = true)
+            public PagedResponse<EventResponseDTO> getMyParticipatedEvents(
+                String title,
+                RegistrationStatus registrationStatus,
+                int page,
+                int size) {
+            String currentUserId = getCurrentUserId();
+            return getParticipatedEvents(currentUserId, title, registrationStatus, null, page, size);
+            }
 
     @Override
     @Transactional(readOnly = true)

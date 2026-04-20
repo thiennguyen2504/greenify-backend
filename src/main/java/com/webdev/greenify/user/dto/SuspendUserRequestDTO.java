@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SuspendUserRequestDTO {
 
-    @NotBlank(message = "Suspension reason is required")
+    @NotBlank(message = "Lý do khóa tài khoản là bắt buộc")
     private String reason;
 }

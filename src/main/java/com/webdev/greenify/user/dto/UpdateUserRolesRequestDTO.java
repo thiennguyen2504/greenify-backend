@@ -13,6 +13,6 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UpdateUserRolesRequestDTO {
-    @NotEmpty(message = "Role names cannot be empty")
+    @NotEmpty(message = "Danh sách vai trò không được để trống")
     private Set<String> roleNames;
 }
