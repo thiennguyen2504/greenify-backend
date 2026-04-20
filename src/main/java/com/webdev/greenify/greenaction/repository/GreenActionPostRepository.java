@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -55,4 +56,17 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
 
         @EntityGraph(attributePaths = {"actionType", "postImage"})
         List<GreenActionPostEntity> findByIdIn(Collection<String> ids);
+
+
+        @Query("""
+                SELECT COUNT(p)
+                FROM GreenActionPostEntity p
+                WHERE p.status = :status
+                AND p.createdAt BETWEEN :start AND :end
+                AND p.isDeleted = false
+                """)
+        long countByCreatedAtBetweenAndStatus(
+                @Param("start") LocalDateTime start,
+                @Param("end") LocalDateTime end,
+                @Param("status") PostStatus status);
 }

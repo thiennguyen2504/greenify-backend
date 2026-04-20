@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -39,4 +40,16 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             @Param("province") String province,
             @Param("startHour") int startHour,
             @Param("endHour") int endHour);
+
+    @Query("""
+            SELECT COUNT(e)
+            FROM EventEntity e
+            WHERE e.organizer.id = :organizerId
+            AND e.createdAt BETWEEN :start AND :end
+            AND e.isDeleted = false
+            """)
+    long countByOrganizerIdAndCreatedAtBetween(
+            @Param("organizerId") String organizerId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

@@ -69,4 +69,16 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucherEntity, 
             @Param("availableStatus") UserVoucherStatus availableStatus,
             @Param("expiredStatus") UserVoucherStatus expiredStatus,
             @Param("currentTime") LocalDateTime currentTime);
+
+    @Query("""
+            SELECT COUNT(uv)
+            FROM UserVoucherEntity uv
+            WHERE uv.status = :status
+            AND uv.usedAt BETWEEN :start AND :end
+            AND uv.isDeleted = false
+            """)
+    long countByUsedAtBetweenAndStatus(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("status") UserVoucherStatus status);
 }
