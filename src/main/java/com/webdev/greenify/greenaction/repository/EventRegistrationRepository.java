@@ -43,7 +43,7 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
     @Query("""
             SELECT COUNT(r)
             FROM EventRegistrationEntity r
-            WHERE r.status = :status
+            WHERE r.registrationStatus = :status
             AND r.checkInTime BETWEEN :start AND :end
             AND r.isDeleted = false
             """)
@@ -68,7 +68,7 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
             SELECT COUNT(r)
             FROM EventRegistrationEntity r
             WHERE r.event.organizer.id = :organizerId
-            AND r.status = :status
+            AND r.registrationStatus = :status
             AND r.createdAt BETWEEN :start AND :end
             AND r.isDeleted = false
             """)

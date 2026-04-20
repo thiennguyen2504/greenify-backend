@@ -36,13 +36,14 @@ public class RecyclingStationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'NGO', 'ADMIN')")
     public ResponseEntity<List<RecyclingStationResponseDTO>> getAllStations(
             @RequestParam(name = "wasteTypeID", required = false) String wasteTypeId) {
         return ResponseEntity.ok(recyclingStationService.getAllStations(wasteTypeId));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'CTV', 'NGO', 'ADMIN')")
     public ResponseEntity<RecyclingStationResponseDTO> getStationById(@PathVariable String id) {
         return ResponseEntity.ok(recyclingStationService.getStationById(id));
     }
