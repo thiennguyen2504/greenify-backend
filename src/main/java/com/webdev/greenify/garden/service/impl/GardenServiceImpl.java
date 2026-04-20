@@ -180,12 +180,22 @@ public class GardenServiceImpl implements GardenService {
         for (PlantDailyLogEntity dailyLog : dailyLogs) {
             PlantStage currentStage = dailyLog.getStage();
             boolean isChangeState = previousStage == null || !Objects.equals(currentStage, previousStage);
+            String responseImageUrl = dailyLog.getImageUrl();
+
+            if (isChangeState) {
+                String stageImageUrl = seedMapper.resolveStageImageUrl(
+                        dailyLog.getPlantProgress() != null ? dailyLog.getPlantProgress().getSeed() : null,
+                        currentStage);
+                if (stageImageUrl != null && !stageImageUrl.isBlank()) {
+                    responseImageUrl = stageImageUrl;
+                }
+            }
 
             responses.add(PlantDailyLogResponse.builder()
                     .logDate(dailyLog.getLogDate())
                     .stage(currentStage)
                     .isActiveDay(dailyLog.getIsActiveDay())
-                    .imageUrl(dailyLog.getImageUrl())
+                    .imageUrl(responseImageUrl)
                     .greenPostUrl(dailyLog.getGreenPostUrl())
                     .isChangeState(isChangeState)
                     .build());
