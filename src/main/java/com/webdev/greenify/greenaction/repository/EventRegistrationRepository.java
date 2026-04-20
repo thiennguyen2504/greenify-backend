@@ -103,4 +103,5 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
         long countByUserIdAndRegistrationStatus(
                         @Param("userId") String userId,
                         @Param("status") RegistrationStatus status);
+    boolean existsByRegistrationCodeStartingWith(String prefix);
 }
