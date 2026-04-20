@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,8 +36,15 @@ public class LeaderboardController {
 
     @PostMapping(value = "/admin/leaderboard/prizes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PrizeConfigResponse> createPrizeConfig(
+    public ResponseEntity<PrizeConfigResponse> createPrizeConfigFromForm(
             @Valid @ModelAttribute CreatePrizeConfigRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(leaderboardService.createPrizeConfig(request));
+    }
+
+    @PostMapping(value = "/admin/leaderboard/prizes", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PrizeConfigResponse> createPrizeConfigFromJson(
+            @Valid @RequestBody CreatePrizeConfigRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(leaderboardService.createPrizeConfig(request));
     }
 
