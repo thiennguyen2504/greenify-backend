@@ -1,5 +1,6 @@
 package com.webdev.greenify.user.controller;
 
+import com.webdev.greenify.user.dto.ChangePasswordRequestDTO;
 import com.webdev.greenify.user.dto.ChangeUserRoleRequestDTO;
 import com.webdev.greenify.user.dto.CtvEligibilityResponseDTO;
 import com.webdev.greenify.user.dto.DemoteCtvRequestDTO;
@@ -17,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -86,5 +88,12 @@ public class UserController {
             @PathVariable String id,
             @RequestBody @Valid DemoteCtvRequestDTO request) {
         return ResponseEntity.ok(userService.demoteCtvToUser(id, request));
+    }
+
+    @PostMapping("/change-password")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'CTV', 'NGO')")
+    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequestDTO request) {
+        userService.changePassword(request);
+        return ResponseEntity.ok("Password changed successfully");
     }
 }

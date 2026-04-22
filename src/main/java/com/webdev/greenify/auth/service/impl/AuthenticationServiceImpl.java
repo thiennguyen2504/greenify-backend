@@ -84,7 +84,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public void sendForgotPasswordOtp(SendOtpRequest request) {
         UserEntity user = findUserByIdentifier(request.getIdentifier());
-        otpService.processAndSendOtp(resolveForgotPasswordOtpIdentifier(user));
+        otpService.processAndSendOtp(resolveForgotPasswordOtpIdentifier(user), OtpService.OtpType.FORGOT_PASSWORD);
     }
 
     @Override
