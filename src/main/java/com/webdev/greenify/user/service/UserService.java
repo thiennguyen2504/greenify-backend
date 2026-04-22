@@ -1,6 +1,7 @@
 package com.webdev.greenify.user.service;
 
 import com.webdev.greenify.user.dto.ChangeUserRoleRequestDTO;
+import com.webdev.greenify.user.dto.ChangePasswordRequestDTO;
 import com.webdev.greenify.user.dto.CtvEligibilityResponseDTO;
 import com.webdev.greenify.user.dto.DemoteCtvRequestDTO;
 import com.webdev.greenify.user.dto.PagedResponse;
@@ -26,4 +27,6 @@ public interface UserService {
     UserAdminSummaryResponseDTO upgradeCurrentUserToCtv();
 
     UserAdminSummaryResponseDTO demoteCtvToUser(String userId, DemoteCtvRequestDTO request);
+
+    void changePassword(ChangePasswordRequestDTO request);
 }

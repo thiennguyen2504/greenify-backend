@@ -1,4 +1,6 @@
 package com.webdev.greenify.file.dto;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ImageRequestDTO {
     @NotBlank(message = "Tên bucket là bắt buộc")
     private String bucketName;

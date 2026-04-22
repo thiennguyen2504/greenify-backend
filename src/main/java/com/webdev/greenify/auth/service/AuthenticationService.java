@@ -2,6 +2,7 @@ package com.webdev.greenify.auth.service;
 
 import com.webdev.greenify.auth.dto.AuthenticationRequest;
 import com.webdev.greenify.auth.dto.AuthenticationResponse;
+import com.webdev.greenify.auth.dto.ForgotPasswordSetPasswordRequest;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
@@ -14,6 +15,12 @@ public interface AuthenticationService {
     void sendOtp(SendOtpRequest request);
 
     VerifyOtpResponse verifyOtp(VerifyOtpRequest request);
+
+    void sendForgotPasswordOtp(SendOtpRequest request);
+
+    VerifyOtpResponse verifyForgotPasswordOtp(VerifyOtpRequest request);
+
+    void setForgotPassword(ForgotPasswordSetPasswordRequest request);
 
     AuthenticationResponse register(RegisterRequest request);
 

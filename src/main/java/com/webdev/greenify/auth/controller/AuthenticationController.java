@@ -2,6 +2,7 @@ package com.webdev.greenify.auth.controller;
 
 import com.webdev.greenify.auth.dto.AuthenticationRequest;
 import com.webdev.greenify.auth.dto.AuthenticationResponse;
+import com.webdev.greenify.auth.dto.ForgotPasswordSetPasswordRequest;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
@@ -31,9 +32,26 @@ public class AuthenticationController {
         return ResponseEntity.ok("OTP sent successfully");
     }
 
+    @PostMapping("/forgot-password/send-otp")
+    public ResponseEntity<String> sendForgotPasswordOtp(@RequestBody @Valid SendOtpRequest request) {
+        service.sendForgotPasswordOtp(request);
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
     @PostMapping("/register/verify-otp")
     public ResponseEntity<VerifyOtpResponse> verifyOtp(@RequestBody @Valid VerifyOtpRequest request) {
         return ResponseEntity.ok(service.verifyOtp(request));
+    }
+
+    @PostMapping("/forgot-password/verify-otp")
+    public ResponseEntity<VerifyOtpResponse> verifyForgotPasswordOtp(@RequestBody @Valid VerifyOtpRequest request) {
+        return ResponseEntity.ok(service.verifyForgotPasswordOtp(request));
+    }
+
+    @PostMapping("/forgot-password/set-password")
+    public ResponseEntity<String> setForgotPassword(@RequestBody @Valid ForgotPasswordSetPasswordRequest request) {
+        service.setForgotPassword(request);
+        return ResponseEntity.ok("Password updated successfully");
     }
 
     @PostMapping("/register")

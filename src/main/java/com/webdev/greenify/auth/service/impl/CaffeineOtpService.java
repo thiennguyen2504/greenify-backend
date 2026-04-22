@@ -69,6 +69,11 @@ public class CaffeineOtpService implements OtpService {
 
     @Override
     public void processAndSendOtp(String identifier) {
+        processAndSendOtp(identifier, OtpType.REGISTRATION);
+    }
+
+    @Override
+    public void processAndSendOtp(String identifier, OtpType otpType) {
         // Rate limiting check
         Integer count = rateLimitCache.getIfPresent(identifier);
         if (count != null && count >= MAX_OTP_PER_DAY) {
@@ -97,7 +102,7 @@ public class CaffeineOtpService implements OtpService {
         try {
             // Send OTP
             if (identifier.contains("@")) {
-                sendOtpEmail(identifier, otp);
+                sendOtpEmail(identifier, otp, otpType);
             } else {
                 // Simulated otp sending via sms
                 log.info("Simulating SMS sent to {}: Your OTP is {}", identifier, otp);
@@ -162,18 +167,32 @@ public class CaffeineOtpService implements OtpService {
         return sb.toString();
     }
 
-    private void sendOtpEmail(String email, String otp) {
-        String subject = "Greenify Registration OTP";
-        String content = String.format(
-                "<p>Xin chào,</p>" +
-                        "<p>Mã OTP đăng ký tài khoản Greenify của bạn là: <strong>%s</strong></p>" +
-                        "<p>Mã có hiệu lực trong %d phút.</p>" +
-                        "<p>ếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>",
-                otp,
-                OTP_EXPIRE_MINUTES);
+    private void sendOtpEmail(String email, String otp, OtpType otpType) {
+        String subject;
+        String content;
+
+        if (otpType == OtpType.FORGOT_PASSWORD) {
+            subject = "Greenify - Đặt lại mật khẩu";
+            content = String.format(
+                    "<p>Xin chào,</p>" +
+                            "<p>Mã OTP để đặt lại mật khẩu Greenify của bạn là: <strong>%s</strong></p>" +
+                            "<p>Mã có hiệu lực trong %d phút.</p>" +
+                            "<p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>",
+                    otp,
+                    OTP_EXPIRE_MINUTES);
+        } else {
+            subject = "Greenify Registration OTP";
+            content = String.format(
+                    "<p>Xin chào,</p>" +
+                            "<p>Mã OTP đăng ký tài khoản Greenify của bạn là: <strong>%s</strong></p>" +
+                            "<p>Mã có hiệu lực trong %d phút.</p>" +
+                            "<p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>",
+                    otp,
+                    OTP_EXPIRE_MINUTES);
+        }
 
         emailService.sendEmail(email, subject, content);
-        log.info("OTP email sent to {}", email);
+        log.info("OTP email sent to {} for {}", email, otpType);
     }
 
     private void rollbackOtpState(String identifier, Integer previousCount) {
