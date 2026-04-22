@@ -7,6 +7,7 @@ import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
 import com.webdev.greenify.point.entity.PointWalletEntity;
 import com.webdev.greenify.point.repository.PointWalletRepository;
 import com.webdev.greenify.user.dto.ChangeUserRoleRequestDTO;
+import com.webdev.greenify.user.dto.ChangePasswordRequestDTO;
 import com.webdev.greenify.user.dto.CtvEligibilityResponseDTO;
 import com.webdev.greenify.user.dto.DemoteCtvRequestDTO;
 import com.webdev.greenify.user.dto.PagedResponse;
@@ -36,6 +37,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +72,7 @@ public class UserServiceImpl implements UserService {
     private final UserManagementActionRepository userManagementActionRepository;
     private final UserProfileMapper userProfileMapper;
     private final NGOProfileMapper ngoProfileMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -125,6 +128,28 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByIdWithDetails(userId)
                 .map(userMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequestDTO request) {
+        String userId = getCurrentUserId();
+        UserEntity user = getUserOrThrow(userId);
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new AppException("Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new AppException("Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST);
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new AppException("Mật khẩu mới không được trùng mật khẩu hiện tại", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     @Override

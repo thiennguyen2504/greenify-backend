@@ -14,6 +14,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.webdev.greenify.auth.dto.AuthenticationRequest;
 import com.webdev.greenify.auth.dto.AuthenticationResponse;
+import com.webdev.greenify.auth.dto.ForgotPasswordSetPasswordRequest;
 import com.webdev.greenify.auth.dto.LogoutRequest;
 import com.webdev.greenify.auth.dto.RefreshTokenRequest;
 import com.webdev.greenify.auth.dto.RegisterRequest;
@@ -78,6 +79,43 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String normalizedIdentifier = normalizeIdentifier(request.getIdentifier());
         String token = otpService.verifyOtp(normalizedIdentifier, request.getOtp());
         return VerifyOtpResponse.builder().verificationToken(token).build();
+    }
+
+    @Override
+    public void sendForgotPasswordOtp(SendOtpRequest request) {
+        UserEntity user = findUserByIdentifier(request.getIdentifier());
+        otpService.processAndSendOtp(resolveForgotPasswordOtpIdentifier(user));
+    }
+
+    @Override
+    public VerifyOtpResponse verifyForgotPasswordOtp(VerifyOtpRequest request) {
+        UserEntity user = findUserByIdentifier(request.getIdentifier());
+        String token = otpService.verifyOtp(resolveForgotPasswordOtpIdentifier(user), request.getOtp());
+        return VerifyOtpResponse.builder().verificationToken(token).build();
+    }
+
+    @Override
+    @Transactional
+    public void setForgotPassword(ForgotPasswordSetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new AppException("Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST);
+        }
+
+        String identifier = otpService.getIdentifierFromVerificationToken(request.getVerificationToken());
+        if (identifier == null) {
+            throw new InvalidTokenException("Mã xác thực không hợp lệ hoặc đã hết hạn");
+        }
+
+        UserEntity user = repository.findByIdentifier(identifier)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new AppException("Mật khẩu mới không được trùng mật khẩu hiện tại", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        repository.save(user);
+        otpService.clearVerificationToken(request.getVerificationToken());
     }
 
     @Override
@@ -152,14 +190,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String value = identifier.trim();
 
         if (value.contains("@")) {
-            return identifier.toLowerCase();
+            return value.toLowerCase();
         }
 
         if (value.matches("^[0-9+().\\s-]+$")) {
             return normalizePhone(value);
         }
 
-        return identifier.trim().toLowerCase().replaceAll("\\s+", "");
+        return value.toLowerCase().replaceAll("\\s+", "");
     }
 
     private String normalizePhone(String phone) {
@@ -288,5 +326,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private UserEntity findUserByIdentifier(String identifier) {
+        String normalizedIdentifier = normalizeIdentifier(identifier);
+        return repository.findByIdentifier(normalizedIdentifier)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+    }
+
+    private String resolveForgotPasswordOtpIdentifier(UserEntity user) {
+        if (!hasText(user.getEmail())) {
+            throw new AppException("Tài khoản chưa liên kết email để nhận OTP", HttpStatus.BAD_REQUEST);
+        }
+        return user.getEmail().trim().toLowerCase();
     }
 }
