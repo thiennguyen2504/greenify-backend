@@ -44,7 +44,7 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
             SELECT COUNT(r)
             FROM EventRegistrationEntity r
             WHERE r.registrationStatus = :status
-            AND r.checkInTime BETWEEN :start AND :end
+            AND r.createdAt BETWEEN :start AND :end
             AND r.isDeleted = false
             """)
     long countByCheckInTimeBetweenAndStatus(

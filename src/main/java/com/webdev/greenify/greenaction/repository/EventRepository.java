@@ -62,4 +62,10 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             @Param("organizerId") String organizerId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(e.participantCount), 0) FROM EventEntity e WHERE e.status = :status AND e.isDeleted = false AND e.endTime BETWEEN :start AND :end")
+    long sumParticipantCountByStatusAndEndTimeBetween(@Param("status") GreenEventStatus status, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(e.participantCount), 0) FROM EventEntity e WHERE e.organizer.id = :organizerId AND e.isDeleted = false AND e.createdAt BETWEEN :start AND :end")
+    long sumParticipantCountByOrganizerIdAndCreatedAtBetween(@Param("organizerId") String organizerId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
