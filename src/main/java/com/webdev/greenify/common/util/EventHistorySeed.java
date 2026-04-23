@@ -112,6 +112,7 @@ public class EventHistorySeed {
 
     @Transactional
     public void seed() {
+        normalizeAllLegacyEvents();
         if (eventRepository.countCompletedEvents() > COMPLETED_EVENT_THRESHOLD) {
             log.info("Skip EventHistorySeed - already seeded");
             return;
@@ -240,6 +241,35 @@ public class EventHistorySeed {
     private String normalizeProvince(String province) {
         String normalized = provinceNormalizationService.normalizeProvinceName(province);
         return normalized == null || normalized.isBlank() ? province : normalized;
+    }
+
+    @Transactional
+    public void normalizeAllLegacyEvents() {
+        log.info("Bắt đầu chuẩn hóa dữ liệu event cũ...");
+        
+        // Lấy danh sách các event có tên tỉnh kiểu cũ
+        List<EventEntity> legacyEvents = eventRepository.findAll(); 
+        int updatedCount = 0;
+
+        for (EventEntity event : legacyEvents) {
+            if (event.getAddress() != null && event.getAddress().getProvince() != null) {
+                String currentProvince = event.getAddress().getProvince();
+                String normalized = provinceNormalizationService.normalizeProvinceName(currentProvince);
+                
+                // Nếu tên sau khi chuẩn hóa khác tên cũ, tiến hành cập nhật
+                if (normalized != null && !normalized.equals(currentProvince)) {
+                    event.getAddress().setProvince(normalized);
+                    updatedCount++;
+                }
+            }
+        }
+        
+        if (updatedCount > 0) {
+            eventRepository.saveAll(legacyEvents);
+            log.info("Đã cập nhật chuẩn hóa cho {} sự kiện.", updatedCount);
+        } else {
+            log.info("Không tìm thấy dữ liệu cần chuẩn hóa.");
+        }
     }
 
     private List<EventTemplate> buildTemplates() {

@@ -31,7 +31,8 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
     @Query("SELECT COALESCE(AVG(CAST(e.participantCount AS double)), 0.0) " +
             "FROM EventEntity e " +
             "WHERE e.eventType = :eventType " +
-            "AND e.address.province = :province " +
+            "AND (TRIM(UPPER(e.address.province)) = TRIM(UPPER(:normalizedProvince)) " +
+            "     OR TRIM(UPPER(e.address.province)) = TRIM(UPPER(:rawProvince))) " +
             "AND (" +
             "  HOUR(e.startTime) BETWEEN :startHour - 2 AND :startHour + 2 " +
             "  OR HOUR(e.endTime) BETWEEN :endHour - 2 AND :endHour + 2" +
@@ -39,7 +40,8 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             "AND e.status = 'COMPLETED'")
     Double getAverageParticipantsByCriteria(
             @Param("eventType") GreenEventType eventType,
-            @Param("province") String province,
+            @Param("normalizedProvince") String normalizedProvince,
+            @Param("rawProvince") String rawProvince,
             @Param("startHour") int startHour,
             @Param("endHour") int endHour);
 
@@ -62,4 +64,7 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             @Param("organizerId") String organizerId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+        @Query("SELECT e FROM EventEntity e WHERE e.address.province LIKE 'Thành phố %' OR e.address.province LIKE 'Tỉnh %'")
+        List<EventEntity> findAllWithLegacyProvinceNames();
 }

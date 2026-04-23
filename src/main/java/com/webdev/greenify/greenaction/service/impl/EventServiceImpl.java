@@ -453,10 +453,14 @@ public class EventServiceImpl implements EventService {
     public EventPredictionResponseDTO predictEventFeasibility(EventPredictionRequestDTO request) {
         int startHour = request.getStartTime().getHour();
         int endHour = request.getEndTime().getHour();
+        String rawProvince = request.getProvince();
         String normalizedProvince = provinceNormalizationService.normalizeProvinceName(request.getProvince());
+
+
         Double averageParticipants = eventRepository.getAverageParticipantsByCriteria(
                 request.getEventType(),
-            normalizedProvince,
+                normalizedProvince != null ? normalizedProvince : rawProvince, // Tránh null
+                rawProvince,
                 startHour,
                 endHour);
 
