@@ -7,6 +7,7 @@ import com.webdev.greenify.analyst.dto.NGOAnalystDashboardDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystMetricDTO;
 import com.webdev.greenify.analyst.dto.NGOMonthlyMetricDTO;
 import com.webdev.greenify.analyst.service.AnalystService;
+import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
 import com.webdev.greenify.greenaction.repository.EventRegistrationRepository;
@@ -14,10 +15,13 @@ import com.webdev.greenify.greenaction.repository.EventRepository;
 import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import com.webdev.greenify.greenaction.repository.PointTransactionRepository;
 import com.webdev.greenify.trashspot.enumeration.ResolveRequestStatus;
+import com.webdev.greenify.trashspot.enumeration.TrashSpotStatus;
+import com.webdev.greenify.trashspot.repository.TrashSpotRepository;
 import com.webdev.greenify.trashspot.repository.TrashSpotResolveRequestRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.voucher.enumeration.UserVoucherStatus;
 import com.webdev.greenify.voucher.repository.UserVoucherRepository;
+import com.webdev.greenify.voucher.repository.VoucherTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -42,6 +46,8 @@ public class AnalystServiceImpl implements AnalystService {
     private final EventRegistrationRepository registrationRepository;
     private final TrashSpotResolveRequestRepository resolveRepository;
     private final EventRepository eventRepository;
+    private final VoucherTemplateRepository voucherTemplateRepository;
+    private final TrashSpotRepository trashSpotRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -94,9 +100,9 @@ public class AnalystServiceImpl implements AnalystService {
                 .newUsers(userRepository.countByCreatedAtBetween(start, end))
                 .verifiedPosts(postRepository.countByCreatedAtBetweenAndStatus(start, end, PostStatus.VERIFIED))
                 .pointsIssued(pointRepository.sumPointsByCreatedAtBetween(start, end))
-                .vouchersRedeemed(voucherRepository.countByUsedAtBetweenAndStatus(start, end, UserVoucherStatus.USED))
-                .eventAttendance(registrationRepository.countByCheckInTimeBetweenAndStatus(start, end, RegistrationStatus.ATTENDED))
-                .trashResolved(resolveRepository.countByReviewedAtBetweenAndStatus(start, end, ResolveRequestStatus.APPROVED))
+                .vouchersRedeemed(voucherTemplateRepository.countByCreatedAtBetweenAndIsDeletedFalse(start, end))
+                .eventAttendance(eventRepository.sumParticipantCountByStatusAndEndTimeBetween(GreenEventStatus.COMPLETED, start, end))
+                .trashResolved(trashSpotRepository.countByStatusAndLastModifiedAtBetweenAndIsDeletedFalse(TrashSpotStatus.VERIFIED, start, end))
                 .build();
     }
 
@@ -122,7 +128,7 @@ public class AnalystServiceImpl implements AnalystService {
 
     private NGOAnalystMetricDTO calculateNGOMetrics(String ngoId, LocalDateTime start, LocalDateTime end) {
         long totalEvents = eventRepository.countByOrganizerIdAndCreatedAtBetween(ngoId, start, end);
-        long totalParticipants = registrationRepository.countByOrganizerIdAndCreatedAtBetween(ngoId, start, end);
+        long totalParticipants = eventRepository.sumParticipantCountByOrganizerIdAndCreatedAtBetween(ngoId, start, end);
         long attendedCount = registrationRepository.countByOrganizerIdAndStatusAndCreatedAtBetween(ngoId, RegistrationStatus.ATTENDED, start, end);
         
         double attendanceRate = totalParticipants > 0 ? (double) attendedCount / totalParticipants : 0.0;

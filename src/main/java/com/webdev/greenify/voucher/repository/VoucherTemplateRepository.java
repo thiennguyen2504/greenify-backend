@@ -57,4 +57,6 @@ public interface VoucherTemplateRepository extends JpaRepository<VoucherTemplate
             AND vt.remainingStock >= :count
             """)
     int decreaseRemainingStockBatch(@Param("id") String id, @Param("count") int count);
+
+    long countByCreatedAtBetweenAndIsDeletedFalse(LocalDateTime start, LocalDateTime end);
 }
