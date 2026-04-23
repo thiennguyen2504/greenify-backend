@@ -29,17 +29,7 @@ public class SubmitReviewRequest {
 
     @JsonIgnore
     public String resolveRejectReason() {
-        String reason = trimToNull(rejectReason);
-        if (reason != null) {
-            return reason;
-        }
-
-        String code = trimToNull(rejectReasonCode);
-        String note = trimToNull(rejectReasonNote);
-        if (code != null && note != null) {
-            return code + ": " + note;
-        }
-        return code != null ? code : note;
+        return trimToNull(rejectReason);
     }
 
     private String trimToNull(String value) {
