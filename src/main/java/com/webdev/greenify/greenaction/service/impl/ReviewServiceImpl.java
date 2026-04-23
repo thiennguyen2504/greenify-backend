@@ -110,9 +110,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         String rejectReason = request.resolveRejectReason();
 
-        // 5. Reject reason required for REJECT or REPORT_SUSPICIOUS
-        if ((request.getDecision() == ReviewDecision.REJECT || 
-             request.getDecision() == ReviewDecision.REPORT_SUSPICIOUS) &&
+        // 5. Reject reason required for REJECT
+        if (request.getDecision() == ReviewDecision.REJECT &&
             (rejectReason == null || rejectReason.isBlank())) {
             throw new AppException("Lý do từ chối là bắt buộc", HttpStatus.BAD_REQUEST);
         }
