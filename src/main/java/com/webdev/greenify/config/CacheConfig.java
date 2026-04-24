@@ -16,6 +16,8 @@ public class CacheConfig {
                 .withCacheConfiguration("adminDashboard",
                         RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofSeconds(10)))
                 .withCacheConfiguration("ngoDashboard",
-                        RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofSeconds(10)));
+                        RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofSeconds(10)))
+                .withCacheConfiguration("landingPageMetrics",
+                        RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofHours(1)));
     }
 }

@@ -66,4 +66,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String>, JpaSp
     long countByCreatedAtBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    long countByIsDeletedFalse();
 }

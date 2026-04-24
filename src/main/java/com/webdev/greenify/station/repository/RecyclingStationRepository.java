@@ -25,4 +25,6 @@ public interface RecyclingStationRepository extends JpaRepository<RecyclingStati
 
     @EntityGraph(attributePaths = { "address", "wasteTypes" })
     Optional<RecyclingStationEntity> findByIdAndIsDeletedFalse(String id);
+
+    long countByIsDeletedFalse();
 }

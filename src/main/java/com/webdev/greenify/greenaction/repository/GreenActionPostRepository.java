@@ -69,4 +69,6 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
                 @Param("start") LocalDateTime start,
                 @Param("end") LocalDateTime end,
                 @Param("status") PostStatus status);
+
+    long countByIsDeletedFalse();
 }
