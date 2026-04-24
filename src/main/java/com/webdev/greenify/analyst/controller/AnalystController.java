@@ -1,6 +1,7 @@
 package com.webdev.greenify.analyst.controller;
 
 import com.webdev.greenify.analyst.dto.AnalystDashboardDTO;
+import com.webdev.greenify.analyst.dto.LandingPageMetricsDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystDashboardDTO;
 import com.webdev.greenify.analyst.service.AnalystService;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +44,10 @@ public class AnalystController {
         
         String ngoId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(analystService.getNGODashboardMetrics(ngoId, startDate, endDate));
+    }
+
+    @GetMapping("/landing")
+    public ResponseEntity<LandingPageMetricsDTO> getLandingMetrics() {
+        return ResponseEntity.ok(analystService.getLandingPageMetrics());
     }
 }

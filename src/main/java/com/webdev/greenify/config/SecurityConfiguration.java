@@ -58,7 +58,8 @@ public class SecurityConfiguration {
                                                                 "/login/oauth2/code/**",
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
-                                                                "/swagger-ui.html")
+                                                                "/swagger-ui.html",
+                                                                "/api/v1/analyst/landing")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtBlacklistFilter, BearerTokenAuthenticationFilter.class)

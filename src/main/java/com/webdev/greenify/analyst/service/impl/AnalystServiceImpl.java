@@ -3,10 +3,12 @@ package com.webdev.greenify.analyst.service.impl;
 import com.webdev.greenify.analyst.dto.AnalystDashboardDTO;
 import com.webdev.greenify.analyst.dto.AnalystMetricDTO;
 import com.webdev.greenify.analyst.dto.MonthlyMetricDTO;
+import com.webdev.greenify.analyst.dto.LandingPageMetricsDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystDashboardDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystMetricDTO;
 import com.webdev.greenify.analyst.dto.NGOMonthlyMetricDTO;
 import com.webdev.greenify.analyst.service.AnalystService;
+import com.webdev.greenify.station.repository.RecyclingStationRepository;
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
 import com.webdev.greenify.greenaction.enumeration.PostStatus;
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
@@ -48,6 +50,7 @@ public class AnalystServiceImpl implements AnalystService {
     private final EventRepository eventRepository;
     private final VoucherTemplateRepository voucherTemplateRepository;
     private final TrashSpotRepository trashSpotRepository;
+    private final RecyclingStationRepository stationRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -92,6 +95,18 @@ public class AnalystServiceImpl implements AnalystService {
         return NGOAnalystDashboardDTO.builder()
                 .totalMetrics(totalMetrics)
                 .monthlyBreakdown(monthlyBreakdown)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "landingPageMetrics")
+    public LandingPageMetricsDTO getLandingPageMetrics() {
+        return LandingPageMetricsDTO.builder()
+                .totalPosts(postRepository.countByIsDeletedFalse())
+                .totalUsers(userRepository.countByIsDeletedFalse())
+                .totalStations(stationRepository.countByIsDeletedFalse())
+                .totalEvents(eventRepository.countByIsDeletedFalse())
                 .build();
     }
 

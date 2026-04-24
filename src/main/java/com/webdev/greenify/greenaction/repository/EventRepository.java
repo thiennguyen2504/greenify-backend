@@ -63,6 +63,8 @@ public interface EventRepository extends JpaRepository<EventEntity, String>, Jpa
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
+    long countByIsDeletedFalse();
+
     @Query("SELECT COALESCE(SUM(e.participantCount), 0) FROM EventEntity e WHERE e.status = :status AND e.isDeleted = false AND e.endTime BETWEEN :start AND :end")
     long sumParticipantCountByStatusAndEndTimeBetween(@Param("status") GreenEventStatus status, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
