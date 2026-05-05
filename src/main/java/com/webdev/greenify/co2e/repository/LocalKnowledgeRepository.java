@@ -10,6 +10,13 @@ import java.util.List;
 @Repository
 public interface LocalKnowledgeRepository extends JpaRepository<LocalKnowledge, Long> {
 
-    @Query(value = "SELECT * FROM local_knowledge ORDER BY embedding <=> cast(?1 as vector) LIMIT 5", nativeQuery = true)
-    List<LocalKnowledge> findTop5Similar(String embeddingStr);
+    interface LocalKnowledgeProjection {
+        Long getId();
+        String getName();
+        String getDescription();
+        String getType();
+    }
+
+    @Query(value = "SELECT id, name, description, type FROM local_knowledge ORDER BY embedding <=> cast(?1 as vector) LIMIT 5", nativeQuery = true)
+    List<LocalKnowledgeProjection> findTop5Similar(String embeddingStr);
 }

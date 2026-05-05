@@ -33,7 +33,7 @@ public class LocalKnowledgeServiceImpl implements Co2eKnowledgeService {
             // Convert float[] to string format for Postgres vector casting: "[0.1, 0.2, ...]"
             String embeddingStr = Arrays.toString(embedding);
 
-            List<LocalKnowledge> similarKnowledge = repository.findTop5Similar(embeddingStr);
+            List<LocalKnowledgeRepository.LocalKnowledgeProjection> similarKnowledge = repository.findTop5Similar(embeddingStr);
             if (similarKnowledge.isEmpty()) {
                 return "";
             }
@@ -42,7 +42,7 @@ public class LocalKnowledgeServiceImpl implements Co2eKnowledgeService {
             StringBuilder slangsFound = new StringBuilder();
             StringBuilder productsFound = new StringBuilder();
 
-            for (LocalKnowledge kn : similarKnowledge) {
+            for (LocalKnowledgeRepository.LocalKnowledgeProjection kn : similarKnowledge) {
                 if ("slang".equals(kn.getType())) {
                     slangsFound.append("- '").append(kn.getName()).append("': ").append(kn.getDescription()).append("\n");
                 } else if ("product".equals(kn.getType())) {
