@@ -216,7 +216,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public void finalizeDueWeeks() {
         LocalDateTime now = LocalDateTime.now();
         List<String> dueConfigIds = leaderboardPrizeConfigRepository.findIdsToFinalize(PrizeConfigStatus.CONFIGURED, now);

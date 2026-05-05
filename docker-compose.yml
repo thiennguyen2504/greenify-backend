@@ -1,7 +1,7 @@
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: greenify-db
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -9,6 +9,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -88,6 +89,9 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_BUCKET: ${AWS_BUCKET}
       CLOUDFRONT_URL: ${CLOUDFRONT_URL}
+      # Gemini AI for CO2e Analysis
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_ENABLED: ${GEMINI_ENABLED}
     ports:
       - "8080:8080"
     restart: unless-stopped

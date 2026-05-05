@@ -1,5 +1,6 @@
 package com.webdev.greenify.greenaction.service.impl;
 
+import com.webdev.greenify.co2e.event.Co2eAnalysisEvent;
 import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.greenaction.dto.request.SubmitReviewRequest;
@@ -21,6 +22,7 @@ import com.webdev.greenify.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +52,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final PointService pointService;
     private final StreakService streakService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -162,6 +165,17 @@ public class ReviewServiceImpl implements ReviewService {
             log.info("Awarded {} points to post author {} for verified post {}",
                     postPoints, post.getUser().getId(), post.getId());
         }
+
+        eventPublisher.publishEvent(new Co2eAnalysisEvent(
+            this,
+            post.getId(),
+            post.getUser().getId(),
+            post.getPostImage() != null ? post.getPostImage().getImageUrl() : null,
+            post.getCaption(),
+            post.getActionType().getActionName(),
+            post.getActionDate()
+        ));
+        log.info("CO2e ANALYSIS EVENT PUBLISHED for post: {}, user: {}", post.getId(), post.getUser().getId());
 
         // 2. Award points to all reviewers who approved the post
         List<PostReviewEntity> approvingReviews = reviewRepository

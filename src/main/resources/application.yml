@@ -115,3 +115,10 @@ unsplash:
   min-height: ${UNSPLASH_MIN_HEIGHT:700}
   min-likes: ${UNSPLASH_MIN_LIKES:10}
   rate-limit-cooldown-millis: ${UNSPLASH_RATE_LIMIT_COOLDOWN_MILLIS:600000}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.1-flash-lite-preview}
+  api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent}
+  timeout-millis: ${GEMINI_TIMEOUT_MILLIS:10000}
+  enabled: ${GEMINI_ENABLED:true}
