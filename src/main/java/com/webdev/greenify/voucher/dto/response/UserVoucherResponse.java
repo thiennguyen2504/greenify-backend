@@ -1,6 +1,5 @@
 package com.webdev.greenify.voucher.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.webdev.greenify.voucher.enumeration.UserVoucherStatus;
 import com.webdev.greenify.voucher.enumeration.VoucherSource;
 import lombok.AllArgsConstructor;
