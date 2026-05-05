@@ -37,11 +37,13 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
     private final GeminiProperties geminiProperties;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final Co2eKnowledgeService knowledgeService;
 
-    public GeminiAnalysisServiceImpl(GeminiProperties geminiProperties) {
+    public GeminiAnalysisServiceImpl(GeminiProperties geminiProperties, Co2eKnowledgeService knowledgeService) {
         this.geminiProperties = geminiProperties;
         this.restTemplate = buildRestTemplate(geminiProperties);
         this.objectMapper = new ObjectMapper();
+        this.knowledgeService = knowledgeService;
     }
 
     @Override
@@ -72,8 +74,15 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 .build(true)
                 .toUri();
 
+        String localContext = "";
         try {
-            Map<String, Object> payload = buildRequestPayload(request);
+            localContext = knowledgeService.getLocalContext(caption);
+        } catch (Exception ex) {
+            log.warn("Co2eKnowledgeService failed to get local context: {}", ex.getMessage());
+        }
+
+        try {
+            Map<String, Object> payload = buildRequestPayload(request, localContext);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             ResponseEntity<String> response = restTemplate.postForEntity(
@@ -118,8 +127,8 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
         return String.format(DEFAULT_API_URL_TEMPLATE, model);
     }
 
-    private Map<String, Object> buildRequestPayload(GeminiAnalysisRequest request) {
-        String prompt = buildPrompt(request);
+    private Map<String, Object> buildRequestPayload(GeminiAnalysisRequest request, String localContext) {
+        String prompt = buildPrompt(request, localContext);
         Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> generationConfig = Map.of(
@@ -130,22 +139,29 @@ public class GeminiAnalysisServiceImpl implements GeminiAnalysisService {
                 "generationConfig", generationConfig);
     }
 
-    private String buildPrompt(GeminiAnalysisRequest request) {
+    private String buildPrompt(GeminiAnalysisRequest request, String localContext) {
         String imageUrl = hasText(request.getImageUrl()) ? request.getImageUrl() : "";
         String caption = hasText(request.getCaption()) ? request.getCaption() : "";
         String actionType = hasText(request.getActionTypeName()) ? request.getActionTypeName() : "";
         return "You are an assistant that classifies green actions for CO2e calculation. "
-                + "Return only valid JSON with keys: material_code, confidence, estimated_weight_kg, quantity, reasoning. "
+                + "Follow these Chain-of-Thought (CoT) reasoning steps:\n"
+                + "1. Linguistic: Analyze the caption based on the provided local dictionary (if any).\n"
+                + "2. Visual: Compare objects in the image with the provided local product catalog to identify matching items.\n"
+                + "3. Quantitative: Calculate total mass based on quantity x weight (from the catalog).\n"
+                + "4. JSON Output: Return only valid JSON with keys: material_code, confidence, estimated_weight_kg, quantity, reasoning. "
+                + "Make sure the reasoning field contains the inference steps to explain how you got the result to the user.\n\n"
                 + "Use material_code values from the predefined list (e.g., PET_PLASTIC, HDPE_PLASTIC, PP_PLASTIC, "
                 + "MIXED_PLASTIC, PAPER, CARDBOARD, ALUMINUM_CAN, STEEL_CAN, METAL_MIXED, GLASS, MIXED_RECYCLABLES, "
                 + "ORGANIC_COMPOST, CLEANUP_MIXED_WASTE, E_WASTE_SMALL, HAZARDOUS_WASTE, REUSABLE_BOTTLE, "
                 + "REUSABLE_BAG, REUSABLE_BOX, DONATE_TEXTILE, TEXTILE_RECYCLE, TREE_PLANTING_PENDING, "
                 + "TREE_PLANTING_VERIFIED, TREE_SURVIVED_6M, TREE_SURVIVED_1Y, TREE_EVENT_NGO, UNKNOWN). "
-                + "If uncertain, use UNKNOWN and low confidence. "
+                + "If uncertain, use UNKNOWN and low confidence.\n\n"
                 + "Input:\n"
                 + "action_type: " + actionType + "\n"
                 + "caption: " + caption + "\n"
-                + "image_url: " + imageUrl;
+                + "image_url: " + imageUrl + "\n\n"
+                + "Context:\n"
+                + localContext;
     }
 
     private GeminiAnalysisResponse parseGeminiResponse(String body) throws Exception {

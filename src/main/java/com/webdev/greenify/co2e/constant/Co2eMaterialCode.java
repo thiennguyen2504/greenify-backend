@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 public enum Co2eMaterialCode {
 
     // Nhóm rác tái chế
@@ -48,6 +47,14 @@ public enum Co2eMaterialCode {
     private final double co2eFactorKgPerUnit;
     private final Double defaultWeightKgPerItem;
     private final String unit;
+
+    Co2eMaterialCode(String label, Co2eType co2eType, double co2eFactorKgPerUnit, Double defaultWeightKgPerItem, String unit) {
+        this.label = label;
+        this.co2eType = co2eType;
+        this.co2eFactorKgPerUnit = co2eFactorKgPerUnit;
+        this.defaultWeightKgPerItem = defaultWeightKgPerItem;
+        this.unit = unit;
+    }
 
     public boolean isWeightBased() {
         return defaultWeightKgPerItem != null;
