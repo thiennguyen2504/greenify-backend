@@ -40,15 +40,21 @@ public class EventRegistrationController {
 
     @PostMapping("/check-in")
     @PreAuthorize("hasRole('NGO')")
-    public ResponseEntity<Void> checkIn(@RequestParam String code) {
-        registrationService.checkIn(code);
+    public ResponseEntity<Void> checkIn(
+            @RequestParam String code,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude) {
+        registrationService.checkIn(code, latitude, longitude);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/check-out")
     @PreAuthorize("hasRole('NGO')")
-    public ResponseEntity<Void> checkOut(@RequestParam String code) {
-        registrationService.checkOut(code);
+    public ResponseEntity<Void> checkOut(
+            @RequestParam String code,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude) {
+        registrationService.checkOut(code, latitude, longitude);
         return ResponseEntity.ok().build();
     }
 

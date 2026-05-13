@@ -48,6 +48,8 @@ public class PostSeed {
     private static final int TOTAL_REJECTED = 5;
     private static final int TOTAL_REJECTED_WITH_APPEAL = 5;
     private static final long LEGACY_APPEAL_COUNT = 2;
+    private static final int MIN_PRIMARY_POSTS = 5;
+    private static final String PRIMARY_USERNAME = "user";
     private static final BigDecimal REVIEWER_BONUS_POINTS = new BigDecimal("1.00");
 
     private final GreenActionPostRepository postRepository;
@@ -66,11 +68,6 @@ public class PostSeed {
     public void seed() {
         topUpLegacyAppealsIfNeeded();
 
-        if (postRepository.count() > SEED_THRESHOLD) {
-            log.info("Skip PostSeed because post count is already greater than {}", SEED_THRESHOLD);
-            return;
-        }
-
         try {
             List<GreenActionTypeEntity> actionTypes = actionTypeRepository.findAllByOrderByGroupNameAscActionNameAsc();
             if (actionTypes.isEmpty()) {
@@ -80,6 +77,18 @@ public class PostSeed {
 
             prefetchPostImages(actionTypes);
 
+            UserEntity primaryUser = findUserByUsername(PRIMARY_USERNAME);
+            int primaryNeeded = resolvePrimaryPostNeeded(primaryUser);
+
+            if (postRepository.count() > SEED_THRESHOLD) {
+                if (primaryNeeded > 0) {
+                    seedPrimaryUserPosts(primaryUser, actionTypes, primaryNeeded);
+                } else {
+                    log.info("Skip PostSeed because post count is already greater than {}", SEED_THRESHOLD);
+                }
+                return;
+            }
+
             List<UserEntity> reviewers = loadUsersByUsernames(List.of("ctv1", "ctv2", "ctv3"));
             if (reviewers.size() < 3) {
                 log.warn("Skip PostSeed because not enough CTV reviewers (need 3, found {})", reviewers.size());
@@ -87,7 +96,7 @@ public class PostSeed {
             }
 
             List<UserEntity> authors = loadUsersByUsernames(List.of(
-                    "user1", "user2", "user3", "user4", "user5", "user6", "user7", "ctv1", "ctv2", "ctv3"
+                    "user", "user1", "user2", "user3", "user4", "user5", "user6", "user7", "ctv1", "ctv2", "ctv3"
             ));
             if (authors.isEmpty()) {
                 log.warn("Skip PostSeed because no authors found");
@@ -138,6 +147,160 @@ public class PostSeed {
             log.warn("PostSeed failed: {}", e.getMessage(), e);
         }
     }
+
+    private int resolvePrimaryPostNeeded(UserEntity primaryUser) {
+        if (primaryUser == null) {
+            return 0;
+        }
+        long existing = postRepository.countByUser_IdAndIsDeletedFalse(primaryUser.getId());
+        return (int) Math.max(0, MIN_PRIMARY_POSTS - existing);
+    }
+
+        private void seedPrimaryUserPosts(
+            UserEntity primaryUser,
+            List<GreenActionTypeEntity> actionTypes,
+            int target) {
+        if (primaryUser == null || target <= 0) {
+            return;
+        }
+        List<PrimaryPostSpec> specs = buildPrimaryPostSpecs();
+        int seeded = 0;
+
+        for (PrimaryPostSpec spec : specs) {
+            if (seeded >= target) {
+            break;
+            }
+
+            GreenActionTypeEntity actionType = findActionType(actionTypes, spec.groupName(), spec.actionName());
+            if (actionType == null) {
+            log.warn("Skip primary post seed because action type not found for group={}, action={}",
+                spec.groupName(),
+                spec.actionName());
+            continue;
+            }
+
+            if (postRepository.existsByUser_IdAndCaption(primaryUser.getId(), spec.caption())) {
+            continue;
+            }
+
+            LocalDateTime actionAt = randomDateWithin(10);
+            GreenActionPostEntity post = buildPostWithImage(
+                primaryUser,
+                actionType,
+                spec.caption(),
+                spec.location(),
+                spec.imageUrl(),
+                actionAt);
+
+            postRepository.save(post);
+            seeded++;
+        }
+
+        log.info("Seeded {} primary posts for user {}", seeded, primaryUser.getUsername());
+    }
+
+        private GreenActionTypeEntity findActionType(
+            List<GreenActionTypeEntity> actionTypes,
+            String groupName,
+            String actionName) {
+        if (actionTypes == null) {
+            return null;
+        }
+
+        return actionTypes.stream()
+            .filter(type -> equalsIgnoreCase(type.getGroupName(), groupName)
+                && equalsIgnoreCase(type.getActionName(), actionName))
+            .findFirst()
+            .orElseGet(() -> actionTypes.stream()
+                .filter(type -> equalsIgnoreCase(type.getGroupName(), groupName))
+                .findFirst()
+                .orElse(actionTypes.isEmpty() ? null : actionTypes.get(0)));
+        }
+
+        private boolean equalsIgnoreCase(String left, String right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        return left.equalsIgnoreCase(right);
+        }
+
+        private GreenActionPostEntity buildPostWithImage(
+            UserEntity author,
+            GreenActionTypeEntity actionType,
+            String caption,
+            String location,
+            String imageUrl,
+            LocalDateTime actionAt) {
+
+        GreenActionPostEntity post = GreenActionPostEntity.builder()
+            .user(author)
+            .actionType(actionType)
+            .caption(caption)
+            .actionDate(actionAt.toLocalDate())
+            .status(PostStatus.VERIFIED)
+            .approveCount(3)
+            .rejectCount(0)
+            .location(location)
+            .latitude(BigDecimal.valueOf(10.775 + ThreadLocalRandom.current().nextDouble(0.15)))
+            .longitude(BigDecimal.valueOf(106.690 + ThreadLocalRandom.current().nextDouble(0.15)))
+            .build();
+
+        PostImageEntity image = PostImageEntity.builder()
+            .post(post)
+            .bucketName("seeded-demo")
+            .objectKey("seeded/primary/" + UUID.randomUUID())
+            .imageUrl(imageUrl)
+            .status(ImageStatus.ACTIVE)
+            .build();
+
+        post.setPostImage(image);
+        image.setPost(post);
+
+        return post;
+        }
+
+        private List<PrimaryPostSpec> buildPrimaryPostSpecs() {
+        return List.of(
+            new PrimaryPostSpec(
+                "Tái sử dụng",
+                "Tái sử dụng vật dụng thay vì vứt bỏ",
+                "Quyên góp 2 thùng quần áo cũ cho trung tâm tiếp nhận đồ tái sử dụng.",
+                "Trung tâm trao tặng đồ cũ, Quận 1, TP.HCM",
+                "https://m.yodycdn.com/fit-in/filters:format(webp)/blog/quyen-gop-quan-ao-yodyvn5.jpg"),
+            new PrimaryPostSpec(
+                "Mảng xanh",
+                "Trồng cây/trồng hoa",
+                "Trồng thêm 3 cây xanh tại sân chung cư và gắn biển chăm sóc.",
+                "Khu dân cư Lê Lợi, Quận 3, TP.HCM",
+                "https://tse1.mm.bing.net/th/id/OIP.9XI1280V4ijTgjbwQVh5egHaEJ?rs=1&pid=ImgDetMain&o=7&rm=3"),
+            new PrimaryPostSpec(
+                "Dọn dẹp môi trường",
+                "Nhặt rác tại khu vực công cộng",
+                "Tham gia nhặt rác cuối tuần, thu gom 5 túi rác hỗn hợp tại công viên.",
+                "Công viên 23/9, TP.HCM",
+                "https://th.bing.com/th/id/OIP.tUaFH4fVCO9i5dma6k1bMwHaE8?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3"),
+            new PrimaryPostSpec(
+                "Giảm nhựa dùng một lần",
+                "Sử dụng bình nước cá nhân",
+                "Mang bình nước cá nhân khi đi làm để giảm chai nhựa dùng một lần.",
+                "Văn phòng làm việc, Quận 1, TP.HCM",
+                "https://media.vietq.vn/files/tienson/2017/02/19/binh-nuoc.jpg"),
+            new PrimaryPostSpec(
+                "Tái chế",
+                "Thu gom giấy/nhựa/lon để tái chế",
+                "Thu gom chai nhựa PET từ văn phòng và đem đến điểm tái chế.",
+                "Điểm tái chế cộng đồng, Quận 5, TP.HCM",
+                "https://tse3.mm.bing.net/th/id/OIP.8k5iFQNZVCcKz3bD6aDr8wHaEp?rs=1&pid=ImgDetMain&o=7&rm=3")
+        );
+        }
+
+        private record PrimaryPostSpec(
+            String groupName,
+            String actionName,
+            String caption,
+            String location,
+            String imageUrl) {
+        }
 
     private void topUpLegacyAppealsIfNeeded() {
         long currentAppealCount = postAppealRepository.count();

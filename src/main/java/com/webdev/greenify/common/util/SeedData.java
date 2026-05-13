@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,6 +71,7 @@ public class SeedData implements CommandLineRunner {
         private final NotificationSeed notificationSeed;
         private final PostSeed postSeed;
         private final GardenSeed gardenSeed;
+        private final Co2eWalletSeed co2eWalletSeed;
         private final PointWalletSeed pointWalletSeed;
         private final StreakSeed streakSeed;
         private final TrashSpotSeed trashSpotSeed;
@@ -177,6 +179,7 @@ public class SeedData implements CommandLineRunner {
         userSeed.seed();
         notificationSeed.seed();
         postSeed.seed();
+        co2eWalletSeed.seed();
         ngoSeed.seed();
         eventSeed.seed();
         registrationSeed.seed();
@@ -659,11 +662,35 @@ public class SeedData implements CommandLineRunner {
 
     private void seedGardenSeeds(Map<PlantCycleType, VoucherTemplateEntity> rewardVoucherByCycle) {
         List<SeedEntity> existingSeeds = seedRepository.findAll();
-        Map<String, SeedEntity> existingByName = new HashMap<>();
+                Map<String, SeedEntity> existingByName = new HashMap<>();
+                Set<SeedEntity> seedsToSave = new LinkedHashSet<>();
 
-        for (SeedEntity seed : existingSeeds) {
-            existingByName.put(seed.getName(), seed);
-        }
+                Map<String, Integer> wiltDaysByName = Map.ofEntries(
+                        Map.entry("Hướng dương", 40),
+                        Map.entry("Hoa hồng", 60),
+                        Map.entry("Cẩm chướng", 65),
+                        Map.entry("Sen", 70),
+                        Map.entry("Anh đào", 130),
+                        Map.entry("Cây phong", 145),
+                        Map.entry("Cây thông", 180),
+                        Map.entry("Cây dừa", 220),
+                        Map.entry("Hoa tulip", 38),
+                        Map.entry("Hoa mai", 90),
+                        Map.entry("Hoa lan", 105),
+                        Map.entry("Cây táo", 150),
+                        Map.entry("Tre", 125),
+                        Map.entry("Xương rồng nở hoa", 100));
+
+                for (SeedEntity seed : existingSeeds) {
+                        Integer wiltDays = wiltDaysByName.get(seed.getName());
+                        if (wiltDays != null) {
+                                seed.setWiltDays(wiltDays);
+                        } else if (seed.getWiltDays() == null) {
+                                seed.setWiltDays(10);
+                        }
+                        existingByName.put(seed.getName(), seed);
+                        seedsToSave.add(seed);
+                }
 
         Set<String> targetSeedNames = Set.of(
                 "Hướng dương",
@@ -681,7 +708,6 @@ public class SeedData implements CommandLineRunner {
                 "Tre",
                 "Xương rồng nở hoa");
 
-        List<SeedEntity> seedsToSave = new ArrayList<>();
         int deactivatedLegacySeeds = 0;
 
         for (SeedEntity existingSeed : existingSeeds) {
@@ -693,61 +719,61 @@ public class SeedData implements CommandLineRunner {
             }
         }
 
-        seedsToSave.add(upsertSeed(existingByName, "Hướng dương", 30, 3, 8, 18,
+        seedsToSave.add(upsertSeed(existingByName, "Hướng dương", 30, 3, 8, 18, 40,
                 PlantCycleType.EASY,
                 rewardVoucherByCycle.get(PlantCycleType.EASY),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/huong%20duong.png?updatedAt=1776237615262"));
-        seedsToSave.add(upsertSeed(existingByName, "Hoa hồng", 40, 4, 11, 23,
+        seedsToSave.add(upsertSeed(existingByName, "Hoa hồng", 40, 4, 11, 23, 60,
                 PlantCycleType.EASY,
                 rewardVoucherByCycle.get(PlantCycleType.EASY),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hoa%20hong.png?updatedAt=1776237615255"));
-        seedsToSave.add(upsertSeed(existingByName, "Cẩm chướng", 45, 4, 11, 26,
+        seedsToSave.add(upsertSeed(existingByName, "Cẩm chướng", 45, 4, 11, 26, 65,
                 PlantCycleType.EASY,
                 rewardVoucherByCycle.get(PlantCycleType.EASY),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cam%20chuong.png?updatedAt=1776237615259"));
-        seedsToSave.add(upsertSeed(existingByName, "Hoa tulip", 30, 3, 8, 19,
+        seedsToSave.add(upsertSeed(existingByName, "Hoa tulip", 30, 3, 8, 19, 38,
                 PlantCycleType.EASY,
                 rewardVoucherByCycle.get(PlantCycleType.EASY),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/tulip.png?updatedAt=1776237615304"));
 
-        seedsToSave.add(upsertSeed(existingByName, "Sen", 50, 4, 11, 31,
+        seedsToSave.add(upsertSeed(existingByName, "Sen", 50, 4, 11, 31, 70,
                 PlantCycleType.MEDIUM,
                 rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/sen.png?updatedAt=1776237615287"));
-        seedsToSave.add(upsertSeed(existingByName, "Hoa mai", 60, 4, 11, 36,
+        seedsToSave.add(upsertSeed(existingByName, "Hoa mai", 60, 4, 11, 36, 90,
                 PlantCycleType.MEDIUM,
                 rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/hoa%20mai.png?updatedAt=1776237615240"));
-        seedsToSave.add(upsertSeed(existingByName, "Hoa lan", 70, 5, 13, 41,
+        seedsToSave.add(upsertSeed(existingByName, "Hoa lan", 70, 5, 13, 41, 105,
                 PlantCycleType.MEDIUM,
                 rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/phong%20lan.png?updatedAt=1776237615251"));
-        seedsToSave.add(upsertSeed(existingByName, "Tre", 80, 5, 13, 41,
+        seedsToSave.add(upsertSeed(existingByName, "Tre", 80, 5, 13, 41, 125,
                 PlantCycleType.MEDIUM,
                 rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/tree.png?updatedAt=1776237615294"));
-        seedsToSave.add(upsertSeed(existingByName, "Xương rồng nở hoa", 60, 4, 11, 31,
+        seedsToSave.add(upsertSeed(existingByName, "Xương rồng nở hoa", 60, 4, 11, 31, 100,
                 PlantCycleType.MEDIUM,
                 rewardVoucherByCycle.get(PlantCycleType.MEDIUM),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/xuong%20rong.png?updatedAt=1776237615280"));
 
-        seedsToSave.add(upsertSeed(existingByName, "Anh đào", 90, 6, 16, 46,
+        seedsToSave.add(upsertSeed(existingByName, "Anh đào", 90, 6, 16, 46, 130,
                 PlantCycleType.HARD,
                 rewardVoucherByCycle.get(PlantCycleType.HARD),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/anh%20dao.png?updatedAt=1776237615253"));
-        seedsToSave.add(upsertSeed(existingByName, "Cây phong", 100, 6, 16, 51,
+        seedsToSave.add(upsertSeed(existingByName, "Cây phong", 100, 6, 16, 51, 145,
                 PlantCycleType.HARD,
                 rewardVoucherByCycle.get(PlantCycleType.HARD),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20phong.png?updatedAt=1776237615249"));
-        seedsToSave.add(upsertSeed(existingByName, "Cây thông", 120, 8, 22, 61,
+        seedsToSave.add(upsertSeed(existingByName, "Cây thông", 120, 8, 22, 61, 180,
                 PlantCycleType.HARD,
                 rewardVoucherByCycle.get(PlantCycleType.HARD),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20thong.png?updatedAt=1776237615270"));
-        seedsToSave.add(upsertSeed(existingByName, "Cây táo", 100, 6, 16, 51,
+        seedsToSave.add(upsertSeed(existingByName, "Cây táo", 100, 6, 16, 51, 150,
                 PlantCycleType.HARD,
                 rewardVoucherByCycle.get(PlantCycleType.HARD),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/cay%20tao.png?updatedAt=1776237615273"));
-        seedsToSave.add(upsertSeed(existingByName, "Cây dừa", 150, 8, 22, 71,
+        seedsToSave.add(upsertSeed(existingByName, "Cây dừa", 150, 8, 22, 71, 220,
                 PlantCycleType.HARD,
                 rewardVoucherByCycle.get(PlantCycleType.HARD),
                 "https://ik.imagekit.io/ii5tr5cdi/Material/Image/Garden/Cay%20dua.png?updatedAt=1776237615246"));
@@ -767,6 +793,7 @@ public class SeedData implements CommandLineRunner {
             int stage2FromDay,
             int stage3FromDay,
             int stage4FromDay,
+            int wiltDays,
             PlantCycleType cycleType,
             VoucherTemplateEntity rewardVoucherTemplate,
             String stage4ImageUrl) {
@@ -786,6 +813,7 @@ public class SeedData implements CommandLineRunner {
         seed.setStage2FromDay(stage2FromDay);
         seed.setStage3FromDay(stage3FromDay);
         seed.setStage4FromDay(stage4FromDay);
+                seed.setWiltDays(wiltDays);
         seed.setCycleType(cycleType);
         seed.setRewardVoucherTemplate(rewardVoucherTemplate);
         seed.setIsActive(true);

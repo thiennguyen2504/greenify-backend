@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -62,4 +63,8 @@ public class GardenArchiveEntity extends BaseEntity {
 
     @Column(name = "archived_at", nullable = false)
     private LocalDateTime archivedAt;
+
+    @Builder.Default
+    @Column(name = "is_planted", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isPlanted = false;
 }

@@ -33,6 +33,8 @@ public class UserSeed {
 
     @Transactional
     public void seed() {
+        ensureUserProfileIfMissing("user", "Nguyễn Minh User", "Thành phố Hồ Chí Minh");
+
         if (userRepository.count() > SEED_THRESHOLD) {
             log.info("Skip UserSeed because user count is already greater than {}", SEED_THRESHOLD);
             return;
@@ -96,6 +98,28 @@ public class UserSeed {
         log.info("Seeded user {} ({})", seedUser.username(), seedUser.fullName());
     }
 
+    private void ensureUserProfileIfMissing(String username, String displayName, String province) {
+        UserEntity user = findUserByUsername(username);
+        if (user == null) {
+            log.info("Skip ensure user profile because user {} does not exist", username);
+            return;
+        }
+
+        if (userProfileRepository.findByUserId(user.getId()).isPresent()) {
+            return;
+        }
+
+        UserProfileEntity profile = new UserProfileEntity();
+        profile.setDisplayName(displayName);
+        profile.setProvince(province);
+        profile.setStatus(UserProfileStatus.COMPLETE);
+        profile.setUser(user);
+        user.setUserProfile(profile);
+
+        userProfileRepository.save(profile);
+        log.info("Backfilled user profile for {}", username);
+    }
+
     private UserEntity findUserByUsername(String username) {
         return userRepository.findByIdentifier(username)
                 .or(() -> userRepository.findByIdentifier(username + "@greenify.vn"))
@@ -104,6 +128,7 @@ public class UserSeed {
 
     private List<SeedUser> buildSeedUsers() {
         return List.of(
+            new SeedUser("user", "user@greenify.vn", "Nguyễn Minh Huy", "Thành phố Hồ Chí Minh", false),
                 new SeedUser("user1", "user1@greenify.vn", "Nguyễn Văn An", "Thành phố Hồ Chí Minh", false),
                 new SeedUser("user2", "user2@greenify.vn", "Trần Thị Bình", "Hà Nội", false),
                 new SeedUser("user3", "user3@greenify.vn", "Phạm Thu Hà", "Đà Nẵng", false),

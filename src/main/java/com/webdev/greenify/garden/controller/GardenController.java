@@ -1,11 +1,13 @@
 package com.webdev.greenify.garden.controller;
 
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
+import com.webdev.greenify.garden.dto.request.PlantTreeRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
 import com.webdev.greenify.garden.dto.request.UpdateSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
 import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
+import com.webdev.greenify.garden.dto.response.PlantationResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
 import com.webdev.greenify.garden.service.GardenService;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
@@ -56,6 +58,18 @@ public class GardenController {
                 .body(gardenService.selectSeed(request));
     }
 
+    @PostMapping("/garden/plantation")
+    @PreAuthorize("hasAnyRole('USER', 'CTV')")
+    public ResponseEntity<PlantationResponse> plantTree(@Valid @RequestBody PlantTreeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(gardenService.plantTree(request));
+    }
+
+    @GetMapping("/garden/plantation")
+    public ResponseEntity<List<PlantationResponse>> getActivePlantations() {
+        return ResponseEntity.ok(gardenService.getActivePlantations());
+    }
+
     @GetMapping("/garden/plant/current")
     @PreAuthorize("hasAnyRole('USER', 'CTV')")
     public ResponseEntity<PlantProgressResponse> getCurrentPlantProgress() {
@@ -76,6 +90,14 @@ public class GardenController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(gardenService.getGardenArchives(page, size));
+    }
+
+    @GetMapping("/garden/archives/plantable")
+    @PreAuthorize("hasAnyRole('USER', 'CTV')")
+    public ResponseEntity<PagedResponse<GardenArchiveResponse>> getPlantableArchives(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(gardenService.getPlantableArchives(page, size));
     }
 
     @PostMapping("/admin/garden/seeds")

@@ -1,6 +1,7 @@
 package com.webdev.greenify.analyst.controller;
 
 import com.webdev.greenify.analyst.dto.AnalystDashboardDTO;
+import com.webdev.greenify.analyst.dto.Co2eDashboardDTO;
 import com.webdev.greenify.analyst.dto.LandingPageMetricsDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystDashboardDTO;
 import com.webdev.greenify.analyst.service.AnalystService;
@@ -32,6 +33,17 @@ public class AnalystController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
         return ResponseEntity.ok(analystService.getAdminDashboardMetrics(startDate, endDate));
+    }
+
+    @GetMapping("/admin/co2e")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Co2eDashboardDTO> getAdminCo2eDashboard(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        return ResponseEntity.ok(analystService.getCo2eDashboardMetrics(startDate, endDate));
     }
 
     @GetMapping("/ngo/dashboard")

@@ -1,11 +1,13 @@
 package com.webdev.greenify.garden.service;
 
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
+import com.webdev.greenify.garden.dto.request.PlantTreeRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
 import com.webdev.greenify.garden.dto.request.UpdateSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
 import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
+import com.webdev.greenify.garden.dto.response.PlantationResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
@@ -26,6 +28,12 @@ public interface GardenService {
     List<PlantDailyLogResponse> getCurrentUserDailyLogs(LocalDate fromDate, LocalDate toDate);
 
     PagedResponse<GardenArchiveResponse> getGardenArchives(int page, int size);
+
+    PagedResponse<GardenArchiveResponse> getPlantableArchives(int page, int size);
+
+    PlantationResponse plantTree(PlantTreeRequest request);
+
+    List<PlantationResponse> getActivePlantations();
 
     void updatePlantProgress(String userId, LocalDate actionDate, String greenPostUrl);
 

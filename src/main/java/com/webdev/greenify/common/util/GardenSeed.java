@@ -45,20 +45,24 @@ public class GardenSeed {
 
     @Transactional
     public void seed() {
-        if (plantProgressRepository.count() >= SEED_THRESHOLD) {
-            log.info("Skip GardenSeed because plant progress count is already greater than {}", SEED_THRESHOLD);
-            return;
-        }
-
         try {
             Map<String, SeedEntity> seedsByName = seedRepository.findAll().stream()
                     .collect(Collectors.toMap(SeedEntity::getName, Function.identity(), (left, right) -> left));
 
-            seedScenarioUser1(seedsByName);
-            seedScenarioUser2(seedsByName);
-            seedScenarioUser3(seedsByName);
-            seedScenarioUser4(seedsByName);
-            seedScenarioUser5(seedsByName);
+            boolean shouldSeedProgress = plantProgressRepository.count() < SEED_THRESHOLD;
+            if (shouldSeedProgress) {
+                seedScenarioUser1(seedsByName);
+                seedScenarioUser2(seedsByName);
+                seedScenarioUser3(seedsByName);
+                seedScenarioUser4(seedsByName);
+                seedScenarioUser5(seedsByName);
+            }
+
+            seedArchiveScenario("user6", "Hoa lan", 70, 2, true);
+            seedArchiveScenario("user7", "Cây táo", 100, 3, true);
+            seedArchiveScenario("user", "Hướng dương", 30, 2, false);
+            seedArchiveScenario("user", "Hoa hồng", 40, 3, false);
+            seedArchiveScenario("user", "Tre", 80, 4, false);
 
             log.info("GardenSeed completed");
         } catch (Exception e) {
@@ -275,6 +279,71 @@ public class GardenSeed {
             log.info("Seeded garden scenario for user5");
         } catch (Exception ex) {
             log.warn("Failed garden scenario user5: {}", ex.getMessage());
+        }
+    }
+
+    private void seedArchiveScenario(
+            String username,
+            String seedName,
+            int daysTaken,
+            int archivedDaysAgo,
+            boolean skipIfProgressExists) {
+        try {
+            UserEntity user = findUserByUsername(username);
+            SeedEntity seed = seedRepository.findAll().stream()
+                    .filter(item -> seedName.equals(item.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (user == null || seed == null) {
+                log.warn("Skip garden archive scenario for {} because user/seed is missing", username);
+                return;
+            }
+
+            if (gardenArchiveRepository.existsByUserIdAndSeedId(user.getId(), seed.getId())) {
+                log.info("Skip garden archive scenario for {} because archive already exists for seed {}",
+                        username,
+                        seedName);
+                return;
+            }
+
+            if (skipIfProgressExists && plantProgressRepository.existsByUserId(user.getId())) {
+                log.info("Skip garden archive scenario for {} because plant progress already exists", username);
+                return;
+            }
+
+            LocalDateTime startedAt = LocalDateTime.now().minusDays(daysTaken + archivedDaysAgo);
+            PlantProgressEntity progress = PlantProgressEntity.builder()
+                    .user(user)
+                    .seed(seed)
+                    .startedAt(startedAt)
+                    .progressDays(daysTaken)
+                    .currentStage(PlantStage.BLOOMING)
+                    .status(PlantStatus.MATURED)
+                    .maturedAt(startedAt.plusDays(daysTaken))
+                    .build();
+            progress = plantProgressRepository.save(progress);
+
+            String plantImageUrl = getPlantImageUrl(seed);
+            int logDays = Math.min(daysTaken, 10);
+            for (int day = 1; day <= logDays; day++) {
+                PlantStage stage = resolveStageByDay(seed, day);
+                saveDailyLog(user, progress, startedAt.toLocalDate().plusDays(day - 1), stage, true, plantImageUrl);
+            }
+
+            GardenArchiveEntity archive = GardenArchiveEntity.builder()
+                    .user(user)
+                    .seed(seed)
+                    .plantProgress(progress)
+                    .daysTaken(daysTaken)
+                    .rewardStatus(GardenRewardStatus.MATURED)
+                    .displayImageUrl(seed.getStage4ImageUrl())
+                    .archivedAt(LocalDateTime.now().minusDays(archivedDaysAgo))
+                    .build();
+            gardenArchiveRepository.save(archive);
+
+            log.info("Seeded garden archive scenario for {}", username);
+        } catch (Exception ex) {
+            log.warn("Failed garden archive scenario for {}: {}", username, ex.getMessage());
         }
     }
 
