@@ -18,6 +18,7 @@ import com.webdev.greenify.garden.entity.PlantationEntity;
 import com.webdev.greenify.garden.entity.SeedEntity;
 import com.webdev.greenify.garden.enumeration.GardenRewardStatus;
 import com.webdev.greenify.garden.enumeration.PlantCycleType;
+import com.webdev.greenify.garden.enumeration.PlantationBuilding;
 import com.webdev.greenify.garden.enumeration.PlantStage;
 import com.webdev.greenify.garden.enumeration.PlantStatus;
 import com.webdev.greenify.garden.mapper.GardenArchiveMapper;
@@ -293,9 +294,6 @@ public class GardenServiceImpl implements GardenService {
             throw new AppException("Cây này đã được trồng ra vườn rồi", HttpStatus.BAD_REQUEST);
         }
 
-        validateRatioInRange(request.getXRatio(), "x");
-        validateRatioInRange(request.getYRatio(), "y");
-
         int wiltDays = resolveWiltDays(archive.getSeed());
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime wiltedAt = now.plusDays(wiltDays);
@@ -304,8 +302,8 @@ public class GardenServiceImpl implements GardenService {
             .seedId(archive.getSeed() != null ? archive.getSeed().getId() : null)
             .userId(userId)
             .gardenArchiveId(archive.getId())
-            .xRatio(request.getXRatio())
-            .yRatio(request.getYRatio())
+            .slotId(request.getSlotId())
+            .building(request.getBuilding())
             .wiltedAt(wiltedAt)
             .build();
 
@@ -321,9 +319,11 @@ public class GardenServiceImpl implements GardenService {
 
         @Override
         @Transactional(readOnly = true)
-        public List<PlantationResponse> getActivePlantations() {
+        public List<PlantationResponse> getActivePlantations(PlantationBuilding building) {
         LocalDateTime now = LocalDateTime.now();
-        List<PlantationEntity> plantations = plantationRepository.findAllByIsDeletedFalseAndWiltedAtAfter(now);
+        List<PlantationEntity> plantations = building == null
+            ? plantationRepository.findAllByIsDeletedFalseAndWiltedAtAfter(now)
+            : plantationRepository.findAllByIsDeletedFalseAndWiltedAtAfterAndBuilding(now, building);
         if (plantations.isEmpty()) {
             return Collections.emptyList();
         }
@@ -638,13 +638,6 @@ public class GardenServiceImpl implements GardenService {
         return seed.getWiltDays();
     }
 
-    private void validateRatioInRange(Double value, String axis) {
-        if (value == null || value < 0.0 || value > 1.0) {
-            throw new AppException("Toa do " + axis + " phai nam trong khoang [0.0, 1.0]",
-                    HttpStatus.BAD_REQUEST);
-        }
-    }
-
     private PlantationResponse toPlantationResponse(
             PlantationEntity plantation,
             SeedEntity seed,
@@ -660,8 +653,8 @@ public class GardenServiceImpl implements GardenService {
                 .seedName(seed != null ? seed.getName() : null)
                 .seedStage4ImageUrl(seed != null ? seed.getStage4ImageUrl() : null)
                 .user(resolveUserProfile(profile, user))
-                .xRatio(plantation.getXRatio())
-                .yRatio(plantation.getYRatio())
+                .slotId(plantation.getSlotId())
+                .building(plantation.getBuilding())
                 .createdAt(plantation.getCreatedAt())
                 .wiltedAt(plantation.getWiltedAt())
                 .build();

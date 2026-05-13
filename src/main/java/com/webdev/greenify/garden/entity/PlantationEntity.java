@@ -1,8 +1,11 @@
 package com.webdev.greenify.garden.entity;
 
 import com.webdev.greenify.common.entity.BaseEntity;
+import com.webdev.greenify.garden.enumeration.PlantationBuilding;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,11 +33,12 @@ public class PlantationEntity extends BaseEntity {
     @Column(name = "garden_archive_id", nullable = false, unique = true)
     private String gardenArchiveId;
 
-    @Column(name = "x_ratio", nullable = false)
-    private Double xRatio;
+    @Column(name = "slot_id", nullable = false)
+    private String slotId;
 
-    @Column(name = "y_ratio", nullable = false)
-    private Double yRatio;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "building", nullable = false)
+    private PlantationBuilding building;
 
     @Column(name = "wilted_at", nullable = false)
     private LocalDateTime wiltedAt;
