@@ -2,6 +2,7 @@ package com.webdev.greenify.greenaction.repository;
 
 import com.webdev.greenify.greenaction.entity.EventRegistrationEntity;
 import com.webdev.greenify.greenaction.enumeration.RegistrationStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -79,7 +80,8 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
             @Param("end") LocalDateTime end);
     Optional<EventRegistrationEntity> findByIdAndUserIdAndIsDeletedFalse(String id, String userId);
 
-    Optional<EventRegistrationEntity> findByRegistrationCodeAndIsDeletedFalse(String registrationCode);
+        @EntityGraph(attributePaths = {"event", "event.address", "user"})
+        Optional<EventRegistrationEntity> findByRegistrationCodeAndIsDeletedFalse(String registrationCode);
 
         @Query("""
                 SELECT COUNT(r) FROM EventRegistrationEntity r

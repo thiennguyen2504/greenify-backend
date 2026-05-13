@@ -33,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -141,7 +142,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     @Override
     @Transactional
-    public void checkIn(String registrationCode) {
+    public void checkIn(String registrationCode, Double latitude, Double longitude) {
         decodeRegistrationCode(registrationCode); // Verify token
         EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký với mã này"));
@@ -158,6 +159,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
             throw new AppException("Bạn đã check-in trước đó", HttpStatus.BAD_REQUEST);
         }
 
+        validateLocationNearEvent(registration.getEvent(), latitude, longitude);
+
         registration.setCheckInTime(LocalDateTime.now());
         registrationRepository.save(registration);
         log.info("User {} checked in for event {}", registration.getUser().getId(), registration.getEvent().getId());
@@ -165,7 +168,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     @Override
     @Transactional
-    public void checkOut(String registrationCode) {
+    public void checkOut(String registrationCode, Double latitude, Double longitude) {
         decodeRegistrationCode(registrationCode); // Verify token
         EventRegistrationEntity registration = registrationRepository.findByRegistrationCodeAndIsDeletedFalse(registrationCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đăng ký với mã này"));
@@ -177,6 +180,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
         if (registration.getCheckOutTime() != null) {
             throw new AppException("Bạn đã check-out trước đó", HttpStatus.BAD_REQUEST);
         }
+
+        validateLocationNearEvent(registration.getEvent(), latitude, longitude);
 
         registration.setCheckOutTime(LocalDateTime.now());
         registrationRepository.save(registration);
@@ -192,6 +197,46 @@ public class EventRegistrationServiceImpl implements EventRegistrationService {
 
     private boolean isEventHappen(EventEntity event) {
         return LocalDateTime.now().isBefore(event.getEndTime()) && LocalDateTime.now().isAfter(event.getStartTime());
+    }
+
+    private double calculateDistanceMeters(double lat1, double lon1, double lat2, double lon2) {
+        final int earthRadiusMeters = 6371000;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusMeters * c;
+    }
+
+    private void validateLocationNearEvent(EventEntity event, Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) {
+            return;
+        }
+        if (event == null || event.getAddress() == null) {
+            return;
+        }
+
+        BigDecimal eventLat = event.getAddress().getLatitude();
+        BigDecimal eventLon = event.getAddress().getLongitude();
+        if (eventLat == null || eventLon == null) {
+            return;
+        }
+
+        double distance = calculateDistanceMeters(
+                latitude,
+                longitude,
+                eventLat.doubleValue(),
+                eventLon.doubleValue());
+
+        if (distance > 200) {
+            throw new AppException(
+                    "Bạn không ở gần địa điểm tổ chức sự kiện (khoảng cách: "
+                            + Math.round(distance)
+                            + "m, tối đa cho phép: 200m)",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Override

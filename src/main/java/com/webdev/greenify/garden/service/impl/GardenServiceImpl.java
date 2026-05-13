@@ -3,15 +3,18 @@ package com.webdev.greenify.garden.service.impl;
 import com.webdev.greenify.common.exception.AppException;
 import com.webdev.greenify.common.exception.ResourceNotFoundException;
 import com.webdev.greenify.garden.dto.request.CreateSeedRequest;
+import com.webdev.greenify.garden.dto.request.PlantTreeRequest;
 import com.webdev.greenify.garden.dto.request.SelectSeedRequest;
 import com.webdev.greenify.garden.dto.request.UpdateSeedRequest;
 import com.webdev.greenify.garden.dto.response.GardenArchiveResponse;
 import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
+import com.webdev.greenify.garden.dto.response.PlantationResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
 import com.webdev.greenify.garden.entity.GardenArchiveEntity;
 import com.webdev.greenify.garden.entity.PlantDailyLogEntity;
 import com.webdev.greenify.garden.entity.PlantProgressEntity;
+import com.webdev.greenify.garden.entity.PlantationEntity;
 import com.webdev.greenify.garden.entity.SeedEntity;
 import com.webdev.greenify.garden.enumeration.GardenRewardStatus;
 import com.webdev.greenify.garden.enumeration.PlantCycleType;
@@ -23,11 +26,15 @@ import com.webdev.greenify.garden.mapper.SeedMapper;
 import com.webdev.greenify.garden.repository.GardenArchiveRepository;
 import com.webdev.greenify.garden.repository.PlantDailyLogRepository;
 import com.webdev.greenify.garden.repository.PlantProgressRepository;
+import com.webdev.greenify.garden.repository.PlantationRepository;
 import com.webdev.greenify.garden.repository.SeedRepository;
 import com.webdev.greenify.garden.service.GardenService;
 import com.webdev.greenify.garden.specification.PlantDailyLogSpecification;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.user.entity.UserEntity;
+import com.webdev.greenify.user.entity.UserProfileEntity;
+import com.webdev.greenify.user.mapper.UserProfileMapper;
+import com.webdev.greenify.user.repository.UserProfileRepository;
 import com.webdev.greenify.user.repository.UserRepository;
 import com.webdev.greenify.voucher.entity.UserVoucherEntity;
 import com.webdev.greenify.voucher.entity.VoucherTemplateEntity;
@@ -52,10 +59,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +80,10 @@ public class GardenServiceImpl implements GardenService {
     private final PlantProgressRepository plantProgressRepository;
     private final PlantDailyLogRepository plantDailyLogRepository;
     private final GardenArchiveRepository gardenArchiveRepository;
+    private final PlantationRepository plantationRepository;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final UserProfileMapper userProfileMapper;
     private final VoucherTemplateRepository voucherTemplateRepository;
     private final VoucherService voucherService;
     private final VoucherMapper voucherMapper;
@@ -232,6 +246,126 @@ public class GardenServiceImpl implements GardenService {
                 archivesPage.getTotalPages());
     }
 
+        @Override
+        @Transactional(readOnly = true)
+        public PagedResponse<GardenArchiveResponse> getPlantableArchives(int page, int size) {
+        String userId = getCurrentUserId();
+        int effectivePage = Math.max(page, 0);
+        int effectiveSize = clampPageSize(size);
+
+        Pageable pageable = PageRequest.of(
+            effectivePage,
+            effectiveSize,
+            Sort.by(Sort.Direction.DESC, "archivedAt"));
+
+        Page<GardenArchiveEntity> archivesPage = gardenArchiveRepository
+            .findByUserIdAndIsPlantedFalseOrderByArchivedAtDesc(userId, pageable);
+
+        List<GardenArchiveResponse> content = archivesPage.getContent().stream()
+            .map(gardenArchiveMapper::toGardenArchiveResponse)
+            .toList();
+
+        return PagedResponse.of(
+            content,
+            archivesPage.getNumber(),
+            archivesPage.getSize(),
+            archivesPage.getTotalElements(),
+            archivesPage.getTotalPages());
+        }
+
+        @Override
+        @Transactional
+        public PlantationResponse plantTree(PlantTreeRequest request) {
+        String userId = getCurrentUserId();
+
+        GardenArchiveEntity archive = gardenArchiveRepository.findById(request.getArchiveId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy garden archive"));
+
+        if (archive.getUser() == null || !Objects.equals(archive.getUser().getId(), userId)) {
+            throw new AppException("Bạn không có quyền trồng cây này", HttpStatus.FORBIDDEN);
+        }
+
+        if (!isPlantableArchive(archive.getRewardStatus())) {
+            throw new AppException("Cây chưa đủ điều kiện để trồng", HttpStatus.BAD_REQUEST);
+        }
+
+        if (Boolean.TRUE.equals(archive.getIsPlanted())) {
+            throw new AppException("Cây này đã được trồng ra vườn rồi", HttpStatus.BAD_REQUEST);
+        }
+
+        validateRatioInRange(request.getXRatio(), "x");
+        validateRatioInRange(request.getYRatio(), "y");
+
+        int wiltDays = resolveWiltDays(archive.getSeed());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime wiltedAt = now.plusDays(wiltDays);
+
+        PlantationEntity plantation = PlantationEntity.builder()
+            .seedId(archive.getSeed() != null ? archive.getSeed().getId() : null)
+            .userId(userId)
+            .gardenArchiveId(archive.getId())
+            .xRatio(request.getXRatio())
+            .yRatio(request.getYRatio())
+            .wiltedAt(wiltedAt)
+            .build();
+
+        plantation = plantationRepository.save(plantation);
+
+        archive.setIsPlanted(true);
+        gardenArchiveRepository.save(archive);
+
+        UserProfileEntity profile = userProfileRepository.findByUserId(userId).orElse(null);
+        UserEntity user = userRepository.findById(userId).orElse(null);
+        return toPlantationResponse(plantation, archive.getSeed(), profile, user);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<PlantationResponse> getActivePlantations() {
+        LocalDateTime now = LocalDateTime.now();
+        List<PlantationEntity> plantations = plantationRepository.findAllByIsDeletedFalseAndWiltedAtAfter(now);
+        if (plantations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> seedIds = plantations.stream()
+            .map(PlantationEntity::getSeedId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        Set<String> userIds = plantations.stream()
+            .map(PlantationEntity::getUserId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        Map<String, SeedEntity> seedById = seedIds.isEmpty()
+            ? Collections.emptyMap()
+            : seedRepository.findAllById(seedIds).stream()
+                .collect(Collectors.toMap(SeedEntity::getId, Function.identity()));
+
+        Map<String, UserProfileEntity> profileByUserId = userIds.isEmpty()
+            ? Collections.emptyMap()
+            : userProfileRepository.findByUserIdIn(userIds).stream()
+                .filter(profile -> profile.getUser() != null)
+                .collect(Collectors.toMap(profile -> profile.getUser().getId(),
+                    Function.identity(),
+                    (existing, ignored) -> existing));
+
+        Map<String, UserEntity> userById = userIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(userIds).stream()
+                    .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+
+        return plantations.stream()
+            .map(plantation -> {
+                SeedEntity seed = seedById.get(plantation.getSeedId());
+                        UserProfileEntity profile = profileByUserId.get(plantation.getUserId());
+                        UserEntity user = userById.get(plantation.getUserId());
+                        return toPlantationResponse(plantation, seed, profile, user);
+            })
+            .toList();
+        }
+
     /**
      * Update plant progress for a verified action day.
      * Idempotency key is userId + actionDate via plant_daily_logs.
@@ -322,6 +456,8 @@ public class GardenServiceImpl implements GardenService {
                 .rewardVoucherTemplate(rewardVoucherTemplate)
                 .isActive(true)
                 .build();
+
+        seed.setWiltDays(10);
 
         seed = seedRepository.save(seed);
 
@@ -489,6 +625,60 @@ public class GardenServiceImpl implements GardenService {
             throw new AppException("Mốc giai đoạn phải thỏa stage2 < stage3 < stage4 < daysToMature",
                     HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private boolean isPlantableArchive(GardenRewardStatus status) {
+        return status == GardenRewardStatus.MATURED || status == GardenRewardStatus.REWARDED;
+    }
+
+    private int resolveWiltDays(SeedEntity seed) {
+        if (seed == null || seed.getWiltDays() == null) {
+            return 10;
+        }
+        return seed.getWiltDays();
+    }
+
+    private void validateRatioInRange(Double value, String axis) {
+        if (value == null || value < 0.0 || value > 1.0) {
+            throw new AppException("Toa do " + axis + " phai nam trong khoang [0.0, 1.0]",
+                    HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private PlantationResponse toPlantationResponse(
+            PlantationEntity plantation,
+            SeedEntity seed,
+            UserProfileEntity profile,
+            UserEntity user) {
+        if (plantation == null) {
+            return null;
+        }
+
+        return PlantationResponse.builder()
+                .id(plantation.getId())
+                .seedId(plantation.getSeedId())
+                .seedName(seed != null ? seed.getName() : null)
+                .seedStage4ImageUrl(seed != null ? seed.getStage4ImageUrl() : null)
+                .user(resolveUserProfile(profile, user))
+                .xRatio(plantation.getXRatio())
+                .yRatio(plantation.getYRatio())
+                .createdAt(plantation.getCreatedAt())
+                .wiltedAt(plantation.getWiltedAt())
+                .build();
+    }
+
+    private com.webdev.greenify.user.dto.UserProfileResponseDTO resolveUserProfile(
+            UserProfileEntity profile,
+            UserEntity user) {
+        if (profile != null) {
+            return userProfileMapper.toDto(profile);
+        }
+        if (user == null) {
+            return null;
+        }
+        return com.webdev.greenify.user.dto.UserProfileResponseDTO.builder()
+                .displayName(user.getUsername())
+                .build();
     }
 
     private Set<String> collectUpdatedSeedFields(UpdateSeedRequest request) {

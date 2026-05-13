@@ -15,4 +15,9 @@ public interface GardenArchiveRepository extends JpaRepository<GardenArchiveEnti
 
     @EntityGraph(attributePaths = {"seed", "userVoucher", "userVoucher.voucherTemplate"})
     Page<GardenArchiveEntity> findByUserIdOrderByArchivedAtDesc(String userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"seed", "userVoucher", "userVoucher.voucherTemplate"})
+    Page<GardenArchiveEntity> findByUserIdAndIsPlantedFalseOrderByArchivedAtDesc(String userId, Pageable pageable);
+
+    boolean existsByUserIdAndSeedId(String userId, String seedId);
 }

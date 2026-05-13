@@ -2,11 +2,17 @@ package com.webdev.greenify.analyst.service.impl;
 
 import com.webdev.greenify.analyst.dto.AnalystDashboardDTO;
 import com.webdev.greenify.analyst.dto.AnalystMetricDTO;
+import com.webdev.greenify.analyst.dto.Co2eDashboardDTO;
+import com.webdev.greenify.analyst.dto.Co2eMetricDTO;
+import com.webdev.greenify.analyst.dto.Co2eMonthlyMetricDTO;
 import com.webdev.greenify.analyst.dto.MonthlyMetricDTO;
 import com.webdev.greenify.analyst.dto.LandingPageMetricsDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystDashboardDTO;
 import com.webdev.greenify.analyst.dto.NGOAnalystMetricDTO;
 import com.webdev.greenify.analyst.dto.NGOMonthlyMetricDTO;
+import com.webdev.greenify.co2e.enumeration.Co2eTransactionStatus;
+import com.webdev.greenify.co2e.enumeration.Co2eType;
+import com.webdev.greenify.co2e.repository.Co2eTransactionRepository;
 import com.webdev.greenify.analyst.service.AnalystService;
 import com.webdev.greenify.station.repository.RecyclingStationRepository;
 import com.webdev.greenify.greenaction.enumeration.GreenEventStatus;
@@ -29,6 +35,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -51,6 +58,7 @@ public class AnalystServiceImpl implements AnalystService {
     private final VoucherTemplateRepository voucherTemplateRepository;
     private final TrashSpotRepository trashSpotRepository;
     private final RecyclingStationRepository stationRepository;
+    private final Co2eTransactionRepository co2eTransactionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -70,6 +78,29 @@ public class AnalystServiceImpl implements AnalystService {
         List<MonthlyMetricDTO> monthlyBreakdown = calculateAdminMonthlyBreakdown(startDate, endDate);
 
         return AnalystDashboardDTO.builder()
+                .totalMetrics(totalMetrics)
+                .monthlyBreakdown(monthlyBreakdown)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "adminCo2eDashboard", key = "{#startDate, #endDate}")
+    public Co2eDashboardDTO getCo2eDashboardMetrics(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) {
+            startDate = LocalDate.now().with(TemporalAdjusters.firstDayOfYear());
+        }
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        Co2eMetricDTO totalMetrics = calculateCo2eMetrics(startDateTime, endDateTime);
+        List<Co2eMonthlyMetricDTO> monthlyBreakdown = calculateCo2eMonthlyBreakdown(startDate, endDate);
+
+        return Co2eDashboardDTO.builder()
                 .totalMetrics(totalMetrics)
                 .monthlyBreakdown(monthlyBreakdown)
                 .build();
@@ -172,6 +203,51 @@ public class AnalystServiceImpl implements AnalystService {
                     .build());
         }
         return breakdown;
+    }
+
+    private Co2eMetricDTO calculateCo2eMetrics(LocalDateTime start, LocalDateTime end) {
+        BigDecimal avoided = co2eTransactionRepository.sumCo2eKgByStatusAndTypeBetween(
+                Co2eTransactionStatus.CREDITED,
+                Co2eType.AVOIDED,
+                start,
+                end);
+        BigDecimal absorbed = co2eTransactionRepository.sumCo2eKgByStatusAndTypeBetween(
+                Co2eTransactionStatus.CREDITED,
+                Co2eType.ABSORBED,
+                start,
+                end);
+        BigDecimal total = safe(avoided).add(safe(absorbed));
+
+        return Co2eMetricDTO.builder()
+                .totalCo2eKg(total)
+                .totalAvoidedKg(safe(avoided))
+                .totalAbsorbedKg(safe(absorbed))
+                .build();
+    }
+
+    private List<Co2eMonthlyMetricDTO> calculateCo2eMonthlyBreakdown(LocalDate startDate, LocalDate endDate) {
+        List<Co2eMonthlyMetricDTO> breakdown = new ArrayList<>();
+        YearMonth startMonth = YearMonth.from(startDate);
+        YearMonth endMonth = YearMonth.from(endDate);
+
+        for (YearMonth month = startMonth; !month.isAfter(endMonth); month = month.plusMonths(1)) {
+            LocalDateTime monthStart = getMonthStart(month, startDate);
+            LocalDateTime monthEnd = getMonthEnd(month, endDate);
+
+            Co2eMetricDTO metrics = calculateCo2eMetrics(monthStart, monthEnd);
+            breakdown.add(Co2eMonthlyMetricDTO.builder()
+                    .month(month.toString())
+                    .totalCo2eKg(metrics.getTotalCo2eKg())
+                    .totalAvoidedKg(metrics.getTotalAvoidedKg())
+                    .totalAbsorbedKg(metrics.getTotalAbsorbedKg())
+                    .build());
+        }
+
+        return breakdown;
+    }
+
+    private BigDecimal safe(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     private LocalDateTime getMonthStart(YearMonth month, LocalDate requestedStart) {

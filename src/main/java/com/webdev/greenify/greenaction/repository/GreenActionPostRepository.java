@@ -47,6 +47,8 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
             """)
     Optional<GreenActionPostEntity> findByIdWithUserAndActionType(@Param("id") String id);
 
+    boolean existsByUser_IdAndCaption(String userId, String caption);
+
     /**
      * For Specification-based queries with EntityGraph to prevent N+1.
      */
@@ -54,7 +56,7 @@ public interface GreenActionPostRepository extends JpaRepository<GreenActionPost
     @EntityGraph(attributePaths = {"user", "actionType"})
     Page<GreenActionPostEntity> findAll(Specification<GreenActionPostEntity> spec, Pageable pageable);
 
-        @EntityGraph(attributePaths = {"actionType", "postImage"})
+        @EntityGraph(attributePaths = {"user", "user.userProfile", "user.userProfile.avatar", "actionType", "postImage"})
         List<GreenActionPostEntity> findByIdIn(Collection<String> ids);
 
 

@@ -2,6 +2,7 @@ package com.webdev.greenify.co2e.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.webdev.greenify.co2e.enumeration.Co2eType;
+import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Co2eTransactionResponse {
 
-    private String postId;
+    private GreenActionPostSummaryResponse post;
     private String materialCode;
     private String materialLabel;
     private Co2eType co2eType;

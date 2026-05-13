@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -53,6 +54,10 @@ public class SeedEntity extends BaseEntity {
 
     @Column(name = "stage4_from_day", nullable = false)
     private Integer stage4FromDay;
+
+    @Builder.Default
+    @Column(name = "wilt_days", nullable = false, columnDefinition = "INT DEFAULT 10")
+    private Integer wiltDays = 10;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "cycle_type", length = 30, nullable = false)

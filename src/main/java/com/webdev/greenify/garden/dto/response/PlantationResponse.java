@@ -1,7 +1,7 @@
 package com.webdev.greenify.garden.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.webdev.greenify.garden.enumeration.GardenRewardStatus;
+import com.webdev.greenify.user.dto.UserProfileResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class GardenArchiveResponse {
+public class PlantationResponse {
 
     private String id;
+    private String seedId;
     private String seedName;
-    private String displayImageUrl;
-    private Integer daysTaken;
-    private GardenRewardStatus rewardStatus;
-    private String voucherCode;
-    private LocalDateTime archivedAt;
-    private Boolean isPlanted;
+    private String seedStage4ImageUrl;
+    private UserProfileResponseDTO user;
+    private Double xRatio;
+    private Double yRatio;
+    private LocalDateTime createdAt;
+    private LocalDateTime wiltedAt;
 }

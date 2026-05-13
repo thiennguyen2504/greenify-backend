@@ -18,6 +18,10 @@ import com.webdev.greenify.co2e.repository.Co2eTransactionRepository;
 import com.webdev.greenify.co2e.repository.GreenImpactWalletRepository;
 import com.webdev.greenify.co2e.service.Co2eService;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
+import com.webdev.greenify.greenaction.dto.response.GreenActionPostSummaryResponse;
+import com.webdev.greenify.greenaction.entity.GreenActionPostEntity;
+import com.webdev.greenify.greenaction.mapper.GreenActionMapper;
+import com.webdev.greenify.greenaction.repository.GreenActionPostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,7 +34,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Coordinates CO2e analysis, persistence, and wallet aggregation.
@@ -49,6 +58,8 @@ public class Co2eServiceImpl implements Co2eService {
     private final Co2eCalculatorService co2eCalculatorService;
     private final GeminiAnalysisService geminiAnalysisService;
     private final Co2eMapper co2eMapper;
+    private final GreenActionPostRepository postRepository;
+    private final GreenActionMapper greenActionMapper;
 
     @Override
     @Transactional
@@ -113,9 +124,16 @@ public class Co2eServiceImpl implements Co2eService {
         Page<Co2eTransactionEntity> transactionsPage = co2eTransactionRepository
                 .findByUserIdAndStatusOrderByCreatedAtDesc(userId, Co2eTransactionStatus.CREDITED, pageable);
 
-        List<Co2eTransactionResponse> content = transactionsPage.getContent().stream()
-                .map(co2eMapper::toTransactionResponse)
-                .toList();
+        List<Co2eTransactionEntity> transactions = transactionsPage.getContent();
+        Map<String, GreenActionPostSummaryResponse> postById = resolvePostSummaries(transactions);
+
+        List<Co2eTransactionResponse> content = transactions.stream()
+            .map(transaction -> {
+                Co2eTransactionResponse response = co2eMapper.toTransactionResponse(transaction);
+                response.setPost(postById.get(transaction.getPostId()));
+                return response;
+            })
+            .toList();
 
         return PagedResponse.of(
                 content,
@@ -123,6 +141,33 @@ public class Co2eServiceImpl implements Co2eService {
                 transactionsPage.getSize(),
                 transactionsPage.getTotalElements(),
                 transactionsPage.getTotalPages());
+    }
+
+    private Map<String, GreenActionPostSummaryResponse> resolvePostSummaries(
+            List<Co2eTransactionEntity> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Set<String> postIds = transactions.stream()
+                .map(Co2eTransactionEntity::getPostId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (postIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<GreenActionPostEntity> posts = postRepository.findByIdIn(postIds);
+        return posts.stream()
+                .collect(Collectors.toMap(
+                        GreenActionPostEntity::getId,
+                        post -> {
+                            GreenActionPostSummaryResponse response = greenActionMapper.toSummaryResponse(post);
+                            response.setReviews(List.of());
+                            return response;
+                        },
+                        (existing, ignored) -> existing));
     }
 
     @Override
