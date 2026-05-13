@@ -9,6 +9,7 @@ import com.webdev.greenify.garden.dto.response.PlantDailyLogResponse;
 import com.webdev.greenify.garden.dto.response.PlantProgressResponse;
 import com.webdev.greenify.garden.dto.response.PlantationResponse;
 import com.webdev.greenify.garden.dto.response.SeedResponse;
+import com.webdev.greenify.garden.enumeration.PlantationBuilding;
 import com.webdev.greenify.garden.service.GardenService;
 import com.webdev.greenify.greenaction.dto.response.PagedResponse;
 import com.webdev.greenify.voucher.dto.response.VoucherTemplateResponse;
@@ -66,8 +67,9 @@ public class GardenController {
     }
 
     @GetMapping("/garden/plantation")
-    public ResponseEntity<List<PlantationResponse>> getActivePlantations() {
-        return ResponseEntity.ok(gardenService.getActivePlantations());
+    public ResponseEntity<List<PlantationResponse>> getActivePlantations(
+            @RequestParam(required = false) PlantationBuilding building) {
+        return ResponseEntity.ok(gardenService.getActivePlantations(building));
     }
 
     @GetMapping("/garden/plant/current")

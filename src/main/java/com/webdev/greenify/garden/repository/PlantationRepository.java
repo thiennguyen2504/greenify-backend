@@ -1,6 +1,7 @@
 package com.webdev.greenify.garden.repository;
 
 import com.webdev.greenify.garden.entity.PlantationEntity;
+import com.webdev.greenify.garden.enumeration.PlantationBuilding;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -12,4 +13,8 @@ public interface PlantationRepository extends JpaRepository<PlantationEntity, St
     Optional<PlantationEntity> findByIdAndIsDeletedFalse(String id);
 
     List<PlantationEntity> findAllByIsDeletedFalseAndWiltedAtAfter(LocalDateTime now);
+
+    List<PlantationEntity> findAllByIsDeletedFalseAndWiltedAtAfterAndBuilding(
+            LocalDateTime now,
+            PlantationBuilding building);
 }
