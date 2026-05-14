@@ -23,4 +23,17 @@ public interface Co2eMapper {
         BigDecimal safeRight = right != null ? right : BigDecimal.ZERO;
         return safeLeft.add(safeRight);
     }
+
+    default GreenImpactWalletResponse toWalletResponseWithCounts(
+            GreenImpactWalletEntity wallet, 
+            Long totalGreenPost, 
+            Long totalPlant) {
+        return GreenImpactWalletResponse.builder()
+                .totalAvoidedKg(wallet.getTotalAvoidedKg())
+                .totalAbsorbedKg(wallet.getTotalAbsorbedKg())
+                .totalCo2eKg(sum(wallet.getTotalAvoidedKg(), wallet.getTotalAbsorbedKg()))
+                .totalGreenPost(totalGreenPost)
+                .totalPlant(totalPlant)
+                .build();
+    }
 }
