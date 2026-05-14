@@ -63,6 +63,13 @@ public class GardenSeed {
             seedArchiveScenario("user", "Hướng dương", 30, 2, false);
             seedArchiveScenario("user", "Hoa hồng", 40, 3, false);
             seedArchiveScenario("user", "Tre", 80, 4, false);
+            
+            // Add 5 more archive gardens for user "user" using existing seeds
+            seedArchiveScenario("user", "Hoa tulip", 30, 5, false);
+            seedArchiveScenario("user", "Hoa mai", 60, 6, false);
+            seedArchiveScenario("user", "Cẩm chướng", 45, 7, false);
+            seedArchiveScenario("user", "Hoa lan", 70, 8, false);
+            seedArchiveScenario("user", "Xương rồng nở hoa", 60, 9, false);
 
             log.info("GardenSeed completed");
         } catch (Exception e) {

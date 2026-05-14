@@ -18,4 +18,6 @@ public class GreenImpactWalletResponse {
     private BigDecimal totalAvoidedKg;
     private BigDecimal totalAbsorbedKg;
     private BigDecimal totalCo2eKg;
+    private Long totalGreenPost;
+    private Long totalPlant;
 }

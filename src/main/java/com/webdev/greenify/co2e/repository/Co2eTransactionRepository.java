@@ -53,4 +53,16 @@ public interface Co2eTransactionRepository extends JpaRepository<Co2eTransaction
             @Param("end") LocalDateTime end);
 
     Optional<Co2eTransactionEntity> findByPostId(String postId);
+
+    @Query("""
+            SELECT COUNT(t)
+            FROM Co2eTransactionEntity t
+            WHERE t.userId = :userId
+              AND t.status = :status
+              AND t.co2eType = :type
+            """)
+    long countByUserIdAndStatusAndType(
+            @Param("userId") String userId,
+            @Param("status") Co2eTransactionStatus status,
+            @Param("type") Co2eType type);
 }

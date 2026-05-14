@@ -102,14 +102,22 @@ public class Co2eServiceImpl implements Co2eService {
     public GreenImpactWalletResponse getWalletForCurrentUser() {
         String userId = getCurrentUserId();
         GreenImpactWalletEntity wallet = greenImpactWalletRepository.findByUserId(userId).orElse(null);
+        
+        long totalGreenPost = co2eTransactionRepository.countByUserIdAndStatusAndType(
+                userId, Co2eTransactionStatus.CREDITED, Co2eType.AVOIDED);
+        long totalPlant = co2eTransactionRepository.countByUserIdAndStatusAndType(
+                userId, Co2eTransactionStatus.CREDITED, Co2eType.ABSORBED);
+        
         if (wallet == null) {
             return GreenImpactWalletResponse.builder()
                     .totalAvoidedKg(ZERO_KG)
                     .totalAbsorbedKg(ZERO_KG)
                     .totalCo2eKg(ZERO_KG)
+                    .totalGreenPost(totalGreenPost)
+                    .totalPlant(totalPlant)
                     .build();
         }
-        return co2eMapper.toWalletResponse(wallet);
+        return co2eMapper.toWalletResponseWithCounts(wallet, totalGreenPost, totalPlant);
     }
 
     @Override
