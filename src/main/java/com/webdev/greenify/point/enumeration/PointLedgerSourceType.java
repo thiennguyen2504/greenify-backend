@@ -1,5 +1,6 @@
 package com.webdev.greenify.point.enumeration;
 
 public enum PointLedgerSourceType {
-    VOUCHER_REDEEM
+    VOUCHER_REDEEM,
+    ACTION_POST
 }

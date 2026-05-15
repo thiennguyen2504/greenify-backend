@@ -85,6 +85,7 @@ public class SeedData implements CommandLineRunner {
         private final UnsplashImageService unsplashImageService;
         private final GreenActionPostRepository greenActionPostRepository;
         private final EventRepository eventRepository;
+        private final SyncPostDataSeed syncPostDataSeed;
 
     @Override
     @Transactional
@@ -112,7 +113,7 @@ public class SeedData implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name("NGO").build()));
 
         // Create Admin UserEntity
-        if (userRepository.findByIdentifier("admin@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("admin").isEmpty()) {
             Set<RoleEntity> adminRoleEntities = new HashSet<>();
             adminRoleEntities.add(adminRoleEntity);
             adminRoleEntities.add(userRoleEntity);
@@ -127,7 +128,7 @@ public class SeedData implements CommandLineRunner {
         }
 
         // Create Normal UserEntity
-        if (userRepository.findByIdentifier("user@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("user").isEmpty()) {
             Set<RoleEntity> userRoleEntities = new HashSet<>();
             userRoleEntities.add(userRoleEntity);
 
@@ -146,7 +147,7 @@ public class SeedData implements CommandLineRunner {
         createCtvUserIfMissing("ctv3@greenify.vn", "ctv3", ctvRoleEntity, userRoleEntity);
 
         // Create NGO UserEntity
-        if (userRepository.findByIdentifier("ngo@example.com").isEmpty()) {
+        if (userRepository.findByIdentifier("ngo_tester").isEmpty()) {
             Set<RoleEntity> ngoRoleEntities = new HashSet<>();
             ngoRoleEntities.add(ngoRoleEntity);
             ngoRoleEntities.add(userRoleEntity);
@@ -189,8 +190,10 @@ public class SeedData implements CommandLineRunner {
         trashSpotSeed.seed();
         leaderboardSeed.seed();
         eventHistorySeed.seed();
-        leaderboardCurrentWeekSeed.seed();
         recyclingStationSeed.seed();
+        
+        syncPostDataSeed.seed();
+        leaderboardCurrentWeekSeed.seed();
 
                 logSeededSampleImageUrls();
     }
