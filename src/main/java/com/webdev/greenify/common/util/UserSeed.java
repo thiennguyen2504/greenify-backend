@@ -128,7 +128,7 @@ public class UserSeed {
 
     private List<SeedUser> buildSeedUsers() {
         return List.of(
-            new SeedUser("user", "user@greenify.vn", "Nguyễn Minh Huy", "Thành phố Hồ Chí Minh", false),
+            new SeedUser("user", "user@example.com", "Nguyễn Minh Huy", "Thành phố Hồ Chí Minh", false),
                 new SeedUser("user1", "user1@greenify.vn", "Nguyễn Văn An", "Thành phố Hồ Chí Minh", false),
                 new SeedUser("user2", "user2@greenify.vn", "Trần Thị Bình", "Hà Nội", false),
                 new SeedUser("user3", "user3@greenify.vn", "Phạm Thu Hà", "Đà Nẵng", false),

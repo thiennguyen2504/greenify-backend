@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface PointTransactionRepository extends JpaRepository<PointTransactionEntity, String> {
 
+    boolean existsBySourcePostIdAndUser_Id(String sourcePostId, String userId);
+
     /**
      * Calculate accumulated points (total positive points earned) for a user.
      * This includes all points ever earned, regardless of expiration.

@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface PostReviewRepository extends JpaRepository<PostReviewEntity, String> {
 
+    boolean existsByPost_Id(String postId);
+
     /**
      * Check if reviewer has already submitted a valid review for this post.
      */

@@ -34,7 +34,7 @@ import java.util.Map;
 @Slf4j
 public class LeaderboardCurrentWeekSeed {
 
-    private static final LocalDate CURRENT_WEEK_START = LocalDate.of(2026, 4, 20);
+    private static final LocalDate CURRENT_WEEK_START = LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
     private static final String NATIONAL_KEY = "leaderboard:weekly:national:" + CURRENT_WEEK_START;
     private static final String PROVINCIAL_PREFIX = "leaderboard:weekly:province:";
     private static final Duration LEADERBOARD_TTL = Duration.ofDays(14);
@@ -79,7 +79,7 @@ public class LeaderboardCurrentWeekSeed {
 
         LeaderboardPrizeConfigEntity config = LeaderboardPrizeConfigEntity.builder()
                 .weekStartDate(CURRENT_WEEK_START)
-                .lockAt(LocalDateTime.of(2026, 4, 26, 23, 59))
+                .lockAt(CURRENT_WEEK_START.plusDays(6).atTime(23, 59))
                 .status(PrizeConfigStatus.CONFIGURED)
                 .nationalReservedCount(10)
                 .provincialReservedCount(340)
