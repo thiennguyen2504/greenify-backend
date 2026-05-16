@@ -4,14 +4,26 @@ Spring Boot backend application for Greenify project.
 
 ---
 
+## Production
+
+- [Website](https://greenify-web.vercel.app/vi)
+- [Download APK](https://expo.dev/accounts/thiennga/projects/greenify/builds/6b0fd8fd-2b22-42a4-a393-1b44cf028fdc?fbclid=IwY2xjawR0915leHRuA2FlbQIxMABicmlkETF2MVhzbXdITHNkaTByQkVQc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHkAQN2DbbDdshExKOGRLWlRd8TgF-urKqDrfIwyyyzwsU6yJE9P_LiKa_LwO_aem_qtREd2pyR4robPC4_M-Nqw)
+
+
+---
+
 ## Frontend Reference
 - [Web UI Repository](https://github.com/tranuyn/greenify-web)
 - [Mobile UI Repository](https://github.com/tranuyn/greenify-fe)
+
+---
 
 ## Link demo
 
 - [Demo User](https://drive.google.com/file/d/1OSmodCqGizREbHZX7hW5ei3-ueIxrMSv/view?usp=sharing)
 - [Demo Admin](https://drive.google.com/drive/folders/1cTiDzycfVNx0jm06iWbolZreTAyeIHsA?usp=sharing)
+
+---
 
 ## Credential testing
 
@@ -30,6 +42,8 @@ Spring Boot backend application for Greenify project.
 - Use this account for testing Admin feature
   - username: admin
   - password: password123
+
+---
 
 ## Tech Stack
 
