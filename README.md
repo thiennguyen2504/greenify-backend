@@ -2,6 +2,29 @@
 
 Spring Boot backend application for Greenify project.
 
+---
+
+## Frontend Reference
+- [Web UI Repository](https://github.com/tranuyn/greenify-web)
+- [Mobile UI Repository](https://github.com/tranuyn/greenify-fe)
+
+## Link demo
+
+- [Demo User](https://drive.google.com/file/d/1OSmodCqGizREbHZX7hW5ei3-ueIxrMSv/view?usp=sharing)
+- [Demo Admin](https://drive.google.com/drive/folders/1cTiDzycfVNx0jm06iWbolZreTAyeIHsA?usp=sharing)
+
+## Credential testing
+
+- Use this account for testing User feature
+  - username:
+  - password: 
+- Use this account for testing Non-government organization feature
+  - username:
+  - password: 
+- Use this account for testing Admin feature
+  - username:
+  - password: 
+
 ## Tech Stack
 
 - Java 21
