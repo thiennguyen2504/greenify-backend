@@ -16,14 +16,20 @@ Spring Boot backend application for Greenify project.
 ## Credential testing
 
 - Use this account for testing User feature
-  - username:
-  - password: 
+  - username: User@example.com
+  - password: password123
+  
+- Use this account for testing Collobrator feature
+  - username: ctv1
+  - password: password123
+    
 - Use this account for testing Non-government organization feature
-  - username:
-  - password: 
+  - username: Ngo@example.com
+  - password: password123
+
 - Use this account for testing Admin feature
-  - username:
-  - password: 
+  - username: admin
+  - password: password123
 
 ## Tech Stack
 
